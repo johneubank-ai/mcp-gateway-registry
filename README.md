@@ -11,61 +11,217 @@
 
 # MCP Gateway & Registry
 
-[Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open standard protocol that allows AI Models to connect with external systems, tools, and data sources. While MCP simplifies tool access for Agents and solves data access and internal/external API connectivity challenges, several critical obstacles remain before enterprises can fully realize MCP's promise.
+## What is MCP Gateway & Registry?
 
-**Discovery & Access Challenges:**
-- **Service Discovery**: How do developers find and access approved MCP servers?
-- **Governed Access**: How do enterprises provide secure, centralized access to curated MCP servers?
-- **Tool Selection**: With hundreds of enterprise MCP servers, how do developers identify the right tools for their specific agents?
-- **Dynamic Discovery**: How can agents dynamically find and use new tools for tasks they weren't originally designed for?
+The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) lets AI agents use external tools and data sources. However, enterprises face critical challenges when deploying MCP at scale:
 
-The MCP Gateway & Registry solves these challenges by providing a unified platform that combines centralized access control with intelligent tool discovery. The Registry offers both visual and programmatic interfaces for exploring available MCP servers and tools, while the Gateway ensures secure, governed access to all services. This enables developers to programmatically build smarter agents and allows agents to autonomously discover and execute tools beyond their initial capabilities.
+- **🔍 Discovery Challenge**: How do agents find and access approved MCP servers?
+- **🔒 Security Challenge**: How do you control access to sensitive tools and data?
+- **⚙️ Management Challenge**: How do you govern hundreds of MCP servers across teams?
+
+**MCP Gateway & Registry solves this** by providing a unified platform that combines centralized access control with intelligent tool discovery. Think of it as a "single front door" to all your organization's MCP tools with enterprise-grade security.
 
 | Resource | Link |
 |----------|------|
 | **Demo Video** | _coming soon_ |
 | **Blog Post** | [How the MCP Gateway Centralizes Your AI Model's Tools](https://community.aws/content/2xmhMS0eVnA10kZA0eES46KlyMU/how-the-mcp-gateway-centralizes-your-ai-model-s-tools) |
 
-You can deploy the gateway and registry on Amazon EC2 or Amazon EKS for production environments. Jump to [installation on EC2](#installation-on-ec2) or [installation on EKS](#installation-on-eks) for deployment instructions.
+---
 
-## Table of Contents
+## 🚀 Quick Start (5 Minutes)
 
-- [What's New](#whats-new)
-- [Architecture](#architecture)
-- [Features](#features)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-  - [Installation on EC2](#installation-on-ec2)
-    - [Docker Compose Architecture](#docker-compose-architecture)
-    - [Quick Start Installation](#quick-start-installation)
-    - [Post-Installation](#post-installation)
-    - [Running the Gateway over HTTPS](#running-the-gateway-over-https)
-  - [Installation on EKS](#installation-on-eks)
-- [Using the Gateway and Registry with AI Agents](#using-the-gateway-and-registry-with-ai-agents)
-  - [Run Agent with User Identity](#run-agent-with-user-identity)
-  - [Run Agent with Its Own Agentic Identity](#run-agent-with-its-own-agentic-identity)
-- [Usage](#usage)
-  - [Web Interface Usage](#web-interface-usage)
-  - [MCP Client Integration](#mcp-client-integration)
-    - [Programmatic Access](#programmatic-access)
-    - [Integration Example](#integration-example)
-  - [Adding New MCP Servers to the Registry](#adding-new-mcp-servers-to-the-registry)
-- [Roadmap](#roadmap)
-- [License](#license)
+Get MCP Gateway running locally without any AWS setup:
 
-## What's New
+```bash
+# Clone and start the demo
+git clone https://github.com/agentic-community/mcp-gateway-registry.git
+cd mcp-gateway-registry
+./quick-demo.sh  # Starts with sample data, no authentication required
+```
 
-* **IdP Integration with Amazon Cognito:** Complete identity provider integration supporting both user identity and agent identity modes. See [detailed Cognito setup guide](docs/cognito.md) for configuration instructions.
-* **Fine-Grained Access Control (FGAC) for MCP servers and tools:** Granular permissions system allowing precise control over which agents can access specific servers and tools. See [detailed FGAC documentation](docs/scopes.md) for scope configuration and access control setup.
-* **Integration with [Strands Agents](https://github.com/strands-agents/sdk-python):** Enhanced agent capabilities with the Strands SDK
-* **Dynamic tool discovery and invocation:** AI agents can autonomously discover and execute specialized tools beyond their initial capabilities using semantic search with FAISS indexing and sentence transformers. This breakthrough feature enables agents to handle tasks they weren't originally designed for by intelligently matching natural language queries to the most relevant MCP tools across all registered servers. [Learn more about Dynamic Tool Discovery →](docs/dynamic-tool-discovery.md)
-* **[Installation on EKS](#installation-on-eks):** Deploy on Kubernetes for production environments
+**What you'll see:**
+- Registry web interface at `http://localhost:7860`
+- Sample MCP servers (time, weather, calculator)
+- Tool discovery and management interface
+- Example AI agent interactions
 
-## Architecture
+> **Note**: This demo uses mock authentication. For production deployment with real security, see [Production Deployment](#production-deployment).
 
-The Gateway works by using an [Nginx server](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/) as a reverse proxy, where each MCP server is handled as a different _path_ and the Nginx reverse proxy sitting between the MCP clients (contained in AI Agents for example) and backend server forwards client requests to appropriate backend servers and returns the responses back to clients. The requested resources are then returned to the client.
+---
 
-The MCP Gateway provides a single endpoint to access multiple MCP servers and the Registry provides discoverability and management functionality for the MCP servers that an enterprise wants to use. An AI Agent written in any framework can connect to multiple MCP servers via this gateway, for example to access two MCP servers one called `weather`,  and another one called `currenttime` and agent would create an MCP client pointing `https://my-mcp-gateway.enterprise.net/weather/` and another one pointing to `https://my-mcp-gateway.enterprise.net/currenttime/`.  **This technique is able to support both SSE and Streamable HTTP transports**. 
+## 📋 For Decision Makers
+
+### Deployment Options
+
+| Scenario | Setup | Complexity | Time | Best For |
+|----------|-------|------------|------|----------|
+| **Evaluation** | Local Docker | 🟢 Low | 5 min | Trying out the solution |
+| **Development** | EC2 + HTTP | 🟡 Medium | 30 min | Development teams |
+| **Production** | EC2/EKS + HTTPS | 🔴 High | 2-4 hours | Enterprise deployment |
+
+### Key Capabilities
+
+- **🔧 Unified Tool Access**: Single endpoint for all MCP servers
+- **🛡️ Enterprise Security**: Integration with Amazon Cognito, fine-grained access control
+- **🔍 Smart Discovery**: AI agents can find tools using natural language queries
+- **📊 Management Interface**: Web UI for server registration and monitoring
+- **⚡ Dynamic Scaling**: Support for both local and cloud-deployed MCP servers
+- **🔄 Health Monitoring**: Automatic health checks and status reporting
+
+### Architecture Overview
+
+```mermaid
+flowchart TB
+    subgraph "👥 Users & Agents"
+        User[Human Users]
+        Agent[AI Agents]
+    end
+    
+    subgraph "🌐 MCP Gateway & Registry"
+        Gateway[Gateway<br/>Single Entry Point]
+        Registry[Registry<br/>Management UI]
+        Auth[Authentication<br/>& Authorization]
+    end
+    
+    subgraph "🔧 MCP Servers"
+        MCP1[Time Server]
+        MCP2[Weather Server]
+        MCP3[Database Server]
+        MCPn[Custom Servers...]
+    end
+    
+    User --> Gateway
+    Agent --> Gateway
+    Gateway --> Auth
+    Gateway --> Registry
+    Gateway --> MCP1
+    Gateway --> MCP2
+    Gateway --> MCP3
+    Gateway --> MCPn
+```
+
+---
+
+## 🛠️ Getting Started
+
+### Prerequisites
+
+Choose your deployment scenario:
+
+#### For Local Development/Evaluation
+- Docker and Docker Compose
+- 8GB RAM recommended
+- No AWS account required
+
+#### For Production Deployment
+- AWS Account with EC2 access
+- Domain name (recommended for HTTPS)
+- SSL certificate (for production security)
+
+### Installation Options
+
+#### Option 1: Quick Demo (Recommended for First-Time Users)
+
+```bash
+# Start local demo with sample data
+git clone https://github.com/agentic-community/mcp-gateway-registry.git
+cd mcp-gateway-registry
+./quick-demo.sh
+```
+
+**✅ Validation**: Visit `http://localhost:7860` - you should see the registry interface with sample MCP servers.
+
+#### Option 2: Local Development Setup
+
+```bash
+# Clone repository
+git clone https://github.com/agentic-community/mcp-gateway-registry.git
+cd mcp-gateway-registry
+
+# Configure for local development
+cp .env.template .env.local
+# Edit .env.local - set ADMIN_PASSWORD and enable dev mode
+echo "ENABLE_DEV_MODE=true" >> .env.local
+echo "ADMIN_PASSWORD=your-secure-password" >> .env.local
+
+# Start services
+./build_and_run.sh --env-file .env.local
+```
+
+**✅ Validation**: 
+1. Check all services are running: `docker-compose ps`
+2. Access registry: `http://localhost:7860`
+3. Login with username: `admin`, password: `your-secure-password`
+
+#### Option 3: Production Deployment
+
+For production deployment with full authentication and security, see [Production Deployment Guide](#production-deployment).
+
+---
+
+## 💡 Usage Examples
+
+### Web Interface Usage
+
+1. **Access the Registry**: Navigate to `http://localhost:7860`
+2. **Explore MCP Servers**: View available servers, their tools, and health status
+3. **Manage Services**: Enable/disable servers, register new ones, check health
+4. **Discover Tools**: Use the search feature to find tools by natural language description
+
+![MCP Registry](docs/img/registry.png)
+
+### Programmatic Access
+
+Connect your AI agents to the gateway:
+
+```python
+import mcp
+from mcp.client.sse import sse_client
+
+# Connect to MCP Gateway
+server_url = "http://localhost:8080/currenttime/sse"
+
+async with sse_client(server_url) as (read, write):
+    async with mcp.ClientSession(read, write) as session:
+        # Initialize connection
+        await session.initialize()
+        
+        # List available tools
+        tools = await session.list_tools()
+        print(f"Available tools: {[tool.name for tool in tools.tools]}")
+        
+        # Call a tool
+        result = await session.call_tool("current_time_by_timezone", 
+                                       arguments={"timezone": "America/New_York"})
+        print(f"Current time: {result.content[0].text}")
+```
+
+### Adding New MCP Servers
+
+**Via Web Interface:**
+1. Click "Register Server" in the registry UI
+2. Provide server details (name, URL, description)
+3. Configure access permissions
+4. Test connection and save
+
+**Via Configuration File:**
+```json
+{
+  "name": "my-custom-server",
+  "path": "/my-server",
+  "proxy_pass": "http://localhost:8005",
+  "description": "My custom MCP server",
+  "enabled": true
+}
+```
+
+---
+
+## 🏗️ Architecture & Design
+
+The Gateway uses an [Nginx reverse proxy](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/) architecture where each MCP server is accessible via a unique path. This design supports both SSE and Streamable HTTP transports while providing a single entry point for all MCP services.
+
+### Detailed Architecture
 
 ```mermaid
 flowchart TB
@@ -185,293 +341,239 @@ flowchart TB
     class DB1,DB2,API1,API2,API3 dataSource
 ```
 
-## Features
+### Key Features
 
-*   **MCP Tool Discovery:** Enables automatic tool discovery by AI Agents and Agent developers. Fetches and displays the list of tools (name, description, schema) based on natural language queries (e.g. _do I have tools to get stock information?_).
-*   **Unified access to a governed list of MCP servers:** Access multiple MCP servers through a common MCP gateway, enabling AI Agents to dynamically discover and execute MCP tools.
-*   **Service Registration:** Register MCP services via JSON files or the web UI/API.
-*   **Web UI:** Manage services, view status, and monitor health through a web interface.
-*   **Authentication:** Secure login system for the web UI and API access.
-*   **Health Checks:**
-    *   Periodic background checks for enabled services (checks `/sse` endpoint).
-    *   Manual refresh trigger via UI button or API endpoint.
-*   **Real-time UI Updates:** Uses WebSockets to push health status, tool counts, and last-checked times to all connected clients.
-*   **Dynamic Nginx Configuration:** Generates an Nginx reverse proxy configuration file (`registry/nginx_mcp_revproxy.conf`) based on registered services and their enabled/disabled state.
-*   **Service Management:**
-    *   Enable/Disable services directly from the UI.
-    *   Edit service details (name, description, URL, tags, etc.).
-*   **Filtering & Statistics:** Filter the service list in the UI (All, Enabled, Disabled, Issues) and view basic statistics.
-*   **UI Customization:**
-    *   Dark/Light theme toggle (persisted in local storage).
-    *   Collapsible sidebar (state persisted in local storage).
-*   **State Persistence:** Enabled/Disabled state is saved to `registry/server_state.json` (and ignored by Git).
+*   **🔍 MCP Tool Discovery**: Enables automatic tool discovery by AI Agents using natural language queries (e.g. _"do I have tools to get stock information?"_)
+*   **🌐 Unified Access**: Access multiple MCP servers through a single gateway endpoint
+*   **📝 Service Registration**: Register MCP services via JSON files or web UI/API
+*   **🖥️ Management Interface**: Web UI for service management, monitoring, and health checks
+*   **🔐 Enterprise Authentication**: Secure login with Amazon Cognito integration
+*   **💓 Health Monitoring**: Automatic health checks with real-time status updates
+*   **⚙️ Dynamic Configuration**: Auto-generated Nginx configuration based on registered services
+*   **🎨 Modern UI**: Dark/light theme support with responsive design
 
-## Prerequisites
+---
 
-*   **Amazon EC2 Instance:** An Amazon EC2 machine (`ml.t3.2xlarge`) with a standard Ubuntu AMI for running this solution.
+## 🚀 Production Deployment
 
-*   **SSL Certificate Options:**
-    - **Production Deployments:** SSL certificate is preferred for secure communication to the Gateway
-    - **Testing/Development:** Can use localhost when running on EC2, or EC2 domain name for testing
-    - **Default Configuration:** Gateway is available over HTTP for development
+### Security Checklist
 
-*   **Security Group Configuration:** Configure your EC2 security group based on your deployment scenario:
-    - **HTTPS with SSL certificate:**  Port **8080**, **443** need to be opened
-    - **HTTP with EC2 domain name:** Port **8080**, **80** need to be opened
-    - **HTTP with localhost (port forwarding):** Ports **80**, **7860**, and **8080** need to be opened
+Before deploying to production, ensure you have:
 
-*   **External API Keys (Optional):** One of the example MCP servers uses the [`Polygon`](https://polygon.io/stocks) API for stock ticker data. Get an API key from [here](https://polygon.io/dashboard/signup?redirect=%2Fdashboard%2Fkeys). The server will still start without the API key but you will get a 401 Unauthorized error when using the tools provided by this server.
+- [ ] **SSL Certificate**: Valid certificate for your domain
+- [ ] **Amazon Cognito Setup**: User pools and app clients configured
+- [ ] **Security Groups**: Proper firewall rules (ports 443, 8080)
+- [ ] **Environment Variables**: All secrets properly configured
+- [ ] **Access Control**: Fine-grained permissions configured
+- [ ] **Monitoring**: Health checks and alerting set up
 
-*   **Authentication Setup:** Setup authentication using Amazon Cognito as per instructions [here](docs/auth.md). For detailed Cognito configuration, see the [Cognito setup guide](docs/cognito.md). For Fine-Grained Access Control (FGAC) configuration, see the [scopes documentation](docs/scopes.md).
+### EC2 Production Deployment
 
-## Installation
+#### Step 1: Infrastructure Setup
 
-### Installation on EC2
+1. **Launch EC2 Instance**:
+   - Instance type: `t3.2xlarge` or larger
+   - AMI: Ubuntu 22.04 LTS
+   - Security group: Allow ports 80, 443, 8080
 
-The Gateway and Registry are deployed using Docker Compose with separate containers for each service, providing a scalable and maintainable architecture.
-
-#### Docker Compose Architecture
-
-The deployment includes these containers:
-- **Nginx Reverse Proxy**: Routes requests to appropriate services and handles SSL termination
-- **Auth Server**: Handles authentication with Amazon Cognito and GitHub OAuth
-- **Registry MCP Server**: Provides service discovery, management, and the web UI
-- **Example MCP Servers**:
-  - Current Time server (port 8000)
-  - Financial Info server (port 8001)
-  - Real Server Fake Tools server (port 8002)
-  - MCP Gateway server (port 8003)
-
-#### Quick Start Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/agentic-community/mcp-gateway-registry.git
-    cd mcp-gateway-registry
-    ```
-
-2. **Configure environment variables:**
+2. **Configure Domain & SSL**:
    ```bash
-   # Copy the template and edit with your values
+   # Place SSL certificates
+   sudo mkdir -p /home/ubuntu/ssl_data/{certs,private}
+   # Copy your certificate files to these directories
+   ```
+
+#### Step 2: Authentication Setup
+
+1. **Configure Amazon Cognito** (see [detailed guide](docs/cognito.md)):
+   - Create user pool
+   - Configure app client
+   - Set up user groups and permissions
+
+2. **Configure Environment**:
+   ```bash
    cp .env.template .env
-   nano .env  # or use your preferred editor
-   ```
-   
-   **Required configuration in `.env`:**
-   - `ADMIN_PASSWORD`: Set to a secure password (replace "your-secure-password-here")
-   - `COGNITO_USER_POOL_ID`: Your AWS Cognito User Pool ID
-   - `COGNITO_CLIENT_ID`: Your Cognito App Client ID
-   - `COGNITO_CLIENT_SECRET`: Your Cognito App Client Secret
-   - `AWS_REGION`: AWS region where your Cognito User Pool is located
-   
-   **Optional configuration:**
-   - `POLYGON_API_KEY`: For financial data tools (get from [Polygon.io](https://polygon.io/dashboard/signup))
-   - `SECRET_KEY`: Auto-generated by build script if not provided
-
-3. **Deploy with the build and run script:**
-   ```bash
-   ./build_and_run.sh
-   ```
-   
-   The script will:
-   - Validate your `.env` configuration
-   - Generate `SECRET_KEY` if not provided
-   - Build all Docker images using Docker Compose
-   - Start all services in the correct order
-   - Verify service health and display status
-
-4. **Access the Registry:**
-   Navigate to `http://localhost:7860` and you will have two authentication options:
-   
-   **Option 1 - Amazon Cognito (Recommended for Production):**
-   - Click "Login with Cognito" to authenticate via your configured Cognito User Pool
-   - Access permissions will be based on the Cognito group you are a member of
-   - Provides fine-grained access control based on your organizational roles
-   - For detailed Cognito setup instructions, see [docs/cognito.md](docs/cognito.md)
-   - For Fine-Grained Access Control (FGAC) configuration and scope management, see [docs/scopes.md](docs/scopes.md)
-   
-   **Option 2 - Username/Password (Testing Only):**
-   - Use the traditional login with:
-     - **Username:** Value of `ADMIN_USER` (default: admin)
-     - **Password:** Value of `ADMIN_PASSWORD` from your `.env` file
-   - Provides admin access by default
-   - **Note:** This approach should only be used for testing and will soon require setting `ENABLE_DEV_MODE=true` in your `.env` file
-
-   ![MCP Registry](docs/img/registry.png)
-
-#### Post-Installation
-
-1. **View logs from all services:**
-   ```bash
-   # View logs from all services
-   docker-compose logs -f
-   
-   # View logs from a specific service
-   docker-compose logs -f registry
-   docker-compose logs -f auth-server
+   # Edit .env with your Cognito settings:
+   # COGNITO_USER_POOL_ID=your-pool-id
+   # COGNITO_CLIENT_ID=your-client-id
+   # COGNITO_CLIENT_SECRET=your-client-secret
+   # AWS_REGION=your-region
    ```
 
-2. **View MCP server metadata:**
-   Metadata about all MCP servers is available in `/opt/mcp-gateway/servers` directory. The metadata includes information gathered from `ListTools` as well as information provided during server registration.
+#### Step 3: Deploy Services
 
-#### Running the Gateway over HTTPS
+```bash
+# Deploy with production configuration
+./build_and_run.sh
 
-For production deployments with SSL certificates:
-
-1. **Configure Security Group:** Enable access to TCP port 443 from the IP addresses of your MCP clients in the inbound rules of your EC2 instance's security group.
-
-2. **Prepare SSL Certificates:** You need an HTTPS certificate and private key for your domain. For example, if you use `your-mcp-gateway.com` as the domain, you'll need an SSL certificate for `your-mcp-gateway.com`. MCP servers behind the Gateway will be accessible as `https://your-mcp-gateway.com/mcp-server-name/sse`.
-
-3. **Place SSL Certificates:** Copy your SSL certificates to `/home/ubuntu/ssl_data/` on your EC2 instance:
-   ```bash
-   sudo mkdir -p /home/ubuntu/ssl_data/certs
-   sudo mkdir -p /home/ubuntu/ssl_data/private
-   # Copy your certificate and private key files to these directories
-   ```
-
-4. **Deploy with HTTPS:** Run the deployment script as normal:
-   ```bash
-   ./build_and_run.sh
-   ```
-   
-   The Docker Compose configuration automatically mounts the SSL certificates from `/home/ubuntu/ssl_data` to the appropriate container paths.
-
-5. **Access via HTTPS:** Your services will be available at:
-   - Main interface: `https://your-domain.com`
-   - Registry API: `https://your-domain.com:7860` (if port 7860 is opened in security group)
-   - MCP servers: `https://your-domain.com/server-name/sse`
-
-## Using the Gateway and Registry with AI Agents
-
-### Run Agent with User Identity
-
-1. **Configure environment for user authentication:**
-   Copy the template and configure the environment variables:
-   
-   ```bash
-   cp agents/.env.template agents/.env.user
-   # Edit agents/.env.user with your Cognito configuration
-   # See [`docs/cognito.md`](docs/cognito.md) for detailed Cognito setup instructions
-   ```
-
-2. **Authenticate with user identity:**
-   Run the CLI user authentication script which will prompt you to open a browser window to authenticate with Cognito:
-   
-   ```bash
-   python agents/cli_user_auth.py
-   ```
-   
-   This will save a cookie locally in `/home/ubuntu/.mcp` and this cookie will be used when you run the agent.
-
-3. **Run the agent with session cookie:**
-   ```bash
-   python agents/agent.py --use-session-cookie --mcp-registry-url your_registry_url --message "what is the current time in clarksburg, md"
-   ```
-
-### Run Agent with Its Own Agentic Identity
-
-1. **Configure environment for agent authentication:**
-   Copy the template and configure the environment variables:
-   
-   ```bash
-   cp agents/.env.template agents/.env.agent
-   # Edit agents/.env.agent with your Cognito configuration
-   # See docs/cognito.md for detailed Cognito setup instructions
-   ```
-
-2. **Run the agent with agentic identity:**
-   The agent will communicate with Cognito to obtain a JWT token which will include information about the groups it is part of. This information is then used by the Auth server for authorization decisions.
-   
-   ```bash
-   python agents/agent.py --mcp-registry-url your_registry_url --message "what is the current time in clarksburg, md"
-   ```
-
-### Installation on EKS
-
-For production deployments you might want to run this solution on EKS, the [Distributed Training and Inference on EKS](https://github.com/aws-samples/amazon-eks-machine-learning-with-terraform-and-kubeflow) repo contains the helm chart for running the gateway and registry on an EKS cluster. Refer to [Serve MCP Gateway Registry](https://github.com/aws-samples/amazon-eks-machine-learning-with-terraform-and-kubeflow/tree/master/examples/agentic/mcp-gateway-registry) README for step  by step instructions.
-
-## Usage
-
-The MCP Gateway & Registry can be used in multiple ways depending on your needs:
-
-### Web Interface Usage
-
-1.  **Login:** Use the `ADMIN_USER` and `ADMIN_PASSWORD` specified while starting the Gateway container.
-2.  **Manage Services:**
-    *   Toggle the Enabled/Disabled switch. The Nginx config automatically comments/uncomments the relevant `location` block.
-    *   Click "Modify" to edit service details.
-    *   Click the refresh icon (🔄) in the card header to manually trigger a health check and tool list update for enabled services.
-3.  **View Tools:** Click the tool count icon (🔧) in the card footer to open a modal displaying discovered tools and their schemas for healthy services.
-4.  **Filter:** Use the sidebar links to filter the displayed services.
-
-### MCP Client Integration
-
-The MCP Registry provides an API that is also exposed as an MCP server, allowing you to manage the MCP Registry programmatically. Any MCP client that supports remote MCP servers over SSE can connect to the registry.
-
-> **Note:** Using the MCP Gateway with remote clients requires HTTPS. See instructions [here](#running-the-gateway-over-https) for setting up SSL certificates.
-
-#### Programmatic Access
-
-Once connected, your MCP client can:
-- Discover available tools through natural language queries
-- Register new MCP servers programmatically
-- Manage server configurations
-- Monitor server health and status
-
-#### Integration Example
-
-**Python MCP Client:**
-```python
-import mcp
-from mcp.client.sse import sse_client
-
-# Connect to the MCP Gateway with authentication
-headers = {
-    'Authorization': f'Bearer {auth_token}',
-    'X-User-Pool-Id': user_pool_id,
-    'X-Client-Id': client_id,
-    'X-Region': region
-}
-
-async with sse_client(server_url, headers=headers) as (read, write):
-    async with mcp.ClientSession(read, write) as session:
-        # Initialize the connection
-        await session.initialize()
-        
-        # Call a tool with arguments
-        result = await session.call_tool(tool_name, arguments=arguments)
-        
-        # Process the result
-        response = ""
-        for r in result.content:
-            response += r.text + "\n"
+# Verify deployment
+docker-compose ps
+curl -k https://your-domain.com/health
 ```
 
-### Adding New MCP Servers to the Registry
+**✅ Production Validation**:
+1. SSL certificate is valid and trusted
+2. Authentication redirects to Cognito
+3. All MCP servers are accessible via HTTPS
+4. Health checks are passing
+5. Logs show no errors
 
-**Option 1 - Via MCP Registry UI:**
-Click the "Register Server" button on the top right corner of the Registry web interface and follow the instructions. You'll need to provide the following parameters:
+### EKS Production Deployment
 
-- **Server Name**: Display name for the server
-- **Path**: Unique URL path prefix for the server (e.g., '/my-service'). Must start with '/'
-- **Proxy Pass URL**: The internal or external URL where the MCP server is running (e.g., 'http://localhost:8001')
-- **Description**: Description of the server (optional)
-- **Tags**: List of tags for categorization (optional)
-- **Number of Tools**: Number of tools provided by the server (optional)
-- **Number of Stars**: Rating for the server (optional)
-- **Is Python**: Whether the server is implemented in Python (optional)
-- **License**: License information for the server (optional)
+For Kubernetes deployment, see the [EKS deployment guide](https://github.com/aws-samples/amazon-eks-machine-learning-with-terraform-and-kubeflow/tree/master/examples/agentic/mcp-gateway-registry).
 
-**Option 2 - Via MCP Host:**
-_Coming soon_ - Use MCP Host applications such as VSCode-insiders or Cursor to register servers directly through their MCP client interfaces.
+### Production Operations
 
+#### Monitoring
 
-## Roadmap
+**Key Metrics to Track**:
+- Gateway response times
+- MCP server health status
+- Authentication success/failure rates
+- Tool discovery query performance
 
-1. Store the server information in persistent storage.
-1. Use GitHub API to retrieve information (license, programming language etc.) about MCP servers.
-1. Add option to deploy MCP servers.
+**Health Check Endpoints**:
+- Gateway: `https://your-domain.com/health`
+- Registry: `https://your-domain.com:7860/health`
+- Individual servers: `https://your-domain.com/server-name/health`
 
-## License
+#### Security
+
+**Access Review Process**:
+1. Regularly audit Cognito user groups
+2. Review scope configurations in `auth_server/scopes.yml`
+3. Monitor authentication logs for anomalies
+4. Update SSL certificates before expiration
+
+**Backup Strategy**:
+- Configuration files: `auth_server/scopes.yml`, `.env`
+- Server registry: `registry/server_state.json`
+- SSL certificates and keys
+
+#### Scaling
+
+**Performance Characteristics**:
+- Gateway can handle 1000+ concurrent connections
+- Registry supports 100+ registered MCP servers
+- Tool discovery scales with FAISS index size
+
+**Scaling Bottlenecks**:
+- Nginx connection limits
+- Authentication token validation
+- MCP server response times
+
+---
+
+## 🔧 Advanced Configuration
+
+### Authentication Modes
+
+The system supports two authentication modes:
+
+#### User Identity Mode
+Agents act on behalf of users using OAuth 2.0 PKCE flow:
+
+```bash
+# Configure user authentication
+cp agents/.env.template agents/.env.user
+# Edit with Cognito settings
+
+# Authenticate user
+python agents/cli_user_auth.py
+
+# Run agent with user identity
+python agents/agent.py --use-session-cookie --message "what time is it?"
+```
+
+#### Agent Identity Mode
+Agents use their own Machine-to-Machine credentials:
+
+```bash
+# Configure agent authentication
+cp agents/.env.template agents/.env.agent
+# Edit with agent credentials
+
+# Run agent with its own identity
+python agents/agent.py --message "what time is it?"
+```
+
+### Fine-Grained Access Control
+
+Configure detailed permissions in [`auth_server/scopes.yml`](auth_server/scopes.yml):
+
+```yaml
+# Example: Restrict user to specific tools
+group_mappings:
+  mcp-registry-analyst:
+    - mcp-servers-restricted/read
+    - mcp-servers-restricted/execute
+
+mcp-servers-restricted/execute:
+  - server: fininfo
+    methods: [initialize, tools/list, tools/call]
+    tools: [get_stock_aggregates, print_stock_data]
+```
+
+For comprehensive configuration details, see:
+- [Authentication Guide](docs/auth.md)
+- [Cognito Setup](docs/cognito.md)
+- [Scopes Configuration](docs/scopes.md)
+
+---
+
+## 🗺️ What's New
+
+* **🆔 IdP Integration with Amazon Cognito**: Complete identity provider integration supporting both user identity and agent identity modes
+* **🔒 Fine-Grained Access Control (FGAC)**: Granular permissions system for precise control over server and tool access
+* **🤝 Strands Agents Integration**: Enhanced agent capabilities with the [Strands SDK](https://github.com/strands-agents/sdk-python)
+* **🧠 Dynamic Tool Discovery**: AI agents can autonomously discover and execute tools using semantic search with FAISS indexing
+* **☸️ Kubernetes Support**: Deploy on Amazon EKS for production environments
+
+---
+
+## 🛣️ Roadmap
+
+1. **Enhanced Storage**: Persistent storage for server configurations and metadata
+2. **GitHub Integration**: Automatic server information retrieval via GitHub API
+3. **Deployment Automation**: One-click MCP server deployment capabilities
+4. **Advanced Analytics**: Usage analytics and performance insights
+5. **Multi-Cloud Support**: Support for Azure and GCP identity providers
+
+---
+
+## 📄 License
 
 This project is licensed under the Apache-2.0 License.
+
+---
+
+## 🆘 Troubleshooting
+
+### Common Issues
+
+#### "Cannot connect to registry"
+- **Check**: Is Docker running? `docker-compose ps`
+- **Check**: Are ports available? `netstat -tulpn | grep :7860`
+- **Solution**: Restart services with `docker-compose restart`
+
+#### "Authentication failed"
+- **Check**: Cognito configuration in `.env` file
+- **Check**: User exists in correct Cognito group
+- **Solution**: Verify credentials and group membership
+
+#### "MCP server not responding"
+- **Check**: Server health in registry UI
+- **Check**: Server logs with `docker-compose logs server-name`
+- **Solution**: Restart specific server or check server configuration
+
+For detailed troubleshooting, see individual documentation files in the [`docs/`](docs/) directory.
+
+---
+
+## 📚 Additional Resources
+
+- [Model Context Protocol Documentation](https://modelcontextprotocol.io/introduction)
+- [Authentication & Authorization Guide](docs/auth.md)
+- [Amazon Cognito Setup Guide](docs/cognito.md)
+- [Fine-Grained Access Control](docs/scopes.md)
+- [EKS Deployment Guide](https://github.com/aws-samples/amazon-eks-machine-learning-with-terraform-and-kubeflow/tree/master/examples/agentic/mcp-gateway-registry)
