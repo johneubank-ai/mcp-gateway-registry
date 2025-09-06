@@ -1023,7 +1023,7 @@ Examples:
     logger.info("OAuth Token Refresher Service Starting")
     logger.info(f"Check interval: {args.interval} seconds")
     logger.info(f"Expiry buffer: {args.buffer} seconds ({args.buffer / 3600:.1f} hours)")
-    logger.info(f"OAuth tokens directory: {OAUTH_TOKENS_DIR}")
+    logger.info("OAuth tokens directory is configured")
     logger.info("=" * 60)
     
     # Set up signal handlers and PID file for continuous mode
