@@ -112,7 +112,7 @@ def _get_all_tokens() -> List[Tuple[Path, Dict]]:
         List of (filepath, token_data) tuples for all valid tokens
     """
     if not OAUTH_TOKENS_DIR.exists():
-        logger.error(f"OAuth tokens directory not found: {OAUTH_TOKENS_DIR}")
+        logger.error("OAuth tokens directory not found")
         return []
     
     all_tokens = []
