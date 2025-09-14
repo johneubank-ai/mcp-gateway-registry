@@ -250,16 +250,51 @@ flowchart TB
 
 ## Quick Start
 
-> **Important:** Before proceeding, ensure you have satisfied all [prerequisites](docs/installation.md#prerequisites) including Docker, AWS account setup, and Amazon Cognito configuration.
+Choose your identity provider and get running in 5 minutes:
 
-Get up and running in 5 minutes with Docker Compose:
+### Option A: Keycloak (Recommended - Self-Hosted)
+
+> No cloud dependencies, full control, individual agent audit trails
 
 ```bash
-# Clone the repository
+# 1. Clone and configure
 git clone https://github.com/agentic-community/mcp-gateway-registry.git
 cd mcp-gateway-registry
+cp .env.example .env
+# Edit .env: Set AUTH_PROVIDER=keycloak
 
-# Configure environment
+# 2. Set passwords BEFORE starting services
+export KEYCLOAK_ADMIN_PASSWORD="your-secure-password"
+export KEYCLOAK_DB_PASSWORD="your-database-password"
+
+# 3. Start services
+docker-compose up -d postgres keycloak
+sleep 120  # Wait for Keycloak to be ready
+
+# 4. Initialize Keycloak
+./keycloak/setup/init-keycloak.sh
+
+# 5. Create an agent
+./keycloak/setup/setup-agent-service-account.sh \
+  --agent-id my-agent --group mcp-servers-unrestricted
+
+# 6. Start remaining services
+docker-compose up -d
+
+# Access the registry
+open http://localhost:7860
+```
+
+**Full Guide:** [Keycloak Setup Instructions](keycloak/README.md)
+
+### Option B: Amazon Cognito (Cloud-Based)
+
+> **Prerequisites:** AWS account and Cognito user pool configured
+
+```bash
+# Clone and configure
+git clone https://github.com/agentic-community/mcp-gateway-registry.git
+cd mcp-gateway-registry
 cp .env.example .env
 # Edit .env with your Cognito credentials
 
@@ -273,6 +308,8 @@ cp .env.example .env
 open http://localhost:7860
 ```
 
+**Full Guide:** [Cognito Setup Instructions](docs/cognito.md)
+
 **That's it!** Your enterprise MCP gateway is now running.
 
 ### Testing & Integration Options
@@ -284,7 +321,7 @@ open http://localhost:7860
 **Python Agent:**
 - `agents/agent.py` - Full-featured Python agent with advanced AI capabilities
 
-➡️ **Next Steps:** [Testing Guide](docs/testing.md) | [Complete Installation Guide](docs/installation.md) | [Authentication Setup](docs/auth.md) | [AI Assistant Integration](docs/ai-coding-assistants-setup.md)
+**Next Steps:** [Testing Guide](docs/testing.md) | [Complete Installation Guide](docs/installation.md) | [Authentication Setup](docs/auth.md) | [AI Assistant Integration](docs/ai-coding-assistants-setup.md)
 
 ---
 

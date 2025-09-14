@@ -92,15 +92,16 @@ if [[ "$TARGET_GROUP" != "mcp-servers-restricted" && "$TARGET_GROUP" != "mcp-ser
     exit 1
 fi
 
-# Generate service account name
+# Generate service account name and client ID
 SERVICE_ACCOUNT="agent-${AGENT_ID}-m2m"
+AGENT_CLIENT_ID="agent-${AGENT_ID}-m2m"
 
-echo -e "${BLUE}Setting up Agent-Specific M2M Service Account${NC}"
+echo -e "${BLUE}Setting up Agent-Specific M2M Client and Service Account${NC}"
 echo "=============================================="
 echo "Agent ID: $AGENT_ID"
+echo "Agent Client ID: $AGENT_CLIENT_ID"
 echo "Service Account: $SERVICE_ACCOUNT"
 echo "Target Group: $TARGET_GROUP"
-echo "M2M Client: $M2M_CLIENT"
 echo ""
 
 # Function to get admin token
@@ -118,6 +119,69 @@ get_admin_token() {
         exit 1
     fi
     echo -e "${GREEN}✓ Admin token obtained${NC}"
+}
+
+# Function to create agent-specific M2M client
+create_agent_m2m_client() {
+    echo "Creating agent-specific M2M client..."
+    
+    # Check if client already exists
+    EXISTING_CLIENT=$(curl -s -H "Authorization: Bearer $TOKEN" \
+        "$ADMIN_URL/admin/realms/$REALM/clients?clientId=$AGENT_CLIENT_ID" | \
+        jq -r '.[0].id // empty')
+    
+    if [ ! -z "$EXISTING_CLIENT" ] && [ "$EXISTING_CLIENT" != "null" ]; then
+        echo -e "${YELLOW}Agent M2M client already exists with ID: $EXISTING_CLIENT${NC}"
+        CLIENT_ID="$EXISTING_CLIENT"
+        return 0
+    fi
+    
+    # Create the M2M client
+    CLIENT_JSON='{
+        "clientId": "'$AGENT_CLIENT_ID'",
+        "name": "Agent M2M Client for '$AGENT_ID'",
+        "description": "Machine-to-Machine client for AI agent '$AGENT_ID' with individual audit trails",
+        "enabled": true,
+        "clientAuthenticatorType": "client-secret",
+        "serviceAccountsEnabled": true,
+        "standardFlowEnabled": false,
+        "implicitFlowEnabled": false,
+        "directAccessGrantsEnabled": false,
+        "publicClient": false,
+        "protocol": "openid-connect",
+        "attributes": {
+            "agent_id": "'$AGENT_ID'",
+            "client_type": "agent_m2m",
+            "created_by": "keycloak_setup_script"
+        },
+        "defaultClientScopes": [
+            "web-origins",
+            "acr",
+            "profile",
+            "roles",
+            "email"
+        ]
+    }'
+    
+    RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+        -X POST "$ADMIN_URL/admin/realms/$REALM/clients" \
+        -H "Authorization: Bearer $TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "$CLIENT_JSON")
+    
+    if [ "$RESPONSE" = "201" ]; then
+        echo -e "${GREEN}✓ Agent M2M client created successfully${NC}"
+        
+        # Get the client ID
+        CLIENT_ID=$(curl -s -H "Authorization: Bearer $TOKEN" \
+            "$ADMIN_URL/admin/realms/$REALM/clients?clientId=$AGENT_CLIENT_ID" | \
+            jq -r '.[0].id')
+        
+        echo "Client UUID: $CLIENT_ID"
+    else
+        echo -e "${RED}Failed to create agent M2M client. HTTP: $RESPONSE${NC}"
+        exit 1
+    fi
 }
 
 # Function to check if service account user exists
@@ -144,9 +208,10 @@ create_service_account() {
         "username": "'$SERVICE_ACCOUNT'",
         "enabled": true,
         "emailVerified": true,
-        "serviceAccountClientId": "'$M2M_CLIENT'",
+        "serviceAccountClientId": "'$AGENT_CLIENT_ID'",
         "attributes": {
             "agent_id": ["'$AGENT_ID'"],
+            "agent_client_id": ["'$AGENT_CLIENT_ID'"],
             "account_type": ["agent_service_account"],
             "created_by": ["keycloak_setup_script"]
         }
@@ -239,19 +304,27 @@ assign_to_group() {
     fi
 }
 
-# Function to get M2M client ID
-get_m2m_client_id() {
-    echo "Finding M2M client..."
-    CLIENT_ID=$(curl -s -H "Authorization: Bearer $TOKEN" \
-        "$ADMIN_URL/admin/realms/$REALM/clients?clientId=$M2M_CLIENT" | \
-        jq -r '.[0].id // empty')
+# Function to get agent M2M client secret
+get_agent_client_secret() {
+    echo "Retrieving agent M2M client secret..."
     
-    if [ -z "$CLIENT_ID" ] || [ "$CLIENT_ID" = "null" ]; then
-        echo -e "${RED}M2M client '$M2M_CLIENT' not found${NC}"
+    if [ -z "$CLIENT_ID" ]; then
+        echo -e "${RED}Error: CLIENT_ID not set${NC}"
         exit 1
     fi
     
-    echo -e "${GREEN}✓ Found M2M client with ID: $CLIENT_ID${NC}"
+    # Get the client secret
+    SECRET_RESPONSE=$(curl -s -H "Authorization: Bearer $TOKEN" \
+        "$ADMIN_URL/admin/realms/$REALM/clients/$CLIENT_ID/client-secret")
+    
+    AGENT_CLIENT_SECRET=$(echo "$SECRET_RESPONSE" | jq -r '.value // empty')
+    
+    if [ -z "$AGENT_CLIENT_SECRET" ]; then
+        echo -e "${RED}Failed to retrieve agent client secret${NC}"
+        exit 1
+    fi
+    
+    echo -e "${GREEN}✓ Agent client secret retrieved${NC}"
 }
 
 # Function to ensure groups mapper exists
@@ -349,10 +422,12 @@ generate_agent_token() {
   "agent_id": "$AGENT_ID",
   "service_account": "$SERVICE_ACCOUNT",
   "group": "$TARGET_GROUP",
-  "client_id": "$M2M_CLIENT",
+  "client_id": "$AGENT_CLIENT_ID",
+  "client_secret": "$AGENT_CLIENT_SECRET",
   "keycloak_url": "https://mcpgateway.ddns.net/keycloak",
   "realm": "$REALM",
-  "usage_notes": "Agent-specific token for $AGENT_ID with audit trail support"
+  "saved_at": "$(date -u '+%Y-%m-%d %H:%M:%S UTC')",
+  "usage_notes": "Individual M2M client credentials for agent $AGENT_ID with complete audit trails"
 }
 EOF
     
@@ -363,27 +438,30 @@ EOF
 main() {
     get_admin_token
     
-    # Step 1: Ensure service account exists
+    # Step 1: Create agent-specific M2M client
+    create_agent_m2m_client
+    
+    # Step 2: Get agent client secret
+    get_agent_client_secret
+    
+    # Step 3: Create service account linked to agent client
     if ! check_service_account; then
         create_service_account
     fi
     
-    # Step 2: Ensure target group exists
+    # Step 4: Ensure target group exists
     ensure_target_group
     
-    # Step 3: Assign service account to group
+    # Step 5: Assign service account to group
     assign_to_group
     
-    # Step 4: Get M2M client ID
-    get_m2m_client_id
-    
-    # Step 5: Ensure groups mapper exists
+    # Step 6: Ensure groups mapper exists on agent client
     ensure_groups_mapper
     
-    # Step 6: Verify everything is set up correctly
+    # Step 7: Verify everything is set up correctly
     verify_setup
     
-    # Step 7: Generate agent-specific token configuration
+    # Step 8: Generate agent-specific token configuration
     generate_agent_token
     
     echo ""
@@ -391,20 +469,22 @@ main() {
     echo ""
     echo -e "${YELLOW}Agent Details:${NC}"
     echo "- Agent ID: $AGENT_ID"
+    echo "- Agent Client ID: $AGENT_CLIENT_ID"
+    echo "- Agent Client Secret: ${AGENT_CLIENT_SECRET:0:10}..."
     echo "- Service Account: $SERVICE_ACCOUNT"
     echo "- Group: $TARGET_GROUP"
-    echo "- Client: $M2M_CLIENT"
     echo "- Token Config: .oauth-tokens/agent-${AGENT_ID}.json"
     echo ""
     echo -e "${YELLOW}Next steps:${NC}"
     echo "1. Generate agent-specific M2M token:"
-    echo "   python credentials-provider/token_refresher.py --agent-id $AGENT_ID"
+    echo "   cd keycloak/setup && ./generate-agent-token.sh --agent-id $AGENT_ID --save"
     echo ""
     echo "2. Test the authentication:"
     echo "   ./test-keycloak-mcp.sh --agent-id $AGENT_ID"
     echo ""
     echo -e "${BLUE}Audit Trail Features:${NC}"
     echo "- All actions by this agent will be logged with agent ID: $AGENT_ID"
+    echo "- Individual M2M client: $AGENT_CLIENT_ID"
     echo "- Service account username: $SERVICE_ACCOUNT"
     echo "- Group-based authorization: $TARGET_GROUP"
 }

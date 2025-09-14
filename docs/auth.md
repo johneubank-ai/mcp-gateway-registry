@@ -726,6 +726,267 @@ cd credentials-provider
 
 ---
 
+## Setting Up Groups in Keycloak
+
+This section provides step-by-step instructions for entry-level platform engineers to set up and manage groups in Keycloak for the MCP Gateway.
+
+### Prerequisites Checklist
+
+Before starting group setup:
+- ✅ Keycloak is running (check: `docker-compose ps keycloak`)
+- ✅ You have admin credentials (default: admin / your-configured-password)
+- ✅ You can access the admin console at `https://your-domain/admin` or `http://localhost:8080/admin`
+- ✅ The `mcp-gateway` realm exists (created by init-keycloak.sh)
+
+### Understanding Groups in Keycloak
+
+#### What are Groups?
+Groups in Keycloak are collections of users that share common permissions. Think of them as departments in a company - all members inherit the same access rights.
+
+#### Why Use Groups for MCP Gateway?
+- **Simplified Management**: Assign permissions once to a group, not individually to each agent
+- **Scalability**: Easy to add new agents with same permissions
+- **Audit Trail**: Track which agents belong to which permission sets
+- **Security**: Principle of least privilege - agents only get necessary access
+
+#### MCP Gateway Group Structure
+```
+mcp-gateway (realm)
+├── mcp-servers-unrestricted (group)
+│   └── Full access to all MCP servers and tools
+└── mcp-servers-restricted (group)
+    └── Limited access to specific MCP servers and tools
+```
+
+### Step-by-Step: Creating Groups via Keycloak Admin Console
+
+#### Step 1: Access the Admin Console
+
+1. **Open your browser** and navigate to:
+   - Local: `http://localhost:8080/admin`
+   - Production: `https://mcpgateway.ddns.net/admin`
+
+2. **Login with admin credentials**:
+   ```
+   Username: admin
+   Password: <your-admin-password>
+   ```
+
+   > **Note**: If you don't know the password, check with your team lead or the person who set up Keycloak.
+
+#### Step 2: Navigate to the Correct Realm
+
+1. **Check current realm** - Look at the top-left dropdown
+2. **Switch to `mcp-gateway` realm** if not already selected:
+   - Click the realm dropdown
+   - Select `mcp-gateway`
+
+   > **Important**: Always ensure you're in the `mcp-gateway` realm, not the `master` realm!
+
+#### Step 3: Create the Required Groups
+
+1. **Navigate to Groups**:
+   - In the left sidebar, click **Groups**
+   - You'll see either existing groups or an empty list
+
+2. **Create the first group** (`mcp-servers-unrestricted`):
+   - Click the **Create group** button
+   - Enter exactly: `mcp-servers-unrestricted`
+   - Leave Parent as "none"
+   - Click **Create**
+
+3. **Create the second group** (`mcp-servers-restricted`):
+   - Click **Create group** again
+   - Enter exactly: `mcp-servers-restricted`
+   - Leave Parent as "none"
+   - Click **Create**
+
+   > **Critical**: The group names must match EXACTLY (case-sensitive) for the auth server to recognize them!
+
+#### Step 4: Verify Group Creation
+
+1. **Check the groups list**:
+   - Both groups should appear in the Groups list
+   - They should be at the root level (no parent)
+
+2. **Verify group paths**:
+   - Click on each group
+   - Check the path shows: `/mcp-servers-unrestricted` or `/mcp-servers-restricted`
+
+### Assigning Service Accounts to Groups
+
+Service accounts (used by AI agents) need to be added to groups to get permissions.
+
+#### Method 1: Via User Management (Recommended for Individual Agents)
+
+1. **Navigate to Users**:
+   - Click **Users** in the left sidebar
+   - Search for the service account (e.g., `agent-sre-agent-m2m`)
+
+2. **Add to Group**:
+   - Click on the service account name
+   - Go to the **Groups** tab
+   - Click **Join Group**
+   - Select either:
+     - `mcp-servers-unrestricted` for full access
+     - `mcp-servers-restricted` for limited access
+   - Click **Join**
+
+3. **Verify Membership**:
+   - The group should now appear in the user's group list
+   - Shows the group path and when they joined
+
+#### Method 2: Via Group Management (Good for Bulk Operations)
+
+1. **Navigate to Groups**:
+   - Click **Groups** in the left sidebar
+   - Click on the target group
+
+2. **Add Members**:
+   - Go to the **Members** tab
+   - Click **Add member**
+   - Search for service accounts (type "agent" to see all)
+   - Select the accounts you want to add
+   - Click **Add**
+
+### Group Configuration for Different Agent Types
+
+#### Decision Tree for Group Assignment
+
+```
+Is this agent for...
+│
+├── Production/Critical Operations?
+│   ├── Yes → mcp-servers-unrestricted
+│   │   Examples: SRE agents, monitoring agents
+│   │
+│   └── No → Continue ↓
+│
+├── Customer-Facing or Limited Scope?
+│   ├── Yes → mcp-servers-restricted
+│   │   Examples: Travel assistants, chatbots
+│   │
+│   └── No → mcp-servers-restricted (default to restricted)
+│
+└── Development/Testing?
+    └── Create a custom group or use mcp-servers-restricted
+```
+
+### Validating Your Group Setup
+
+#### Quick Validation Checklist
+
+1. **Groups exist in Keycloak** ✓
+   ```bash
+   # Check via admin console: Groups section should show both groups
+   ```
+
+2. **Service accounts have group membership** ✓
+   ```bash
+   # Check via admin console: Users → [service-account] → Groups tab
+   ```
+
+3. **Test token generation with groups** ✓
+   ```bash
+   # Generate a token for an agent
+   cd credentials-provider
+   python token_refresher.py --agent-id <agent-name>
+
+   # Check the token contains groups
+   cat .oauth-tokens/agent-<agent-name>.json | jq '.access_token' | \
+     cut -d. -f2 | base64 -d | jq '.groups'
+
+   # Should show: ["mcp-servers-unrestricted"] or ["mcp-servers-restricted"]
+   ```
+
+4. **Verify auth server recognizes groups** ✓
+   ```bash
+   # Test authentication with the token
+   ./test-keycloak-mcp.sh --agent-id <agent-name>
+
+   # Check auth server logs for group mapping
+   docker-compose logs auth-server | grep -i "groups.*mapped"
+   # Should see: "Mapped Keycloak groups ['mcp-servers-unrestricted'] to scopes..."
+   ```
+
+### Troubleshooting Group Issues
+
+#### Issue: "Access forbidden" even though user is in group
+
+**Symptoms**:
+- Agent gets 403 Forbidden errors
+- Logs show "Access denied" messages
+
+**Solutions**:
+1. **Verify exact group names**:
+   ```bash
+   # Groups must be named EXACTLY:
+   # ✓ mcp-servers-unrestricted
+   # ✗ mcp-servers-Unrestricted (wrong case)
+   # ✗ mcp_servers_unrestricted (underscores instead of hyphens)
+   ```
+
+2. **Check group mapper configuration**:
+   - Go to Clients → `mcp-gateway-m2m` → Client scopes
+   - Check that "groups" mapper exists and is enabled
+
+3. **Regenerate token** after group changes:
+   ```bash
+   python credentials-provider/token_refresher.py --agent-id <agent-name> --force
+   ```
+
+#### Issue: Groups not appearing in JWT token
+
+**Symptoms**:
+- Token doesn't contain groups claim
+- Auth server can't map groups to scopes
+
+**Solutions**:
+1. **Ensure groups mapper is configured**:
+   - Navigate to: Clients → `mcp-gateway-m2m` → Client scopes → Mappers
+   - Should have a "groups" mapper
+   - If missing, run: `./keycloak/setup/init-keycloak.sh`
+
+2. **Check service account has "view-groups" role**:
+   - Users → [service-account] → Role mappings
+   - Should have "view-groups" client role
+
+#### Issue: Can't create groups - "Forbidden" error
+
+**Symptoms**:
+- Admin console shows permission errors
+- Can't create or modify groups
+
+**Solutions**:
+1. **Verify you're logged in as admin**:
+   - Logout and login with the admin account
+   - Not a regular user account
+
+2. **Check you're in the correct realm**:
+   - Must be in `mcp-gateway` realm to create groups there
+   - Master realm admin can switch to any realm
+
+### Best Practices for Group Management
+
+1. **Naming Conventions**:
+   - Use the exact names: `mcp-servers-unrestricted` and `mcp-servers-restricted`
+   - Don't create variations or abbreviations
+
+2. **Documentation**:
+   - Keep a record of which agents are in which groups
+   - Document why an agent needs unrestricted access
+
+3. **Regular Audits**:
+   - Monthly: Review group memberships
+   - Quarterly: Audit unrestricted access needs
+   - Remove agents that no longer need access
+
+4. **Testing After Changes**:
+   - Always regenerate tokens after group changes
+   - Test agent access to verify permissions work
+
+---
+
 ## Additional Resources
 
 - [Complete Configuration Reference](configuration.md)
