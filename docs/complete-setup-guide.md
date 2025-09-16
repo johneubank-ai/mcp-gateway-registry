@@ -1,0 +1,711 @@
+# Complete Setup Guide: MCP Gateway & Registry from Scratch
+
+This guide provides a comprehensive, step-by-step walkthrough for setting up the MCP Gateway & Registry on a fresh AWS EC2 instance. Perfect for first-time users who want to get the system running from zero.
+
+## Table of Contents
+1. [AWS EC2 Instance Setup](#1-aws-ec2-instance-setup)
+2. [Initial System Configuration](#2-initial-system-configuration)
+3. [Installing Prerequisites](#3-installing-prerequisites)
+4. [Cloning and Configuring the Project](#4-cloning-and-configuring-the-project)
+5. [Setting Up Keycloak Identity Provider](#5-setting-up-keycloak-identity-provider)
+6. [Starting the MCP Gateway Services](#6-starting-the-mcp-gateway-services)
+7. [Verification and Testing](#7-verification-and-testing)
+8. [Configuring AI Agents and Coding Assistants](#8-configuring-ai-agents-and-coding-assistants)
+9. [Troubleshooting](#9-troubleshooting)
+10. [Next Steps](#10-next-steps)
+
+---
+
+## 1. AWS EC2 Instance Setup
+
+### Launch EC2 Instance
+
+1. **Log into AWS Console** and navigate to EC2
+2. **Click "Launch Instance"** and configure:
+   - **Name**: `mcp-gateway-server`
+   - **AMI**: Ubuntu Server 24.04 LTS (or latest Ubuntu LTS)
+   - **Instance Type**: `t3.2xlarge` (8 vCPU, 32GB RAM)
+   - **Key Pair**: Create new or select existing SSH key
+   - **Storage**: 100GB gp3 SSD
+
+3. **Network Settings**:
+   - VPC: Default or your custom VPC
+   - Subnet: Public subnet with auto-assign public IP
+   - **Security Group**: Create new with following rules:
+     ```
+     Inbound Rules:
+     - SSH (22): Your IP address
+     - HTTP (80): 0.0.0.0/0 (or restrict as needed)
+     - HTTPS (443): 0.0.0.0/0 (or restrict as needed)
+     - Custom TCP (7860): 0.0.0.0/0 (Registry UI)
+     - Custom TCP (8080): 0.0.0.0/0 (Keycloak Admin)
+     - Custom TCP (8000): 0.0.0.0/0 (Auth Server)
+     ```
+
+4. **Launch the instance** and wait for it to be running
+
+### Connect to Your Instance
+
+```bash
+# From your local terminal
+ssh -i your-key.pem ubuntu@your-instance-public-ip
+
+# Example:
+ssh -i ~/.ssh/mcp-gateway-key.pem ubuntu@ec2-54-123-456-789.compute-1.amazonaws.com
+```
+
+---
+
+## 2. Initial System Configuration
+
+Once connected to your EC2 instance:
+
+```bash
+# Update system packages
+sudo apt-get update && sudo apt-get upgrade -y
+
+# Set timezone (optional but recommended)
+sudo timedatectl set-timezone America/New_York  # Change to your timezone
+
+# Create a working directory
+mkdir -p ~/workspace
+cd ~/workspace
+```
+
+---
+
+## 3. Installing Prerequisites
+
+### Install Docker and Docker Compose
+
+```bash
+# Install Docker
+sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+
+# Add user to docker group
+sudo usermod -aG docker $USER
+
+# Apply the group change immediately for current shell
+newgrp docker
+
+# Verify Docker works without sudo:
+docker --version
+# Expected output: Docker version 24.x.x or higher
+
+# Test Docker permissions (MUST work without sudo)
+docker run hello-world
+# Should show "Hello from Docker!" message
+
+# Install Docker Compose (standalone version)
+sudo apt-get install -y docker-compose
+
+# Verify Docker Compose installation
+docker-compose --version
+# Expected output: docker-compose version 1.29.x or higher
+
+# Alternative: If the above doesn't work, install Docker Compose V2 plugin
+# sudo apt-get update
+# sudo apt-get install -y docker-compose-plugin
+# Then use 'docker compose' instead of 'docker-compose' in all commands
+```
+
+### Install Node.js and npm
+
+```bash
+# Install Node.js 20.x (LTS)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Verify installations
+node --version  # Should show v20.x.x
+npm --version   # Should show 10.x.x
+```
+
+### Install Python and UV (Python Package Manager)
+
+```bash
+# Install Python 3.12
+sudo apt-get install -y python3.12 python3.12-venv python3-pip
+
+# Install UV package manager
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Add UV to PATH
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Verify UV installation
+uv --version
+# Expected output: uv 0.x.x
+```
+
+### Install Additional Tools
+
+```bash
+# Install Git (should already be installed, but just in case)
+sudo apt-get install -y git
+
+# Install jq for JSON processing
+sudo apt-get install -y jq
+
+# Install curl and wget
+sudo apt-get install -y curl wget
+
+# Install net-tools for network debugging
+sudo apt-get install -y net-tools
+```
+
+---
+
+## 4. Cloning and Configuring the Project
+
+### Clone the Repository
+
+```bash
+cd ~/workspace
+git clone https://github.com/agentic-community/mcp-gateway-registry.git
+cd mcp-gateway-registry
+
+# Verify you're in the right directory
+ls -la
+# You should see files like docker-compose.yml, .env.example, README.md, etc.
+```
+
+### Setup Python Virtual Environment
+
+```bash
+# Create and activate Python virtual environment
+uv sync
+source .venv/bin/activate
+
+# Verify the virtual environment is active
+which python
+# Should show: /home/ubuntu/workspace/mcp-gateway-registry/.venv/bin/python
+```
+
+### Initial Environment Configuration
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Open the file for editing
+nano .env
+```
+
+For now, make these essential changes in the `.env` file:
+
+```bash
+# Set authentication provider to Keycloak
+AUTH_PROVIDER=keycloak
+
+# Set a secure admin password (change this!)
+ADMIN_PASSWORD=SecureKeycloakAdmin123!
+
+# Set Keycloak database password (change this!)
+KEYCLOAK_DB_PASSWORD=SecureKeycloakDB123!
+
+# Leave other Keycloak settings as default for now
+KEYCLOAK_URL=http://localhost:8080
+KEYCLOAK_REALM=mcp-gateway
+KEYCLOAK_CLIENT_ID=mcp-gateway-client
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+```
+
+**Important**: Remember the passwords you set here - you'll need to use the same ones in Step 5!
+
+---
+
+## 5. Setting Up Keycloak Identity Provider
+
+Keycloak provides enterprise-grade authentication with support for both human users and AI agents.
+
+### Set Keycloak Passwords
+
+**Important**: These environment variables will override the values in your `.env` file. Use the SAME passwords you configured in Step 4!
+
+```bash
+# Use the SAME passwords you set in the .env file in Step 4!
+# Replace these with your actual passwords from Step 4
+export KEYCLOAK_ADMIN_PASSWORD="YourSecureAdminPassword123!"
+export KEYCLOAK_DB_PASSWORD="SecureKeycloakDB123!"
+
+# Verify they're set correctly
+echo "Admin Password: $KEYCLOAK_ADMIN_PASSWORD"
+echo "DB Password: $KEYCLOAK_DB_PASSWORD"
+```
+
+**Critical**: These passwords MUST match what you set in the `.env` file in Step 4. If they don't match, Keycloak initialization will fail!
+
+### Start Keycloak and PostgreSQL
+
+```bash
+# Start only the database and Keycloak services first
+docker-compose up -d keycloak-db keycloak
+
+# Check if services are starting
+docker-compose ps
+
+# Monitor logs to see when Keycloak is ready
+docker-compose logs -f keycloak
+# Wait for message: "Keycloak 25.x.x started in xxxms"
+# Press Ctrl+C to exit logs when you see this message
+```
+
+**Important**: Wait at least 2-3 minutes for Keycloak to fully initialize before proceeding.
+
+**Note about Health Status**: The Keycloak container may show as "unhealthy" in `docker ps` output when running in development mode. This is normal and won't affect functionality. You can verify Keycloak is working by running:
+```bash
+curl http://localhost:8080/realms/master
+# Should return JSON with realm information
+```
+
+### Initialize Keycloak Configuration
+
+```bash
+# Make the setup script executable
+chmod +x keycloak/setup/init-keycloak.sh
+
+# Run the Keycloak initialization
+./keycloak/setup/init-keycloak.sh
+
+# Expected output:
+# ✓ Waiting for Keycloak to be ready...
+# ✓ Keycloak is ready!
+# ✓ Logged in to Keycloak
+# ✓ Created realm: mcp-gateway
+# ✓ Created client: mcp-gateway-client
+# ... more success messages ...
+# ✓ Client secrets generated!
+#
+# The script will tell you to run get-all-client-credentials.sh
+# to retrieve the credentials
+```
+
+### Create Your First AI Agent Account
+
+```bash
+# Make the agent setup script executable
+chmod +x keycloak/setup/setup-agent-service-account.sh
+
+# Create a test agent with full access
+./keycloak/setup/setup-agent-service-account.sh \
+  --agent-id test-agent \
+  --group mcp-servers-unrestricted
+
+# Note: The script does not display the credentials at the end.
+# Your Client ID is: agent-test-agent-m2m
+
+# Retrieve and save ALL client credentials (recommended):
+./keycloak/setup/get-all-client-credentials.sh
+
+# This will:
+# - Retrieve credentials for ALL clients in the realm
+# - Save all credentials to .oauth-tokens/keycloak-client-secrets.txt
+# - Create individual JSON files: .oauth-tokens/<client-id>.json
+# - Create individual env files: .oauth-tokens/<client-id>.env
+# - Display a summary of all credentials saved
+
+# Or to get just one specific client:
+./keycloak/setup/get-agent-credentials.sh agent-test-agent-m2m
+```
+
+**Important**: Save the Client ID and Client Secret shown in the output. You'll need these to authenticate your AI agents.
+
+### Update .env File with Client Secrets
+
+After retrieving the credentials, you need to update your `.env` file with the client secrets:
+
+```bash
+# Get the client secrets from the generated files
+cat .oauth-tokens/keycloak-client-secrets.txt
+
+# You'll see output like:
+# KEYCLOAK_CLIENT_ID=mcp-gateway-web
+# KEYCLOAK_CLIENT_SECRET=<some-secret-value>
+#
+# KEYCLOAK_M2M_CLIENT_ID=mcp-gateway-m2m
+# KEYCLOAK_M2M_CLIENT_SECRET=<some-secret-value>
+
+# Update your .env file with these secrets
+nano .env
+
+# Find and update these lines with the actual secret values:
+# KEYCLOAK_CLIENT_SECRET=<paste-the-web-client-secret-here>
+# KEYCLOAK_M2M_CLIENT_SECRET=<paste-the-m2m-client-secret-here>
+
+# Save and exit (Ctrl+X, then Y, then Enter)
+```
+
+This step is crucial for the auth-server and other services to authenticate properly with Keycloak.
+
+### Verify Keycloak is Running
+
+Open a web browser and navigate to:
+```
+http://your-instance-public-ip:8080
+```
+
+You should see the Keycloak login page. You can log in with:
+- Username: `admin`
+- Password: The `KEYCLOAK_ADMIN_PASSWORD` you set earlier
+
+---
+
+## 6. Starting the MCP Gateway Services
+
+### Build and Start All Services
+
+```bash
+# Return to project directory
+cd ~/workspace/mcp-gateway-registry
+
+# Activate the virtual environment if not already active
+source .venv/bin/activate
+
+# Make the build script executable
+chmod +x build_and_run.sh
+
+# Build frontend and start all services using the build script
+./build_and_run.sh
+
+# This script will:
+# - Check for Node.js and npm installation
+# - Build the React frontend in the frontend/ directory
+# - Create necessary local directories
+# - Build Docker images
+# - Start all services with docker-compose
+
+# After the script completes, check all services are running
+docker-compose ps
+
+# Expected output should show all services as "Up":
+# - keycloak-db
+# - keycloak
+# - auth-server
+# - registry
+# - nginx
+# - Various MCP servers (mcp-weather, mcp-time, etc.)
+```
+
+### Monitor Service Logs
+
+```bash
+# View all logs
+docker-compose logs -f
+
+# Or view specific service logs
+docker-compose logs -f auth-server
+docker-compose logs -f registry
+docker-compose logs -f nginx
+
+# Press Ctrl+C to exit log viewing
+```
+
+### Wait for Services to Initialize
+
+```bash
+# Check if registry is ready
+curl http://localhost:7860/health
+
+# Expected output:
+# {"status":"healthy","timestamp":"..."}
+```
+
+---
+
+## 7. Verification and Testing
+
+### Test the Registry Web Interface
+
+1. Open your web browser and navigate to:
+   ```
+   http://your-instance-public-ip:7860
+   ```
+
+2. You should see the MCP Gateway Registry login page
+
+3. Click "Login with Keycloak" and use these test credentials:
+   - Username: `admin`
+   - Password: The `KEYCLOAK_ADMIN_PASSWORD` you set
+
+### Test MCP Commands
+
+```bash
+# Navigate to tests directory
+cd ~/workspace/mcp-gateway-registry/tests
+
+# Activate the virtual environment if not already active
+source ../.venv/bin/activate
+
+# Make test scripts executable
+chmod +x mcp_cmds.sh mcp_demo.sh
+
+# Option 1: Source the agent credentials from the saved file
+source ../.oauth-tokens/agent-test-agent-m2m.env
+
+# Option 2: Or manually set the environment variables
+# export CLIENT_ID="agent-test-agent-m2m"
+# export CLIENT_SECRET="<get-from-.oauth-tokens/keycloak-client-secrets.txt>"
+# export GATEWAY_URL="http://localhost:8000"
+
+# Test basic connectivity
+./mcp_cmds.sh ping
+# Expected: "pong"
+
+# List available tools
+./mcp_cmds.sh list
+# Expected: List of available MCP tools
+
+# Test calling a simple tool
+./mcp_cmds.sh call mcp-time get-time
+# Expected: Current time in JSON format
+```
+
+### Test Intelligent Agent Demo
+
+```bash
+# Run the intelligent agent demo
+./mcp_demo.sh "What's the current time and weather?"
+# Expected: Natural language response with time and weather information
+```
+
+---
+
+## 8. Configuring AI Agents and Coding Assistants
+
+### Generate Client Configurations
+
+```bash
+cd ~/workspace/mcp-gateway-registry
+
+# Activate the virtual environment if not already active
+source .venv/bin/activate
+
+# Create OAuth tokens directory
+mkdir -p .oauth-tokens
+
+# Generate client configurations
+./credentials-provider/generate_creds.sh
+
+# List generated configurations
+ls -la .oauth-tokens/
+# You should see files like:
+# - mcp.json (for Roo Code)
+# - vscode-mcp.json (for VS Code)
+# - cursor-mcp.json (for Cursor)
+```
+
+### Configure VS Code / Cursor / Claude Code
+
+For VS Code or similar editors, you'll need to:
+
+1. Copy the configuration to your local machine:
+   ```bash
+   # From your local machine (not the EC2 instance)
+   scp -i your-key.pem ubuntu@your-instance-ip:~/workspace/mcp-gateway-registry/.oauth-tokens/mcp.json ~/
+   ```
+
+2. Add to your editor's MCP settings:
+   - VS Code: Add to `.vscode/settings.json`
+   - Cursor: Add to cursor settings
+   - Claude Code: Add to claude settings
+
+### Create a Python Test Agent
+
+```bash
+cd ~/workspace/mcp-gateway-registry/agents
+
+# Create a test configuration
+cat > agent_config.json <<EOF
+{
+  "client_id": "test-agent",
+  "client_secret": "<your-agent-secret>",
+  "gateway_url": "http://localhost:8000"
+}
+EOF
+
+# Install Python dependencies
+uv venv
+source .venv/bin/activate
+uv pip install -r requirements.txt
+
+# Run the test agent
+python agent.py --config agent_config.json
+```
+
+---
+
+## 9. Troubleshooting
+
+### Common Issues and Solutions
+
+#### Services Won't Start
+```bash
+# Check Docker daemon
+sudo systemctl status docker
+
+# Restart Docker if needed
+sudo systemctl restart docker
+
+# Check for port conflicts
+sudo netstat -tlnp | grep -E ':(80|443|7860|8080|8000)'
+
+# Stop conflicting services if found
+sudo systemctl stop apache2  # If Apache is running
+```
+
+#### Keycloak Initialization Fails
+```bash
+# Check Keycloak logs
+docker-compose logs keycloak | tail -50
+
+# Restart Keycloak
+docker-compose restart keycloak
+
+# Wait 2-3 minutes and retry initialization
+./keycloak/setup/init-keycloak.sh
+```
+
+#### Authentication Issues
+```bash
+# Verify Keycloak is accessible
+curl http://localhost:8080/realms/mcp-gateway
+
+# Check auth server logs
+docker-compose logs auth-server | tail -50
+
+# Regenerate agent credentials
+./keycloak/setup/setup-agent-service-account.sh \
+  --agent-id new-test-agent \
+  --group mcp-servers-unrestricted
+```
+
+#### Registry Not Loading
+```bash
+# Check registry logs
+docker-compose logs registry | tail -50
+
+# Rebuild registry frontend
+cd ~/workspace/mcp-gateway-registry/registry
+npm install
+npm run build
+cd ..
+docker-compose restart registry
+```
+
+### View Real-time Logs
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f <service-name>
+
+# Last 100 lines
+docker-compose logs --tail=100 <service-name>
+```
+
+### Stopping Services
+
+```bash
+# Graceful shutdown (keeps data)
+docker-compose down
+
+# Complete cleanup (removes all data)
+docker-compose down -v
+
+# Just stop services (to restart later)
+docker-compose stop
+```
+
+### Reset Everything
+If you need to start over completely:
+```bash
+# Stop all services and remove volumes
+docker-compose down -v
+
+# Remove all Docker images (optional)
+docker system prune -a
+
+# Start fresh
+docker-compose up -d keycloak-db keycloak
+# Then follow setup steps again from Step 5
+```
+
+---
+
+## 10. Next Steps
+
+### Secure Your Installation
+
+1. **Update Security Groups**: Restrict IP access to only necessary addresses
+2. **Enable HTTPS**: Set up SSL certificates for production use
+3. **Change Default Passwords**: Update all default passwords in production
+4. **Set up Monitoring**: Configure CloudWatch or similar monitoring
+
+### Add More MCP Servers
+
+1. Check available MCP servers:
+   ```bash
+   ls ~/workspace/mcp-gateway-registry/registry/servers/
+   ```
+
+2. Edit `docker-compose.yml` to enable additional servers
+
+3. Restart services:
+   ```bash
+   docker-compose up -d
+   ```
+
+### Configure Production Settings
+
+1. **Domain Name**: Set up a domain name and update configurations
+2. **Load Balancer**: Add an Application Load Balancer for high availability
+3. **Backup Strategy**: Implement regular backups of PostgreSQL database
+4. **Scaling**: Consider EKS deployment for auto-scaling capabilities
+
+### Explore Advanced Features
+
+- **Fine-grained Access Control**: Configure `scopes.yml` for detailed permissions
+- **Custom MCP Servers**: Add your own MCP server implementations
+- **OAuth Integration**: Connect with external services (GitHub, Atlassian, etc.)
+- **Monitoring Dashboard**: Set up Grafana for metrics visualization
+
+### Documentation Resources
+
+- [Authentication Guide](auth.md) - Deep dive into authentication options
+- [Keycloak Advanced Configuration](keycloak-integration.md) - Enterprise features
+- [API Reference](registry_api.md) - Programmatic registry management
+- [Dynamic Tool Discovery](dynamic-tool-discovery.md) - AI agent capabilities
+- [Production Deployment](production-deployment.md) - Best practices for production
+
+### Getting Help
+
+- **GitHub Issues**: https://github.com/agentic-community/mcp-gateway-registry/issues
+- **Discussions**: https://github.com/agentic-community/mcp-gateway-registry/discussions
+- **Documentation**: Check the `/docs` folder for detailed guides
+
+---
+
+## Summary
+
+You now have a fully functional MCP Gateway & Registry running on your AWS EC2 instance! The system is ready to:
+
+- Authenticate AI agents and human users through Keycloak
+- Provide centralized access to MCP servers
+- Enable dynamic tool discovery for AI assistants
+- Offer a web-based registry for managing configurations
+
+Remember to:
+- Save all generated credentials securely
+- Monitor service logs regularly
+- Keep the system updated with latest releases
+- Follow security best practices for production use
+
+Congratulations on completing the setup! Your enterprise MCP gateway is now operational and ready to serve both AI agents and development teams.
