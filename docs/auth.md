@@ -429,15 +429,21 @@ sequenceDiagram
 ```json
 {
   "headers": {
-    // Ingress Authentication (for Gateway)
+    // Ingress Authentication (for Gateway) - Keycloak
+    "X-Authorization": "Bearer {keycloak_jwt_token}",
+    "X-Client-Id": "{agent_client_id}",
+    "X-Keycloak-Realm": "mcp-gateway",
+    "X-Keycloak-URL": "http://localhost:8080",
+
+    // OR Ingress Authentication (for Gateway) - Cognito
     "X-Authorization": "Bearer {cognito_jwt_token}",
     "X-User-Pool-Id": "{cognito_user_pool_id}",
     "X-Client-Id": "{cognito_client_id}",
     "X-Region": "{aws_region}",
-    
-    // Egress Authentication (for MCP Server)
-    "Authorization": "Bearer {external_provider_token}",
-    "X-Provider-Id": "{provider_specific_id}"  // Provider-specific headers
+
+    // Egress Authentication (for MCP Server) - Example: Atlassian
+    "Authorization": "Bearer {atlassian_oauth_token}",
+    "X-Atlassian-Cloud-Id": "{atlassian_cloud_id}"
   }
 }
 ```
@@ -446,9 +452,10 @@ sequenceDiagram
 ```json
 {
   "headers": {
-    // Only egress headers are forwarded
+    // Only egress headers are forwarded (provider-specific)
     "Authorization": "Bearer {external_provider_token}",
-    "X-Provider-Id": "{provider_specific_id}"
+    "X-Atlassian-Cloud-Id": "{atlassian_cloud_id}"  // For Atlassian
+    // OR other provider-specific headers as needed
   }
 }
 ```
