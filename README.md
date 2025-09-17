@@ -133,7 +133,7 @@ flowchart TB
     end
     
     %% Identity Provider
-    IdP[Identity Provider<br/>Amazon Cognito]
+    IdP[Identity Provider<br/>Keycloak/Cognito]
     
     subgraph EKS_Cluster["Amazon EKS/EC2 Cluster"]
         MCP_EKS1["MCP Server 3"]
@@ -254,7 +254,7 @@ flowchart TB
 
 Choose your identity provider and get running in 5 minutes:
 
-### Option A: Keycloak (Recommended - Self-Hosted)
+### Option A: [Keycloak](https://www.keycloak.org/) (Recommended - Self-Hosted)
 
 > No cloud dependencies, full control, individual agent audit trails
 
@@ -316,9 +316,9 @@ open http://localhost:7860
 
 ### Testing & Integration Options
 
-**Shell Scripts (No Python Required):**
-- `./mcp_cmds.sh` - Core MCP operations (ping, list tools, call tools)
-- `./mcp_demo.sh` - Intelligent agent workflows with natural language queries
+**Python Scripts:**
+- `./mcp_client.py` - Core MCP operations (ping, list tools, call tools)
+- `./tests/mcp_cmds.sh` - Shell-based MCP testing operations
 
 **Python Agent:**
 - `agents/agent.py` - Full-featured Python agent with advanced AI capabilities
@@ -355,7 +355,7 @@ Transform how both autonomous AI agents and development teams access enterprise 
 - **Session-Based** - For human developers using AI coding assistants and web interface
 
 **Supported Identity Providers:**
-- **Keycloak** - Enterprise-grade open-source identity and access management with individual agent audit trails
+- **[Keycloak](https://www.keycloak.org/)** - Enterprise-grade open-source identity and access management with individual agent audit trails
 - **Amazon Cognito** - Amazon managed identity service
 - Any OAuth 2.0 compatible provider
 
