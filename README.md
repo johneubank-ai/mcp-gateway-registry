@@ -70,7 +70,7 @@ The **MCP Gateway & Registry** is an enterprise-ready platform that centralizes 
 └─────────────────────────────────────┘     └──────────────────────────────────────┘
 ```
 
-## 🔧 MCP Tools in Action
+## MCP Tools in Action
 
 <div align="center">
 <img src="docs/img/MCP_tools.gif" alt="MCP Tools Demo" width="800"/>
