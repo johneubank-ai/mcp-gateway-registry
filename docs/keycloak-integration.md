@@ -320,22 +320,28 @@ curl -f http://localhost:8080/health/ready
 ##### Agent-Specific Tokens (Production)
 ```bash
 # Generate token for SRE agent
-uv run uv run python credentials-provider/token_refresher.py --agent-id sre-agent
+uv run python credentials-provider/keycloak/generate_tokens.py --agent-id sre-agent
 
-# Generate token for Travel Assistant agent  
-uv run uv run python credentials-provider/token_refresher.py --agent-id travel-assistant
+# Generate token for Travel Assistant agent
+uv run python credentials-provider/keycloak/generate_tokens.py --agent-id travel-assistant
+
+# Generate tokens for all agents
+uv run python credentials-provider/keycloak/generate_tokens.py --all-agents
 
 # Verify token files created
-ls -la .oauth-tokens/agent-*.json
+ls -la .oauth-tokens/agent-*-m2m-token.json
 ```
 
-##### Legacy Single Token (Development)
+##### Complete Credential Generation (Recommended)
 ```bash
-# Generate shared token
-uv run python credentials-provider/token_refresher.py
+# Generate all authentication tokens and MCP configurations
+./credentials-provider/generate_creds.sh
 
-# Verify token file created
-ls -la .oauth-tokens/ingress.json
+# Start automatic token refresh service
+./start_token_refresher.sh
+
+# Verify token refresh is working
+tail -f token_refresher.log
 ```
 
 #### 6. Validation & Testing
@@ -400,32 +406,42 @@ docker-compose ps --format table
 #### Token Generation
 ```bash
 # Generate new agent token
-uv run uv run python credentials-provider/token_refresher.py --agent-id <agent-id>
+uv run python credentials-provider/keycloak/generate_tokens.py --agent-id <agent-id>
 
-# Generate legacy token
-uv run python credentials-provider/token_refresher.py
+# Generate tokens for all agents
+uv run python credentials-provider/keycloak/generate_tokens.py --all-agents
 
-# Force token refresh (ignore cache)
-uv run python credentials-provider/token_refresher.py --force --agent-id <agent-id>
+# Use complete credential generation workflow
+./credentials-provider/generate_creds.sh
 ```
 
 #### Token Validation
 ```bash
 # Check token expiration
-cat .oauth-tokens/agent-<agent-id>.json | jq '.expires_at_human'
+cat .oauth-tokens/agent-<agent-id>-m2m-token.json | jq '.expires_at_human'
 
-# Verify token claims
-cat .oauth-tokens/agent-<agent-id>.json | jq '.access_token' | base64 -d | jq '.'
+# Verify token claims (decode JWT)
+cat .oauth-tokens/agent-<agent-id>-m2m-token.json | jq -r '.access_token' | cut -d. -f2 | base64 -d | jq '.'
 
 # Test token authentication
 ./test-keycloak-mcp.sh --agent-id <agent-id>
+
+# Check automatic token refresh status
+tail -20 token_refresher.log
 ```
 
 #### Token Rotation Strategy
 ```bash
-# Daily token refresh (recommended)
-0 6 * * * /path/to/project/credentials-provider/token_refresher.py --agent-id sre-agent
-0 6 * * * /path/to/project/credentials-provider/token_refresher.py --agent-id travel-assistant
+# Automatic token refresh service (recommended)
+./start_token_refresher.sh
+
+# The service will automatically:
+# - Refresh tokens every 5 minutes
+# - Regenerate MCP configuration files
+# - Handle both ingress and egress tokens
+
+# Manual token refresh if needed
+uv run python credentials-provider/keycloak/generate_tokens.py --all-agents
 
 # Hourly health check
 0 * * * * /path/to/project/test-keycloak-mcp.sh --agent-id sre-agent --silent
@@ -441,7 +457,7 @@ cat .oauth-tokens/agent-<agent-id>.json | jq '.access_token' | base64 -d | jq '.
   --group mcp-servers-restricted
 
 # 2. Generate initial token
-uv run python credentials-provider/token_refresher.py --agent-id new-agent-001
+uv run python credentials-provider/keycloak/generate_tokens.py --agent-id new-agent-001
 
 # 3. Test authentication
 ./test-keycloak-mcp.sh --agent-id new-agent-001
@@ -551,7 +567,7 @@ for agent_config in "${AGENTS[@]}"; do
     --group "$group"
   
   echo "Generating token for: $agent_id"
-  uv run uv run python credentials-provider/token_refresher.py --agent-id "$agent_id"
+  uv run python credentials-provider/keycloak/generate_tokens.py --agent-id "$agent_id"
 done
 ```
 
@@ -560,11 +576,15 @@ done
 #!/bin/bash
 # bulk-refresh-tokens.sh
 
-for token_file in .oauth-tokens/agent-*.json; do
+# Use the built-in all-agents option (recommended)
+uv run python credentials-provider/keycloak/generate_tokens.py --all-agents
+
+# Or manually refresh individual agents
+for token_file in .oauth-tokens/agent-*-m2m-token.json; do
   if [ -f "$token_file" ]; then
-    agent_id=$(basename "$token_file" .json | sed 's/agent-//')
+    agent_id=$(basename "$token_file" -m2m-token.json | sed 's/agent-//')
     echo "Refreshing token for agent: $agent_id"
-    uv run uv run python credentials-provider/token_refresher.py --agent-id "$agent_id"
+    uv run python credentials-provider/keycloak/generate_tokens.py --agent-id "$agent_id"
   fi
 done
 ```
