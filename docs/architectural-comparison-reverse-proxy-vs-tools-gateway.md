@@ -81,6 +81,7 @@ AI Agent/Coding Assistant
 | Memory | Low gateway memory usage, servers handle their own state | Gateway must buffer requests/responses, maintain backend connections | Reverse Proxy |
 | **Protocol Independence** | **Nginx passes through any protocol - not MCP-specific** | **Gateway must understand MCP protocol specifics** | **Reverse Proxy** |
 | Implementation Language | Python suitable due to Nginx handling message routing | **Requires Go/Rust for enterprise performance requirements** | Reverse Proxy |
+| **Implementation Complexity** | **Nginx handles protocol details, minimal state management needed** | **Requires elaborate state management, protocol awareness, connection lifecycle management** | **Reverse Proxy** |
 
 ### Security
 
@@ -107,7 +108,7 @@ AI Agent/Coding Assistant
 |--------|-------------------------|---------------|-------------------|
 | Horizontal Scaling | Can load balance multiple gateway instances easily | Gateway must maintain backend connection pools | Reverse Proxy |
 | **Backend Scaling** | **Each MCP server scales independently** | **Gateway must implement backend load balancing** | **Reverse Proxy** |
-| **Resource Isolation** | **Server failures don't affect other servers** | **Gateway failure affects all services** | **Reverse Proxy** |
+| **Resource Isolation** | **Both handle backend failures via health checks, but Nginx transparently proxies data plane traffic end-to-end** | **Gateway must maintain both data plane MCP connections AND separate health checks to backends** | **Reverse Proxy** |
 | Connection Pooling | Direct client connections to needed servers only | Gateway must manage M×N connection pools | Reverse Proxy |
 | Geographic Distribution | Can proxy to servers in different regions | Complex backend routing required | Reverse Proxy |
 | **Protocol Extensibility** | **Same architecture works for Agent-to-Agent (A2A) or other protocols** | **MCP-specific implementation limits future protocol support** | **Reverse Proxy** |
