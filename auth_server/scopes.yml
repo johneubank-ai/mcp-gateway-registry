@@ -85,8 +85,8 @@ mcp-servers-unrestricted/read:
   - intelligent_tool_finder
   - toggle_service
   - register_service
-  - get_server_details
-  - get_service_tools
+  - list_services
+  - remove_service
   - refresh_service
 - server: realserverfaketools
   methods:
@@ -235,8 +235,8 @@ mcp-servers-unrestricted/execute:
   tools:
   - toggle_service
   - register_service
-  - get_server_details
-  - get_service_tools
+  - list_services
+  - remove_service
   - refresh_service
   - intelligent_tool_finder
 - server: realserverfaketools
@@ -333,6 +333,11 @@ mcp-servers-restricted/read:
   - resources/templates/list
   tools:
   - intelligent_tool_finder
+  - toggle_service
+  - register_service
+  - list_services
+  - remove_service
+  - refresh_service
 - server: realserverfaketools
   methods:
   - initialize
@@ -383,6 +388,11 @@ mcp-servers-restricted/execute:
   - resources/templates/list
   tools:
   - intelligent_tool_finder
+  - toggle_service
+  - register_service
+  - list_services
+  - remove_service
+  - refresh_service
 - server: realserverfaketools
   methods:
   - initialize

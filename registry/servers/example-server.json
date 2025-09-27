@@ -1,0 +1,74 @@
+{
+  "server_name": "Example MCP Server",
+  "description": "An example MCP server demonstrating basic functionality",
+  "path": "/example-server",
+  "proxy_pass_url": "http://example-server:9000/",
+  "supported_transports": ["streamable-http"],
+  "auth_type": "none",
+  "tags": ["example", "demo", "test"],
+  "num_tools": 3,
+  "num_stars": 0,
+  "is_python": true,
+  "license": "MIT",
+  "tool_list": [
+    {
+      "name": "example_tool",
+      "parsed_description": {
+        "main": "An example tool that demonstrates MCP functionality.",
+        "args": "message: Example message to process",
+        "returns": "Dict[str, Any]: Result of the example operation containing processed message info",
+        "raises": "Exception: If the operation fails"
+      },
+      "schema": {
+        "properties": {
+          "message": {
+            "description": "Example message to process",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": ["message"],
+        "type": "object"
+      }
+    },
+    {
+      "name": "echo_tool",
+      "parsed_description": {
+        "main": "A simple echo tool that returns the input with optional metadata.",
+        "args": "input_text: Text to echo back, include_metadata: Whether to include metadata in the response",
+        "returns": "Dict[str, Any]: Echo response with optional metadata",
+        "raises": "Exception: If the operation fails"
+      },
+      "schema": {
+        "properties": {
+          "input_text": {
+            "description": "Text to echo back",
+            "title": "Input Text",
+            "type": "string"
+          },
+          "include_metadata": {
+            "default": true,
+            "description": "Whether to include metadata in the response",
+            "title": "Include Metadata",
+            "type": "boolean"
+          }
+        },
+        "required": ["input_text"],
+        "type": "object"
+      }
+    },
+    {
+      "name": "status_tool",
+      "parsed_description": {
+        "main": "Get the current status of the example server.",
+        "args": "None",
+        "returns": "Dict[str, Any]: Server status information",
+        "raises": "Exception: If unable to get status"
+      },
+      "schema": {
+        "properties": {},
+        "type": "object"
+      }
+    }
+  ]
+}

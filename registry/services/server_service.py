@@ -373,5 +373,42 @@ class ServerService:
             logger.info("No service state changes detected after reload")
 
 
+    def remove_server(self, path: str) -> bool:
+        """Remove a server from the registry and file system."""
+        # Check if server exists
+        if path not in self.registered_servers:
+            logger.error(f"Cannot remove server at path '{path}': not found in registry")
+            return False
+
+        try:
+            # Remove from file system
+            filename = self._path_to_filename(path)
+            file_path = settings.servers_dir / filename
+
+            if file_path.exists():
+                file_path.unlink()
+                logger.info(f"Removed server file: {file_path}")
+            else:
+                logger.warning(f"Server file not found: {file_path}")
+
+            # Remove from in-memory registry
+            server_name = self.registered_servers[path].get('server_name', 'Unknown')
+            del self.registered_servers[path]
+
+            # Remove from service state
+            if path in self.service_state:
+                del self.service_state[path]
+
+            # Persist updated state
+            self.save_service_state()
+
+            logger.info(f"Successfully removed server '{server_name}' from path '{path}'")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to remove server at path '{path}': {e}", exc_info=True)
+            return False
+
+
 # Global service instance
 server_service = ServerService() 

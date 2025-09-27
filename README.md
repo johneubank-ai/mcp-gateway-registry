@@ -300,7 +300,7 @@ Complete: **[Testing with mcp_client.py and agent.py](docs/complete-setup-guide.
 ### Testing & Integration Options
 
 **Python Scripts:**
-- `./mcp_client.py` - Core MCP operations (ping, list tools, call tools)
+- `./cli/mcp_client.py` - Core MCP operations (ping, list tools, call tools)
 - `./tests/mcp_cmds.sh` - Shell-based MCP testing operations
 
 **Python Agent:**

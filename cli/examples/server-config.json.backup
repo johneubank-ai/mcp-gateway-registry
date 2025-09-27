@@ -1,0 +1,45 @@
+{
+  "server_name": "Example MCP Server",
+  "description": "An example MCP server configuration for the CLI tool",
+  "path": "/example-server",
+  "proxy_pass_url": "http://example-server:9000/",
+  "tags": ["example", "demo", "test"],
+  "is_python": true,
+  "license": "MIT",
+  "tool_list": [
+    {
+      "name": "example_tool",
+      "parsed_description": {
+        "main": "An example tool that demonstrates MCP functionality",
+        "args": "params: ExampleParams containing the input parameters",
+        "returns": "Dict[str, Any]: Result of the example operation",
+        "raises": "Exception: If the operation fails"
+      },
+      "schema": {
+        "$defs": {
+          "ExampleParams": {
+            "description": "Parameters for the example tool",
+            "properties": {
+              "message": {
+                "description": "Example message to process",
+                "title": "Message",
+                "type": "string"
+              }
+            },
+            "required": ["message"],
+            "title": "ExampleParams",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "params": {
+            "$ref": "#/$defs/ExampleParams"
+          }
+        },
+        "required": ["params"],
+        "title": "example_toolArguments",
+        "type": "object"
+      }
+    }
+  ]
+}
