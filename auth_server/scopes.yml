@@ -88,6 +88,7 @@ mcp-servers-unrestricted/read:
   - list_services
   - remove_service
   - refresh_service
+  - healthcheck
 - server: realserverfaketools
   methods:
   - initialize
@@ -338,6 +339,7 @@ mcp-servers-restricted/read:
   - list_services
   - remove_service
   - refresh_service
+  - healthcheck
 - server: realserverfaketools
   methods:
   - initialize
@@ -393,6 +395,7 @@ mcp-servers-restricted/execute:
   - list_services
   - remove_service
   - refresh_service
+  - healthcheck
 - server: realserverfaketools
   methods:
   - initialize

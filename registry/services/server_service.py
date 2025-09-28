@@ -194,13 +194,31 @@ class ServerService:
         self.registered_servers[path] = server_info
         
         logger.info(f"Server '{server_info['server_name']}' ({path}) updated")
-        
+
+        # Update FAISS index with new server information
+        try:
+            from ..search.service import faiss_service
+            import asyncio
+
+            # Check if we're in an async context
+            try:
+                asyncio.get_running_loop()
+                # We're in an async context, schedule the update
+                asyncio.create_task(faiss_service.add_or_update_service(path, server_info, self.is_service_enabled(path)))
+            except RuntimeError:
+                # No event loop running, we're in sync context - skip FAISS update
+                # This will be handled by the caller in async context
+                logger.debug(f"Skipping FAISS update for {path} - no async context available")
+
+        except Exception as e:
+            logger.error(f"Failed to update FAISS index after server update: {e}")
+
         # Regenerate nginx config if this is an enabled service (proxy_pass_url might have changed)
         if self.is_service_enabled(path):
             try:
                 from ..core.nginx_service import nginx_service
                 enabled_servers = {
-                    service_path: self.get_server_info(service_path) 
+                    service_path: self.get_server_info(service_path)
                     for service_path in self.get_enabled_services()
                 }
                 nginx_service.generate_config(enabled_servers)
@@ -208,7 +226,7 @@ class ServerService:
                 logger.info(f"Regenerated nginx config due to server update: {path}")
             except Exception as e:
                 logger.error(f"Failed to regenerate nginx configuration after server update: {e}")
-        
+
         return True
         
     def toggle_service(self, path: str, enabled: bool) -> bool:

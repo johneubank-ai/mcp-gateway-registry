@@ -1,6 +1,6 @@
-# MCP Server Management Guide
+# MCP Client CLI Guide
 
-This guide documents how to manage MCP servers using the `mcp_client.py` CLI tool.
+This guide documents how to interact with MCP servers using the `mcp_client.py` command-line interface.
 
 ## Table of Contents
 - [Overview](#overview)
@@ -85,6 +85,14 @@ uv run cli/mcp_client.py --url http://localhost/mcpgw/mcp call \
   }'
 ```
 
+**Register from a JSON file:**
+```bash
+# Register a service using configuration from a JSON file
+uv run cli/mcp_client.py --url http://localhost/mcpgw/mcp call \
+  --tool register_service \
+  --args "$(cat cli/examples/server-config.json)"
+```
+
 **Required parameters:**
 - `server_name`: Display name for the server
 - `path`: Unique URL path prefix (must start with '/')
@@ -117,14 +125,6 @@ uv run cli/mcp_client.py --url http://localhost/mcpgw/mcp call \
 ```bash
 uv run cli/mcp_client.py --url http://localhost/mcpgw/mcp call \
   --tool toggle_service \
-  --args '{"service_path": "/my-service"}'
-```
-
-### Refresh Service Tools
-Force the registry to reconnect and refresh the tool list for a service:
-```bash
-uv run cli/mcp_client.py --url http://localhost/mcpgw/mcp call \
-  --tool refresh_service \
   --args '{"service_path": "/my-service"}'
 ```
 

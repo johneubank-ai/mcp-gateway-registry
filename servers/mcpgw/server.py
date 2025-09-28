@@ -1168,42 +1168,57 @@ async def refresh_service(
 @mcp.tool()
 async def healthcheck(ctx: Context = None) -> Dict[str, Any]:
     """
-    Retrieves health status information from all registered MCP servers via the registry's WebSocket endpoint.
-    
+    Retrieves health status information from all registered MCP servers via the registry's internal API.
+
     Returns:
         Dict[str, Any]: Health status information for all registered servers, including:
             - status: 'healthy' or 'disabled'
             - last_checked_iso: ISO timestamp of when the server was last checked
             - num_tools: Number of tools provided by the server
-            
+
     Raises:
-        Exception: If the WebSocket connection fails or the data cannot be retrieved.
+        Exception: If the API call fails or data cannot be retrieved
     """
     try:
-        # Connect to the WebSocket endpoint
-        registry_ws_url = f"ws://localhost:7860/ws/health_status"
-        logger.info(f"Connecting to WebSocket endpoint: {registry_ws_url}")
-        
-        async with websockets.connect(registry_ws_url) as websocket:
-            # WebSocket connection established, wait for the health status data
-            logger.info("WebSocket connection established, waiting for health status data...")
-            response = await websocket.recv()
-            
-            # Parse the JSON response
-            health_data = json.loads(response)
-            logger.info(f"Received health status data for {len(health_data)} servers")
-            
-            return health_data
-            
-    except websockets.exceptions.WebSocketException as e:
-        logger.error(f"WebSocket error: {e}")
-        raise Exception(f"Failed to connect to health status WebSocket: {e}")
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON decode error: {e}")
-        raise Exception(f"Failed to parse health status data: {e}")
+        import httpx
+        import base64
+        import os
+
+        # Get admin credentials from environment
+        registry_username = os.getenv("REGISTRY_USERNAME", "admin")
+        registry_password = os.getenv("REGISTRY_PASSWORD")
+
+        if not registry_password:
+            raise Exception("REGISTRY_PASSWORD not configured in environment")
+
+        # Create Basic Auth header
+        credentials = f"{registry_username}:{registry_password}"
+        encoded_credentials = base64.b64encode(credentials.encode()).decode()
+        headers = {
+            "Authorization": f"Basic {encoded_credentials}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+
+        # Call registry's internal health check endpoint
+        registry_base_url = os.getenv("REGISTRY_BASE_URL", "http://registry:7860")
+        healthcheck_url = f"{registry_base_url}/api/internal/healthcheck"
+
+        logger.info(f"Calling internal health check endpoint: {healthcheck_url}")
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(healthcheck_url, headers=headers)
+
+            if response.status_code == 200:
+                health_data = response.json()
+                logger.info(f"Retrieved health status data for {len(health_data)} servers")
+                return health_data
+            else:
+                logger.error(f"Health check API returned status {response.status_code}: {response.text}")
+                raise Exception(f"Health check API call failed with status {response.status_code}")
+
     except Exception as e:
-        logger.error(f"Unexpected error retrieving health status: {e}")
-        raise Exception(f"Unexpected error retrieving health status: {e}")
+        logger.error(f"Error retrieving health status: {e}")
+        raise Exception(f"Failed to retrieve health status: {str(e)}")
 
 
 @mcp.tool()

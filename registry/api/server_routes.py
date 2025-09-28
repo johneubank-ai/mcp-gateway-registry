@@ -325,8 +325,9 @@ async def register_service(
             content={"error": f"Service with path '{path}' already exists or failed to save"},
         )
 
-    # Add to FAISS index (disabled by default)
-    await faiss_service.add_or_update_service(path, server_entry, False)
+    # Add to FAISS index with current enabled state
+    is_enabled = server_service.is_service_enabled(path)
+    await faiss_service.add_or_update_service(path, server_entry, is_enabled)
     
     # Regenerate Nginx configuration
     enabled_servers = {
@@ -486,10 +487,24 @@ async def internal_register_service(
             },
         )
 
+    logger.warning("INTERNAL REGISTER: Auto-enabling newly registered server")  # TODO: replace with debug
+
+    # Automatically enable the newly registered server BEFORE FAISS indexing
+    try:
+        toggle_success = server_service.toggle_service(path, True)
+        if toggle_success:
+            logger.info(f"Successfully auto-enabled server {path} after registration")
+        else:
+            logger.warning(f"Failed to auto-enable server {path} after registration")
+    except Exception as e:
+        logger.error(f"Error auto-enabling server {path}: {e}")
+        # Non-fatal error - server is registered but not enabled
+
     logger.warning(f"INTERNAL REGISTER: Server registered successfully, adding to FAISS index")  # TODO: replace with debug
 
-    # Add to FAISS index (disabled by default)
-    await faiss_service.add_or_update_service(path, server_entry, False)
+    # Add to FAISS index with current enabled state (should be True after auto-enable)
+    is_enabled = server_service.is_service_enabled(path)
+    await faiss_service.add_or_update_service(path, server_entry, is_enabled)
 
     logger.warning("INTERNAL REGISTER: Regenerating Nginx configuration")  # TODO: replace with debug
 
@@ -504,6 +519,24 @@ async def internal_register_service(
 
     # Broadcast health status update to WebSocket clients
     await health_service.broadcast_health_update(path)
+
+    logger.warning("INTERNAL REGISTER: Updating scopes.yml for new server")  # TODO: replace with debug
+
+    # Update scopes.yml with the new server's tools
+    from ..utils.scopes_manager import update_server_scopes
+
+    # Get the tool list from the server entry
+    tool_names = []
+    if "tool_list" in server_entry and server_entry["tool_list"]:
+        tool_names = [tool["name"] for tool in server_entry["tool_list"] if "name" in tool]
+
+    # Update scopes and reload auth server
+    try:
+        await update_server_scopes(path, name, tool_names)
+        logger.info(f"Successfully updated scopes for server {path} with {len(tool_names)} tools")
+    except Exception as e:
+        logger.error(f"Failed to update scopes for server {path}: {e}")
+        # Non-fatal error - server is registered but scopes not updated
 
     logger.warning(f"INTERNAL REGISTER: Registration complete, returning success response")  # TODO: replace with debug
     logger.info(f"New service registered via internal endpoint: '{name}' at path '{path}' by admin '{username}'")
@@ -634,6 +667,18 @@ async def internal_remove_service(
 
     # Broadcast health status update to WebSocket clients
     await health_service.broadcast_health_update(service_path)
+
+    logger.warning("INTERNAL REMOVE: Removing server from scopes.yml")  # TODO: replace with debug
+
+    # Remove server from scopes.yml and reload auth server
+    from ..utils.scopes_manager import remove_server_scopes
+
+    try:
+        await remove_server_scopes(service_path)
+        logger.info(f"Successfully removed server {service_path} from scopes")
+    except Exception as e:
+        logger.error(f"Failed to remove server {service_path} from scopes: {e}")
+        # Non-fatal error - server is removed but scopes not updated
 
     logger.warning(f"INTERNAL REMOVE: Removal complete, returning success response")  # TODO: replace with debug
     logger.info(f"Service removed via internal endpoint: '{service_path}' by admin '{username}'")
@@ -790,6 +835,80 @@ async def internal_toggle_service(
             "num_tools": server_info.get("num_tools", 0)
         },
     )
+
+
+@router.post("/internal/healthcheck")
+async def internal_healthcheck(request: Request):
+    """Internal health check endpoint for mcpgw-server (requires HTTP Basic Authentication with admin credentials)."""
+    import base64
+    import os
+    from ..health.service import health_service
+
+    logger.warning("INTERNAL HEALTHCHECK: Function called - starting execution")  # TODO: replace with debug
+
+    # Check for HTTP Basic Authentication
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Basic "):
+        logger.warning("INTERNAL HEALTHCHECK: No Basic Auth header found")  # TODO: replace with debug
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    logger.warning("INTERNAL HEALTHCHECK: Basic Auth header found, decoding credentials")  # TODO: replace with debug
+
+    # Decode Basic Auth credentials
+    try:
+        encoded_credentials = auth_header.split(" ")[1]
+        decoded_credentials = base64.b64decode(encoded_credentials).decode("utf-8")
+        username, password = decoded_credentials.split(":", 1)
+        logger.warning(f"INTERNAL HEALTHCHECK: Decoded username: {username}")  # TODO: replace with debug
+    except (IndexError, ValueError, Exception):
+        logger.warning("INTERNAL HEALTHCHECK: Failed to decode Basic Auth credentials")  # TODO: replace with debug
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication format",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    # Verify admin credentials from environment
+    admin_user = os.getenv("ADMIN_USER", "admin")
+    admin_password = os.getenv("ADMIN_PASSWORD")
+
+    if not admin_password:
+        logger.error("INTERNAL HEALTHCHECK: ADMIN_PASSWORD not set in environment")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server configuration error"
+        )
+
+    if username != admin_user or password != admin_password:
+        logger.warning(f"INTERNAL HEALTHCHECK: Invalid credentials for user: {username}")  # TODO: replace with debug
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    logger.warning(f"INTERNAL HEALTHCHECK: Admin authenticated successfully: {username}")  # TODO: replace with debug
+
+    # Get health status for all servers
+    try:
+        health_data = health_service.get_all_health_status()
+        logger.info(f"Retrieved health status for {len(health_data)} servers")
+
+        return JSONResponse(
+            status_code=200,
+            content=health_data
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to retrieve health status: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve health status: {str(e)}"
+        )
 
 
 @router.get("/edit/{service_path:path}", response_class=HTMLResponse)

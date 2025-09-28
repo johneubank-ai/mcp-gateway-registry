@@ -141,6 +141,19 @@ services:
       - "8002:8002"
     restart: unless-stopped
 
+  # Example MCP Server
+  example-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mcp-server
+      args:
+        SERVER_PATH: servers/example-server
+    environment:
+      - PORT=9000
+      - MCP_TRANSPORT=streamable-http
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
 
   # Atlassian MCP Server
   atlassian-server:
