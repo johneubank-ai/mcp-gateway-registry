@@ -500,6 +500,15 @@ class HealthMonitoringService:
                 else:
                     logger.info(f"[TRACE] Detected MCP endpoint in URL, using standard HTTP handling")
                     response = await client.get(proxy_pass_url, headers=headers, follow_redirects=True)
+
+                    # Check for auth failures first
+                    if response.status_code in [401, 403]:
+                        logger.info(f"[TRACE] Auth failure detected ({response.status_code}) for {proxy_pass_url}, trying ping without auth")
+                        if await self._try_ping_without_auth(client, proxy_pass_url):
+                            return True, HealthStatus.HEALTHY
+                        else:
+                            return False, f"unhealthy: auth failed and ping without auth failed"
+
                     if self._is_mcp_endpoint_healthy(response):
                         return True, HealthStatus.HEALTHY
                     else:

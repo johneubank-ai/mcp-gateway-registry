@@ -1,21 +1,49 @@
 #!/bin/bash
+#
+# Import MCP servers from Anthropic Registry
+#
+# This script fetches server definitions from the Anthropic MCP Registry
+# and registers them with the local MCP Gateway Registry.
+#
+# Usage:
+#   ./import_from_anthropic_registry.sh [--dry-run] [--import-list <file>]
+#
+# Environment Variables:
+#   GATEWAY_URL - Gateway URL (default: http://localhost)
+#                 Example: export GATEWAY_URL=https://mcpgateway.ddns.net
+#
 
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Load environment variables from .env file if it exists
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    set -a  # Automatically export all variables
+    source "$PROJECT_ROOT/.env"
+    set +a  # Turn off automatic export
+fi
+
 # Configuration
 ANTHROPIC_API_BASE="https://registry.modelcontextprotocol.io"
-TEMP_DIR=".tmp/anthropic-import"
+TEMP_DIR="$PROJECT_ROOT/.tmp/anthropic-import"
 BASE_PORT=8100
 
-# Colors
+# Gateway URL (can be overridden with GATEWAY_URL environment variable)
+GATEWAY_URL="${GATEWAY_URL:-http://localhost}"
+
+# Colors for terminal output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-print_success() { echo -e "${GREEN}✓ $1${NC}"; }
-print_error() { echo -e "${RED}✗ $1${NC}"; }
-print_info() { echo -e "${BLUE}ℹ $1${NC}"; }
+# Output formatting functions (minimal emoji use per coding standards)
+print_success() { echo -e "${GREEN}[SUCCESS] $1${NC}"; }
+print_error() { echo -e "${RED}[ERROR] $1${NC}"; }
+print_info() { echo -e "${BLUE}[INFO] $1${NC}"; }
 
 # Generate deployment instructions for a server
 detect_transport() {
@@ -50,7 +78,7 @@ validate_package() {
 
 # Parse arguments
 DRY_RUN=false
-IMPORT_LIST="import_server_list.txt"
+IMPORT_LIST="$SCRIPT_DIR/import_server_list.txt"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -58,6 +86,10 @@ while [[ $# -gt 0 ]]; do
         --import-list) IMPORT_LIST="$2"; shift 2 ;;
         --help)
             echo "Usage: $0 [--dry-run] [--import-list <file>]"
+            echo ""
+            echo "Environment Variables:"
+            echo "  GATEWAY_URL - Gateway URL (default: http://localhost)"
+            echo "                Example: export GATEWAY_URL=https://mcpgateway.ddns.net"
             exit 0 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
@@ -135,27 +167,31 @@ for server_name in "${servers[@]}"; do
     
     # Use Python transformer for complete transformation
     python3 -c "
-import json, sys
-sys.path.append('cli')
+import json
+import sys
+
+sys.path.append('$SCRIPT_DIR')
 from anthropic_transformer import transform_anthropic_to_gateway
 
+# Load Anthropic server data
 with open('$anthropic_file') as f:
     data = json.load(f)
-    
+
+# Transform to Gateway Registry format
 result = transform_anthropic_to_gateway(data, $current_port)
 result['path'] = '/$safe_path'
 
-# Store remote URL in headers for health check use
-remote_url = result.get('remote_url')
-if remote_url and result.get('supported_transports', [''])[0] in ['streamable-http', 'sse']:
-    # Add remote URL as a special header for health checks
-    result['headers'] = [{'X-Health-Check-URL': remote_url}]
-
 # Remove unsupported fields for register_service tool
-unsupported_fields = ['repository_url', 'website_url', 'package_npm', 'remote_url']
+# The user-facing register_service tool only supports basic fields
+# Note: auth_type, auth_provider, and headers are now kept for proper auth handling
+unsupported_fields = [
+    'repository_url', 'website_url', 'package_npm', 'remote_url',
+    'supported_transports', 'tool_list'
+]
 for field in unsupported_fields:
     result.pop(field, None)
 
+# Write transformed configuration
 with open('$config_file', 'w') as f:
     json.dump(result, f, indent=2)
 "
@@ -164,7 +200,7 @@ with open('$config_file', 'w') as f:
     
     # Register with service_mgmt.sh (if not dry run)
     if [ "$DRY_RUN" = false ]; then
-        if ./cli/service_mgmt.sh add "$config_file"; then
+        if GATEWAY_URL="$GATEWAY_URL" "$SCRIPT_DIR/service_mgmt.sh" add "$config_file"; then
             print_success "Registered $server_name"
             success_count=$((success_count + 1))
         else
