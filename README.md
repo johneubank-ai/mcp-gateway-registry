@@ -402,9 +402,6 @@ Comprehensive real-time metrics and monitoring through Grafana dashboards with d
 - [GitHub Discussions](https://github.com/agentic-community/mcp-gateway-registry/discussions) - Feature requests and general discussion
 - [GitHub Issues](https://github.com/agentic-community/mcp-gateway-registry/issues) - Bug reports and feature requests
 
-**Resources**
-- [Demo Videos](https://github.com/agentic-community/mcp-gateway-registry#demo-videos) - See the platform in action
-
 **Contributing**
 - [Contributing Guide](CONTRIBUTING.md) - How to contribute code and documentation
 - [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
