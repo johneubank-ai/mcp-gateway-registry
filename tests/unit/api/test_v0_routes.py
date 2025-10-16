@@ -108,7 +108,7 @@ def sample_servers_data():
 
 
 @pytest.mark.unit
-class TestV01ListServers:
+class TestV0ListServers:
     """Test suite for GET /{api_version}/servers endpoint."""
 
     def test_list_servers_admin_sees_all(
@@ -271,7 +271,7 @@ class TestV01ListServers:
 
 
 @pytest.mark.unit
-class TestV01ListServerVersions:
+class TestV0ListServerVersions:
     """Test suite for GET /{api_version}/servers/{serverName}/versions endpoint."""
 
     def test_list_versions_success(self, mock_enhanced_auth_admin, sample_servers_data):
@@ -358,7 +358,7 @@ class TestV01ListServerVersions:
 
 
 @pytest.mark.unit
-class TestV01GetServerVersion:
+class TestV0GetServerVersion:
     """Test suite for GET /{api_version}/servers/{serverName}/versions/{version} endpoint."""
 
     def test_get_version_latest(self, mock_enhanced_auth_admin, sample_servers_data):
