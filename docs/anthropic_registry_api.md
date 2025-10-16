@@ -1,6 +1,8 @@
-# Anthropic MCP Registry API v0.1 Documentation
+# Anthropic MCP Registry API Documentation
 
-The MCP Gateway Registry implements the server listing and related APIs from the [Anthropic MCP Registry REST API v0.1](https://raw.githubusercontent.com/modelcontextprotocol/registry/refs/heads/main/docs/reference/api/openapi.yaml) specification. Additional API endpoints will be added in future releases.
+The MCP Gateway Registry implements the server listing and related APIs from the [Anthropic MCP Registry REST API](https://raw.githubusercontent.com/modelcontextprotocol/registry/refs/heads/main/docs/reference/api/openapi.yaml) specification (currently v0.1). Additional API endpoints will be added in future releases.
+
+> **Note**: The API version is defined in `registry/constants.py` as `ANTHROPIC_API_VERSION` for easy version management.
 
 ## Overview
 
@@ -47,7 +49,7 @@ The token file typically contains:
 
 ## API Endpoints
 
-All endpoints are prefixed with `/v0.1` and require authentication via Bearer token.
+All endpoints are prefixed with the API version (currently `/v0.1`, defined in `registry/constants.py`) and require authentication via Bearer token.
 
 ### 1. List Servers
 
@@ -323,9 +325,9 @@ The API may implement rate limiting. Check response headers for rate limit infor
 
 ## Support
 
-For issues with the Anthropic Registry API v0.1 implementation:
+For issues with the Anthropic Registry API implementation:
 
-1. **Official Anthropic Registry API Specification**: [View the interactive API documentation](https://elements-demo.stoplight.io/?spec=https://raw.githubusercontent.com/modelcontextprotocol/registry/refs/heads/main/docs/reference/api/openapi.yaml) - This is the official Anthropic MCP Registry REST API v0.1 specification that this implementation follows
+1. **Official Anthropic Registry API Specification**: [View the interactive API documentation](https://elements-demo.stoplight.io/?spec=https://raw.githubusercontent.com/modelcontextprotocol/registry/refs/heads/main/docs/reference/api/openapi.yaml) - This is the official Anthropic MCP Registry REST API specification that this implementation follows
 2. Review the [authentication guide](./auth.md) for authentication setup
 3. Examine the test script at `cli/test_anthropic_api.py` for working examples
 4. Check server logs for detailed error information

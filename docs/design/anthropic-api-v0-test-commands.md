@@ -4,6 +4,8 @@
 **Issue**: #175
 **Branch**: feature/anthropic-registry-api-compatibility
 
+> **Note**: The API version (v0.1) is defined in `registry/constants.py` as `ANTHROPIC_API_VERSION`. All examples in this document use `/v0.1/` for clarity.
+
 ## Overview
 
 This document provides comprehensive curl commands to test all three endpoints of the Anthropic Registry API v0.1 implementation:
@@ -26,7 +28,7 @@ docker compose logs -f registry
 
 ### 2. Authentication Setup
 
-The v0.1 API requires JWT authentication via Keycloak.
+The API requires JWT authentication via Keycloak.
 
 **Generate Fresh Token (Required)**
 
