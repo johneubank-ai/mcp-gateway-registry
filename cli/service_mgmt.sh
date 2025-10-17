@@ -458,10 +458,85 @@ add_service() {
     # Use the modified config for registration
     config_json="$modified_config"
 
+    # Extract service_path from config for later use
+    local service_path
+    service_path=$(python3 -c "
+import json
+config = json.loads('''$config_json''')
+print(config.get('path', ''))
+")
+
     echo "=== Adding Service: $service_name ==="
 
     # Check prerequisites
     check_prerequisites
+
+    # Extract proxy_pass_url for security scanning
+    local proxy_pass_url
+    proxy_pass_url=$(python3 -c "
+import json
+config = json.loads('''$config_json''')
+print(config.get('proxy_pass_url', ''))
+")
+
+    # Run security scan
+    echo ""
+    echo "=== Security Scan ==="
+    print_info "Scanning server for security vulnerabilities..."
+
+    local is_safe="true"
+    local scan_output=""
+
+    # Run scan using Python CLI and capture JSON output
+    # Note: Scanner exits with code 1 when unsafe, so we need to capture both success and "failure" cases
+    local scan_exit_code=0
+    scan_output=$(cd "$PROJECT_ROOT" && uv run cli/mcp_security_scanner.py --server-url "$proxy_pass_url" --json 2>&1) || scan_exit_code=$?
+    print_info "scan_exit_code - $scan_exit_code"
+
+    # Exit code 0 = safe, exit code 1 = unsafe, exit code 2 = error
+    if [ $scan_exit_code -eq 0 ]; then
+        print_success "Security scan passed - Server is SAFE"
+    elif [ $scan_exit_code -eq 1 ]; then
+        print_error "Security scan failed - Server has critical or high severity issues"
+        print_info "Server will be registered but marked as UNHEALTHY with security-pending status"
+
+        # Add security-pending tag to config_json BEFORE registration
+        echo ""
+        echo "====Adding security-pending tag to configuration===="
+        print_info "Adding 'security-pending' tag to server configuration before registration..."
+
+        config_json=$(python3 -c "
+import json
+import sys
+
+try:
+    config = json.loads('''$config_json''')
+
+    # Add security-pending tag if not already present
+    tags = config.get('tags', [])
+    if 'security-pending' not in tags:
+        tags.append('security-pending')
+        config['tags'] = tags
+
+    print(json.dumps(config))
+    sys.exit(0)
+except Exception as e:
+    print(f'Failed to add tag: {e}', file=sys.stderr)
+    sys.exit(1)
+")
+
+        if [ $? -eq 0 ]; then
+            print_success "Added 'security-pending' tag to configuration"
+        else
+            print_error "Failed to add 'security-pending' tag to configuration"
+            exit 1
+        fi
+    else
+        print_error "Security scan encountered an error (exit code: $scan_exit_code)"
+        print_info "Server will be registered but marked as UNHEALTHY with security-pending status"
+    fi
+
+    echo ""
 
     # Register the service
     if ! run_mcp_command "register_service" "$config_json" "Registering service"; then
@@ -482,6 +557,44 @@ add_service() {
 
     if ! verify_faiss_metadata "$service_name" "true"; then
         exit 1
+    fi
+
+    if [ $scan_exit_code -eq 1 ]; then
+        #Disabling the server
+        echo ""
+        echo "====Disabling the server===="
+
+        # Get admin credentials from environment
+        local admin_user="${ADMIN_USER:-admin}"
+        local admin_password="${ADMIN_PASSWORD}"
+
+        if [ -z "$admin_password" ]; then
+            print_error "ADMIN_PASSWORD not set in environment - cannot disable server"
+        else
+            # Call the internal toggle endpoint to set service to disabled (false)
+            # Since the server was just auto-enabled during registration, we need to toggle it OFF
+            print_info "Calling toggle endpoint with: ${GATEWAY_URL}/api/internal/toggle"
+            print_info "Service path: $service_path"
+
+            output=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "${GATEWAY_URL}/api/internal/toggle" \
+                --user "$admin_user:$admin_password" \
+                --data-urlencode "service_path=$service_path" 2>&1)
+
+            # Extract HTTP status code from response
+            http_status=$(echo "$output" | grep "HTTP_STATUS:" | cut -d':' -f2)
+            response_body=$(echo "$output" | sed '/HTTP_STATUS:/d')
+
+            print_info "Toggle API HTTP Status: $http_status"
+            print_info "Toggle API Response: $response_body"
+
+            if [ "$http_status" = "200" ]; then
+                print_success "Server disabled due to failed security scan"
+            else
+                print_error "Failed to disable server - HTTP Status: $http_status"
+                print_error "Response: $response_body"
+            fi
+            print_info "Review the security scan report before enabling this server"
+        fi
     fi
 
     # Run health check
@@ -669,14 +782,55 @@ monitor_services() {
     print_success "Monitoring completed!"
 }
 
+scan_server_security() {
+    local server_url="$1"
+    local analyzers="${2:-yara}"
+    local api_key="${3:-}"
+
+    if [ -z "$server_url" ]; then
+        print_error "Usage: $0 scan <server-url> [analyzers] [api-key]"
+        print_error "Example: $0 scan https://mcp.deepwki.com/mcp"
+        print_error "Example: $0 scan https://mcp.deepwki.com/mcp yara,openai sk-..."
+        exit 1
+    fi
+
+    echo "=== Security Scan: $server_url ==="
+
+    # Build command
+    local cmd="cd \"$PROJECT_ROOT\" && uv run cli/mcp_security_scanner.py --server-url \"$server_url\" --analyzers \"$analyzers\""
+
+    # Add API key if provided
+    if [ -n "$api_key" ]; then
+        cmd="$cmd --api-key \"$api_key\""
+    fi
+
+    print_info "Running security scan..."
+    print_info "Analyzers: $analyzers"
+
+    # Run scan and capture exit code
+    if eval "$cmd"; then
+        print_success "Security scan completed - Server is SAFE"
+        return 0
+    else
+        local exit_code=$?
+        if [ $exit_code -eq 1 ]; then
+            print_error "Security scan completed - Server is UNSAFE (has critical or high severity issues)"
+        else
+            print_error "Security scan failed with error code $exit_code"
+        fi
+        return $exit_code
+    fi
+}
+
 show_usage() {
-    echo "Usage: $0 {add|delete|monitor|test|add-to-groups|remove-from-groups|create-group|delete-group|list-groups} [args...]"
+    echo "Usage: $0 {add|delete|monitor|test|scan|add-to-groups|remove-from-groups|create-group|delete-group|list-groups} [args...]"
     echo ""
     echo "Service Commands:"
     echo "  add <config-file>            - Add a service using JSON config and verify registration"
     echo "  delete <service-path> <service-name> - Delete a service by path and name"
     echo "  monitor [config-file]        - Run health check (all services or specific service from config)"
     echo "  test <config-file>           - Test service searchability using intelligent_tool_finder"
+    echo "  scan <server-url> [analyzers] [api-key] - Run security scan on MCP server"
     echo ""
     echo "Server-to-Group Commands:"
     echo "  add-to-groups <server-name> <groups> - Add server to specific scopes groups (comma-separated)"
@@ -709,6 +863,8 @@ show_usage() {
     echo "  $0 monitor                                        # All services"
     echo "  $0 monitor cli/examples/example-server-config.json # Specific service"
     echo "  $0 test cli/examples/example-server-config.json    # Test searchability"
+    echo "  $0 scan https://mcp.deepwki.com/mcp              # Security scan with YARA"
+    echo "  $0 scan https://mcp.deepwki.com/mcp yara,openai sk-... # Scan with multiple analyzers"
     echo ""
     echo "  # Server-to-group operations"
     echo "  $0 add-to-groups example-server 'mcp-servers-restricted/read,mcp-servers-restricted/execute'"
@@ -979,6 +1135,9 @@ case "${1:-}" in
         ;;
     test)
         test_service "$2"
+        ;;
+    scan)
+        scan_server_security "$2" "$3" "$4"
         ;;
     add-to-groups)
         add_to_groups "$2" "$3"
