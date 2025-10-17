@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 # Constants
-DEFAULT_ANALYZERS = "yara"
+DEFAULT_ANALYZERS = "yara,llm"
 OPENAI_API_KEY_ENV = "OPENAI_API_KEY"
 # Use absolute path relative to project root
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -526,7 +526,7 @@ Example usage:
     try:
         # Get API key if needed for OpenAI analyzer
         api_key = None
-        if "openai" in args.analyzers.lower():
+        if "llm" in args.analyzers.lower():
             api_key = _get_openai_api_key(args.api_key)
 
         # Run scan
