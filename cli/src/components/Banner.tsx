@@ -1,23 +1,32 @@
 import React from "react";
 import { Box, Text } from "ink";
 
-const BANNER_LINES = [
-  ' __  __  _____ _____     _____       _______ ________          __ __     __   _____ _      _____',
-  '|  \\/  |/ ____|  __ \\   / ____|   /\\|__   __|  ____\\ \\        / /\\\\ \\   / /  / ____| |    |_   _|',
-  '| \\  / | |    | |__) | | |  __   /  \\  | |  | |__   \\ \\  /\\  / /  \\\\ \\_/ /  | |    | |      | |',
-  '| |\\/| | |    |  ___/  | | |_ | / /\\ \\ | |  |  __|   \\ \\/  \\/ / /\\ \\\\   /   | |    | |      | |',
-  '| |  | | |____| |      | |__| |/ ____ \\| |  | |____   \\  /\\  / ____ \\| |    | |____| |____ _| |_',
-  '|_|  |_|\\_____|_|       \\_____/_/    \\_\\_|  |______|   \\/  \\/_/    \\_\\_|     \\_____|______|_____|'
-];
-
 export function Banner() {
+  const width = Math.min(process.stdout.columns || 80, 80);
+  const separator = "═".repeat(width);
+
   return (
-    <Box flexDirection="column">
-      {BANNER_LINES.map((line) => (
-        <Text key={line} color="cyan" bold>
-          {line}
+    <Box flexDirection="column" marginBottom={1}>
+      <Box>
+        <Text bold color="cyan">{separator}</Text>
+      </Box>
+      <Box>
+        <Text bold color="white">
+          {"\n"}
+          {"   __  __  ___ ___    ___         _    _                                  \n"}
+          {"  |  \\/  |/ __| _ \\  | _ \\___ __ _ (_)__| |_ _ _ _  _                   \n"}
+          {"  | |\\/| | (__|  _/  |   / -_) _` || (_-<  _| '_| || |                   \n"}
+          {"  |_|  |_|\\___|_|    |_|_\\___\\__, ||_/__/\\__|_|  \\_, |                  \n"}
+          {"                              |___/              |__/                     \n"}
+          {"            /_\\   ______ (_)__| |_ __ _ _ _| |_                          \n"}
+          {"           / _ \\ (_-< (_-< | (_-<  _/ _` | ' \\  _|                       \n"}
+          {"          /_/ \\_\\/__/ /__/_|/__/\\__\\__,_|_||_\\__|                       \n"}
+          {"\n"}
         </Text>
-      ))}
+      </Box>
+      <Box>
+        <Text bold color="cyan">{separator}</Text>
+      </Box>
     </Box>
   );
 }
