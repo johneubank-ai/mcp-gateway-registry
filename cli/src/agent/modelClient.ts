@@ -129,10 +129,10 @@ export function getDefaultProvider(): ModelProvider {
 
 export function getDefaultModel(provider: ModelProvider): string {
   if (provider === "bedrock") {
-    // Use environment variable or default to Claude Sonnet 4.5 on Bedrock
+    // Use environment variable or default to Claude Haiku 4.5 on Bedrock (fast and efficient)
     // Note: Claude 4+ models require inference profile IDs (us.anthropic.* or global.anthropic.*)
     // Claude 3.x models can use direct model IDs (anthropic.claude-*)
-    return process.env.BEDROCK_MODEL_ID || "us.anthropic.claude-sonnet-4-5-20250929-v1:0";
+    return process.env.BEDROCK_MODEL_ID || "us.anthropic.claude-haiku-4-5-20251001-v1:0";
   } else {
     // Use environment variable or default to Haiku for Anthropic API
     return process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001";

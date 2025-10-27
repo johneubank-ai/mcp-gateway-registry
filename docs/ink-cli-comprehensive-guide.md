@@ -128,7 +128,7 @@ You: /exit
 
 ## Quick Start
 
-> **💡 Tip:** Set `BEDROCK_MODEL_ID` to use a different model. If not set, defaults to Claude Sonnet 4.5.
+> **💡 Tip:** Set `BEDROCK_MODEL_ID` to use a different model. If not set, defaults to Claude Haiku 4.5 (fastest and most efficient).
 
 > **⚠️ Prerequisites:** Build the CLI first (`npm install && npm run build`). OAuth tokens are generated automatically on first run!
 
@@ -145,9 +145,9 @@ isengard credentials export --account <account-id> --role <role-name>
 export AWS_REGION=us-west-2
 
 # 4. (Optional) Choose a different model
-export BEDROCK_MODEL_ID=us.anthropic.claude-opus-4-1-20250805-v1:0  # Use Opus instead of Sonnet
+export BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-5-20250929-v1:0  # Use Sonnet (balanced)
 # OR
-export BEDROCK_MODEL_ID=us.anthropic.claude-haiku-4-5-20251001-v1:0  # Use Haiku (faster/cheaper)
+export BEDROCK_MODEL_ID=us.anthropic.claude-opus-4-1-20250805-v1:0  # Use Opus (most powerful)
 
 # 5. Run the CLI (tokens generated automatically on first run)
 npm start
@@ -156,9 +156,9 @@ npm start
 **Note:** OAuth tokens are now generated automatically when you start the CLI - no need to run `generate_creds.sh` manually!
 
 **Available models:**
-- `us.anthropic.claude-sonnet-4-5-20250929-v1:0` - Balanced (default)
+- `us.anthropic.claude-haiku-4-5-20251001-v1:0` - Fastest/cheapest (default)
+- `us.anthropic.claude-sonnet-4-5-20250929-v1:0` - Balanced performance
 - `us.anthropic.claude-opus-4-1-20250805-v1:0` - Most powerful
-- `us.anthropic.claude-haiku-4-5-20251001-v1:0` - Fastest/cheapest
 
 See [Available Models](#available-models) section for complete list.
 
@@ -214,10 +214,10 @@ export BEDROCK_MODEL_ID=us.anthropic.claude-haiku-4-5-20251001-v1:0
 npm start
 ```
 
-**Example 3: Default Sonnet (no model specified)**
+**Example 3: Default Haiku (no model specified)**
 ```bash
 isengard credentials export --account 577638374636 --role nishdeb-role
-npm start  # Uses Claude Sonnet 4.5 by default
+npm start  # Uses Claude Haiku 4.5 by default (fastest)
 ```
 
 ---
