@@ -6,10 +6,7 @@ interface TokenStatusFooterProps {
   isRefreshing: boolean;
   lastRefresh?: Date;
   source?: string;
-<<<<<<< HEAD
   model?: string;
-=======
->>>>>>> 35b416886c7aafddee7f6c368fc6cc0946e307fd
 }
 
 export function TokenStatusFooter({
@@ -17,12 +14,8 @@ export function TokenStatusFooter({
   expired,
   isRefreshing,
   lastRefresh,
-<<<<<<< HEAD
   source,
   model
-=======
-  source
->>>>>>> 35b416886c7aafddee7f6c368fc6cc0946e307fd
 }: TokenStatusFooterProps) {
   const formatTime = (seconds: number): string => {
     if (seconds < 0) return "expired";
