@@ -320,6 +320,12 @@ export default function App({options}: AppProps) {
           addMessage("assistant", "No response from the agent. Try a different prompt or use /help.");
         } else {
           result.messages.forEach((msg) => addMessage(msg.role, msg.content));
+
+          // Display token usage if available
+          if (result.tokenUsage) {
+            const tokenInfo = `📊 Tokens: ${result.tokenUsage.input_tokens.toLocaleString()} in / ${result.tokenUsage.output_tokens.toLocaleString()} out / ${result.tokenUsage.total_tokens.toLocaleString()} total`;
+            addMessage("system", tokenInfo);
+          }
         }
       } catch (error) {
         addMessage("assistant", `Agent error: ${(error as Error).message}`);

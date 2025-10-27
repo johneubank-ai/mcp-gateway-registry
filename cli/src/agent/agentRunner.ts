@@ -1,6 +1,6 @@
 import { anthropicTools, buildTaskContext, executeMappedTool, mapToolCall } from "./tools.js";
 import type { TaskContext } from "../tasks/types.js";
-import { sendMessage, getDefaultProvider, getDefaultModel, type ModelProvider } from "./modelClient.js";
+import { sendMessage, getDefaultProvider, getDefaultModel, type ModelProvider, type TokenUsage } from "./modelClient.js";
 
 export interface AgentMessage {
   role: "user" | "assistant" | "system";
@@ -19,6 +19,7 @@ export interface AgentConfig {
 export interface AgentResult {
   messages: AgentMessage[];
   toolOutputs: Array<{ name: string; output: string; isError?: boolean }>;
+  tokenUsage?: TokenUsage;
 }
 
 const DEFAULT_PROVIDER = getDefaultProvider();
@@ -46,6 +47,10 @@ export async function runAgentTurn(history: AgentMessage[], config: AgentConfig)
   const finalMessages: AgentMessage[] = [];
   const toolOutputs: Array<{ name: string; output: string; isError?: boolean }> = [];
 
+  // Track cumulative token usage across all turns
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+
   let toolIteration = 0;
   let conversation: ConversationEntry[] = [...messages];
   if (conversation.length === 0) {
@@ -60,6 +65,12 @@ export async function runAgentTurn(history: AgentMessage[], config: AgentConfig)
       max_tokens: 16384,
       tools: anthropicTools
     });
+
+    // Accumulate token usage from this turn
+    if (response.usage) {
+      totalInputTokens += response.usage.input_tokens;
+      totalOutputTokens += response.usage.output_tokens;
+    }
 
     const outputBlocks = (response.content ?? []) as any[];
     const toolCalls = outputBlocks.filter((block) => block.type === "tool_use");
@@ -100,7 +111,14 @@ export async function runAgentTurn(history: AgentMessage[], config: AgentConfig)
     finalMessages.push({ role: "assistant", content: "Reached tool usage limit without final response." });
   }
 
-  return { messages: finalMessages, toolOutputs };
+  // Create token usage summary
+  const tokenUsage: TokenUsage | undefined = (totalInputTokens > 0 || totalOutputTokens > 0) ? {
+    input_tokens: totalInputTokens,
+    output_tokens: totalOutputTokens,
+    total_tokens: totalInputTokens + totalOutputTokens
+  } : undefined;
+
+  return { messages: finalMessages, toolOutputs, tokenUsage };
 }
 
 function buildSystemPrompt(): string {
@@ -186,7 +204,7 @@ Follow these steps:
 {
   "server_name": "My Server",
   "path": "/my-server",
-  "proxypassurl": "http://localhost:3000"
+  "proxy_pass_url": "http://localhost:3000"
 }
 \`\`\`
 

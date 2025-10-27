@@ -12,9 +12,16 @@ export interface MessageRequest {
   tools: any[];
 }
 
+export interface TokenUsage {
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+}
+
 export interface MessageResponse {
   content: any[];
   stop_reason?: string;
+  usage?: TokenUsage;
 }
 
 export async function sendMessage(
@@ -51,9 +58,17 @@ async function sendBedrockMessage(request: MessageRequest): Promise<MessageRespo
     const response = await client.send(command);
     const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
+    // Extract token usage from Bedrock response
+    const usage: TokenUsage | undefined = responseBody.usage ? {
+      input_tokens: responseBody.usage.input_tokens || 0,
+      output_tokens: responseBody.usage.output_tokens || 0,
+      total_tokens: (responseBody.usage.input_tokens || 0) + (responseBody.usage.output_tokens || 0)
+    } : undefined;
+
     return {
       content: responseBody.content || [],
-      stop_reason: responseBody.stop_reason
+      stop_reason: responseBody.stop_reason,
+      usage
     };
   } catch (error: any) {
     // Provide helpful error messages for common Bedrock issues
@@ -88,9 +103,17 @@ async function sendAnthropicMessage(request: MessageRequest): Promise<MessageRes
       tools: request.tools
     });
 
+    // Extract token usage from Anthropic API response
+    const usage: TokenUsage | undefined = response.usage ? {
+      input_tokens: response.usage.input_tokens || 0,
+      output_tokens: response.usage.output_tokens || 0,
+      total_tokens: (response.usage.input_tokens || 0) + (response.usage.output_tokens || 0)
+    } : undefined;
+
     return {
       content: response.content || [],
-      stop_reason: response.stop_reason
+      stop_reason: response.stop_reason,
+      usage
     };
   } catch (error: any) {
     // Provide helpful error messages for Anthropic API issues
