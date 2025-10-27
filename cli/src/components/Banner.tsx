@@ -10,8 +10,8 @@ export function Banner() {
           <Text color="cyan">{"███╗   ███╗"}</Text>
           <Text color="blue">{"██████╗ "}</Text>
           <Text color="magenta">{"██████╗    "}</Text>
-          <Text color="green">{"██████╗ ███████╗ ██████╗ ██╣███████╗████████╗██████╗ ██╗██╦"}</Text>
-          <Text>{"   "}</Text>
+          <Text color="green">{"██████╗ ███████╗ ██████╗ ██╣███████╗████████╗██████╗ ██╗ ██╦"}</Text>
+          <Text>{"  "}</Text>
           <Text color="#FF69B4">{"██████╗"}</Text>
           <Text>{"  "}</Text>
           <Text color="#FF1493">{"██╗     ██╗"}</Text>
@@ -23,8 +23,8 @@ export function Banner() {
           <Text color="cyan">{"████╗ ████║"}</Text>
           <Text color="blue">{"██╔════╝ "}</Text>
           <Text color="magenta">{"██╔══██╗   "}</Text>
-          <Text color="green">{"██╔══██╗██╔════╝██╔════╝██║██╔════╝╚══██╔══╝██╔══██╗██║██╢"}</Text>
-          <Text>{"   "}</Text>
+          <Text color="green">{"██╔══██╗██╔════╝██╔════╝██║██╔════╝╚══██╔══╝██╔══██╗██║██║"}</Text>
+          <Text>{"  "}</Text>
           <Text color="#FF69B4">{"██╔════╝"}</Text>
           <Text>{"  "}</Text>
           <Text color="#FF1493">{"██║     ██║"}</Text>
@@ -36,8 +36,8 @@ export function Banner() {
           <Text color="cyan">{"██╔████╔██║"}</Text>
           <Text color="blue">{"██║      "}</Text>
           <Text color="magenta">{"██████╔╝   "}</Text>
-          <Text color="green">{"██████╔╝█████╗  ██║  ███╗██║███████╗   ██║   ██████╔╝██║██╣"}</Text>
-          <Text>{"   "}</Text>
+          <Text color="green">{"██████╔╝█████╗  ██║  ███╗██║███████╗   ██║   ██████╔╝██║██║"}</Text>
+          <Text>{"  "}</Text>
           <Text color="#FF69B4">{"██║     "}</Text>
           <Text>{"  "}</Text>
           <Text color="#FF1493">{"██║     ██║"}</Text>
@@ -49,8 +49,8 @@ export function Banner() {
           <Text color="cyan">{"██║╚██╔╝██║"}</Text>
           <Text color="blue">{"██║      "}</Text>
           <Text color="magenta">{"██╔═══╝    "}</Text>
-          <Text color="green">{"██╔══██╗██╔══╝  ██║   ██║██║╚════██║   ██║   ██╔══██╗██║██╢"}</Text>
-          <Text>{"   "}</Text>
+          <Text color="green">{"██╔══██╗██╔══╝  ██║   ██║██║╚════██║   ██║   ██╔══██╗██║██║"}</Text>
+          <Text>{"  "}</Text>
           <Text color="#FF69B4">{"██║     "}</Text>
           <Text>{"  "}</Text>
           <Text color="#FF1493">{"██║     ██║"}</Text>
@@ -62,8 +62,8 @@ export function Banner() {
           <Text color="cyan">{"██║ ╚═╝ ██║"}</Text>
           <Text color="blue">{"╚██████╗ "}</Text>
           <Text color="magenta">{"██║        "}</Text>
-          <Text color="green">{"██║  ██║███████╗╚██████╔╝██║███████║   ██║   ██║  ██║██║██╣"}</Text>
-          <Text>{"   "}</Text>
+          <Text color="green">{"██║  ██║███████╗╚██████╔╝██║███████║   ██║   ██║  ██║██║██╗"}</Text>
+          <Text>{"  "}</Text>
           <Text color="#FF69B4">{"╚██████╗"}</Text>
           <Text>{"  "}</Text>
           <Text color="#FF1493">{"███████╗██║"}</Text>
@@ -75,8 +75,8 @@ export function Banner() {
           <Text color="cyan">{"╚═╝     ╚═╝"}</Text>
           <Text color="blue">{"╚═════╝ "}</Text>
           <Text color="magenta">{"╚═╝        "}</Text>
-          <Text color="green">{"╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╣"}</Text>
-          <Text>{"   "}</Text>
+          <Text color="green">{"╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝"}</Text>
+          <Text>{"  "}</Text>
           <Text color="#FF69B4">{"╚═════╝"}</Text>
           <Text>{"  "}</Text>
           <Text color="#FF1493">{"╚══════╝╚═╝"}</Text>
