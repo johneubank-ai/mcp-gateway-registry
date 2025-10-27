@@ -1,6 +1,6 @@
 import type {TaskCategory} from "../tasks/types.js";
 
-export type CommandKind = "help" | "ping" | "list" | "init" | "call" | "task" | "exit" | "unknown";
+export type CommandKind = "help" | "ping" | "list" | "servers" | "init" | "call" | "task" | "exit" | "unknown";
 
 export interface BaseParsedCommand {
   kind: CommandKind;
@@ -15,7 +15,7 @@ export interface ExitCommand extends BaseParsedCommand {
 }
 
 export interface PingCommand extends BaseParsedCommand {
-  kind: "ping" | "list" | "init";
+  kind: "ping" | "list" | "servers" | "init";
 }
 
 export interface CallCommand extends BaseParsedCommand {
@@ -57,6 +57,7 @@ const SIMPLE_COMMANDS: Record<string, PingCommand["kind"]> = {
   ping: "ping",
   list: "list",
   tools: "list",
+  servers: "servers",
   init: "init",
   initialize: "init"
 };

@@ -14,15 +14,18 @@ export async function executeSlashCommand(
 
   switch (parsed.kind) {
     case "help":
-      return {lines: [overviewMessage()]};
+      return {lines: [detailedHelpMessage()]};
 
     case "exit":
-      return {lines: ["Goodbye! 👋"], shouldExit: true};
+      return {lines: ["Goodbye!"], shouldExit: true};
 
     case "ping":
     case "list":
     case "init":
       return await executeMcp(parsed.kind, context);
+
+    case "servers":
+      return await executeServers(context);
 
     case "call":
       return await executeCall(parsed, context);
@@ -61,6 +64,65 @@ async function executeMcp(command: "ping" | "list" | "init", context: CommandExe
   return {lines};
 }
 
+async function executeServers(context: CommandExecutionContext) {
+  // Call list_services to get all registered MCP servers
+  const {handshake, response} = await executeMcpCommand(
+    "call",
+    context.gatewayUrl,
+    context.gatewayToken,
+    context.backendToken,
+    {
+      tool: "list_services",
+      args: {}
+    }
+  );
+
+  // Format as compact summary to avoid terminal lag from massive JSON
+  const lines: string[] = [];
+
+  try {
+    const content = (response as any).content;
+    if (!content || !Array.isArray(content) || content.length === 0) {
+      lines.push("No response content");
+      return {lines};
+    }
+
+    const textContent = content[0].text;
+    const data = JSON.parse(textContent);
+
+    if (data && data.services && Array.isArray(data.services)) {
+      lines.push(`Found ${data.services.length} MCP servers:\n`);
+
+      data.services.forEach((service: any, index: number) => {
+        lines.push(`${index + 1}. ${service.server_name || 'Unknown'}`);
+        lines.push(`   Path: ${service.path || 'N/A'}`);
+        lines.push(`   Status: ${service.health_status || 'unknown'} ${service.is_enabled ? '(enabled)' : '(disabled)'}`);
+        if (service.description) {
+          // Truncate long descriptions
+          const desc = service.description.length > 80
+            ? service.description.substring(0, 80) + '...'
+            : service.description;
+          lines.push(`   Description: ${desc}`);
+        }
+        if (service.tags && service.tags.length > 0) {
+          lines.push(`   Tags: ${service.tags.slice(0, 5).join(', ')}${service.tags.length > 5 ? '...' : ''}`);
+        }
+        lines.push(`   Tools: ${service.num_tools || 0}`);
+        lines.push('');
+      });
+
+      lines.push(`Total: ${data.total_count || data.services.length} servers\n`);
+      lines.push('Tip: Ask "tell me more about server X" for detailed info');
+    } else {
+      lines.push("No servers found");
+    }
+  } catch (error) {
+    lines.push(`Error formatting server list: ${(error as Error).message}`);
+  }
+
+  return {lines};
+}
+
 async function executeCall(parsed: CallCommand, context: CommandExecutionContext) {
   if (!parsed.tool) {
     return {lines: ["Tool name is required for /call."], isError: true};
@@ -87,35 +149,70 @@ async function executeCall(parsed: CallCommand, context: CommandExecutionContext
 }
 
 export function overviewMessage(): string {
-  const commands = [
-    { cmd: "/ping", desc: "Check MCP gateway connectivity" },
-    { cmd: "/list", desc: "List MCP tools" },
-    { cmd: "/call", args: "tool=<name> args='<json>'", desc: "Invoke a tool" },
-    { cmd: "/init", desc: "Initialise a session" },
-    { cmd: "/exit", desc: "Exit the CLI (aliases: /quit, /q)" },
+  return [
+    "Chat with me using natural language - I can discover and use MCP tools for you!",
+    "",
+    "Essential commands:",
+    "  /help     Show help message",
+    "  /exit     Exit the CLI",
+    "  /ping     Test gateway connectivity",
+    "  /list     List available tools",
+    "  /servers  List all MCP servers",
+    "",
+    "Examples:",
+    "  \"What MCP tools are available?\"",
+    "  \"What MCP servers are healthy?\"",
+    ""
+  ].join("\n");
+}
+
+export function detailedHelpMessage(): string {
+  const basicCommands = [
     { cmd: "/help", desc: "Show this help message" },
-    { cmd: "/retry", desc: "Retry authentication" },
-    { cmd: "/refresh", desc: "Refresh OAuth tokens (auto-runs generate_creds.sh)" }
+    { cmd: "/servers", desc: "List all MCP servers" },
+    { cmd: "/exit", desc: "Exit the CLI (aliases: /quit, /q)" }
   ];
 
-  const maxCmdLength = Math.max(...commands.map(c => (c.cmd + (c.args ? " " + c.args : "")).length));
+  const advancedCommands = [
+    { cmd: "/ping", desc: "Check MCP gateway connectivity" },
+    { cmd: "/list", desc: "List MCP tools from current server" },
+    { cmd: "/call", args: "tool=<name> args='<json>'", desc: "Invoke a tool directly" },
+    { cmd: "/refresh", desc: "Refresh OAuth tokens" },
+    { cmd: "/retry", desc: "Retry authentication" }
+  ];
 
-  const formatted = commands.map(({ cmd, args, desc }) => {
-    const fullCmd = cmd + (args ? " " + args : "");
-    const padding = " ".repeat(maxCmdLength - fullCmd.length + 2);
-    return `  ${fullCmd}${padding}${desc}`;
-  });
+  const registryCommands = [
+    { cmd: "/service", desc: "Service management (add, delete, monitor, test, groups)" },
+    { cmd: "/import", desc: "Import from registry (dry, apply)" },
+    { cmd: "/user", desc: "User management (create-m2m, create-human, delete, list)" },
+    { cmd: "/diagnostic", desc: "Run diagnostics (run-suite, run-test)" }
+  ];
+
+  const formatCommands = (cmds: Array<{cmd: string; args?: string; desc: string}>) => {
+    const maxLength = Math.max(...cmds.map(c => (c.cmd + (c.args ? " " + c.args : "")).length));
+    return cmds.map(({cmd, args, desc}) => {
+      const full = cmd + (args ? " " + args : "");
+      const padding = " ".repeat(maxLength - full.length + 2);
+      return `  ${full}${padding}${desc}`;
+    });
+  };
 
   return [
-    "Available commands:",
-    ...formatted,
+    "MCP Gateway CLI - Natural Language Interface",
     "",
-    "Registry scripts:",
-    "  /service <subcommand>         Service management (add, delete, monitor, test, groups)",
-    "  /import <subcommand>          Import from registry (dry, apply)",
-    "  /user <subcommand>            User management (create-m2m, create-human, delete, list)",
-    "  /diagnostic <subcommand>      Run diagnostics (run-suite, run-test)",
+    "PREFERRED: Use natural language to interact with MCP tools",
+    "Examples:",
+    "  \"What tools are available?\"",
+    "  \"Check the current time in New York\"",
+    "  \"Find tools for weather information\"",
     "",
-    "Tip: Use natural language when ANTHROPIC_API_KEY is set to let Claude decide which tools to call."
+    "Basic Commands:",
+    ...formatCommands(basicCommands),
+    "",
+    "Advanced Commands (for debugging):",
+    ...formatCommands(advancedCommands),
+    "",
+    "Registry Management:",
+    ...formatCommands(registryCommands)
   ].join("\n");
 }

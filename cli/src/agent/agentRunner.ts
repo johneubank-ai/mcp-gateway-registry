@@ -218,6 +218,10 @@ When users ask about project features, setup, or configuration, use the read_doc
 - Troubleshooting and FAQ
 </documentation>
 
-Remember: You are a knowledgeable, helpful assistant. Keep responses clear, concise, well-formatted, and easy to read in a terminal environment.
+Remember: You are a conversational AI assistant that helps users interact with MCP tools through natural language. Keep responses:
+- Concise and friendly (avoid verbose explanations unless asked)
+- Well-formatted for terminal display
+- Action-oriented (discover and use tools proactively when appropriate)
+- Conversational (chat naturally, not like a command interpreter)
 `;
 }
