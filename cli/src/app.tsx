@@ -65,14 +65,14 @@ export default function App({options}: AppProps) {
   const gatewayUrl = useMemo(() => options.url ?? "http://localhost/mcpgw/mcp", [options.url]);
   const gatewayBaseUrl = useMemo(() => deriveGatewayBase(gatewayUrl), [gatewayUrl]);
   const agentAvailable = useMemo(() => {
-    // Check if either Bedrock (AWS) or Anthropic API credentials are available
-    const hasAwsCredentials = Boolean(
-      process.env.AWS_ACCESS_KEY_ID ||
-      process.env.AWS_SECRET_ACCESS_KEY ||
-      process.env.AWS_PROFILE
-    );
-    const hasAnthropicKey = Boolean(process.env.ANTHROPIC_API_KEY);
-    return hasAwsCredentials || hasAnthropicKey;
+    // Check credentials: AWS Profile, Anthropic API key, or default to true
+    // (let AWS SDK discover execution role credentials at runtime)
+    const hasAwsProfile = Boolean(process.env.AWS_PROFILE);
+    const hasAnthropicKey = Boolean(process.env.ANTHROPIC_API_KEY || process.env.LLM_API_KEY);
+
+    // If no explicit credentials, assume execution role is available
+    // AWS SDK will attempt to get credentials from EC2 instance metadata
+    return hasAwsProfile || hasAnthropicKey || true;
   }, []);
 
   const addMessage = useCallback((role: ChatRole, text: string) => {
@@ -380,7 +380,7 @@ export default function App({options}: AppProps) {
       if (!agentAvailable) {
         addMessage(
           "assistant",
-          "Agent mode is disabled. Configure AWS credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY) for Bedrock, or set ANTHROPIC_API_KEY for direct API access. Alternatively, use slash commands like /ping."
+          "Agent mode is disabled. Configure AWS_PROFILE, ensure execution role is available, or set ANTHROPIC_API_KEY/LLM_API_KEY. Alternatively, use slash commands like /ping."
         );
         return;
       }
