@@ -94,6 +94,40 @@ Build example A2A agents that demonstrate:
   - Demonstrates key A2A features
   - Can be used for demonstrations/tutorials
 
+### 8. Implement A2A Agent Metrics & Analytics
+**Objective**: Track agent discovery, usage patterns, and popularity metrics
+- Build metrics collection for A2A agent interactions:
+  - Agent discovery queries (what agents are being searched for)
+  - Discovery success rates (agents found vs. searches)
+  - Agent usage/invocation frequency
+  - Popularity scores based on discovery and usage
+  - Peer-to-peer communication patterns
+- Integrate with existing metrics service (Prometheus + SQLite)
+- Track in metrics database for historical analysis
+- **Acceptance Criteria**:
+  - Metrics collection for agent discovery and usage
+  - Popularity scoring algorithm implemented
+  - Historical data stored in metrics database
+  - Can query and retrieve agent metrics via API
+
+### 9. Visualize A2A Agent Metrics in Dashboard
+**Objective**: Display agent metrics and insights in the existing UI
+- Add dashboard widgets for A2A agents:
+  - **Agent Popularity Ranking**: Top agents by usage/discovery frequency
+  - **Discovery Trends**: Graph of discovery queries over time
+  - **Agent Collaboration Network**: Show P2P communication patterns between agents
+  - **Usage Analytics**: Agent invocation frequency, response times
+  - **Discovery Heatmap**: Most searched agent capabilities/skills
+  - **Agent Health & Activity**: Recent registrations, updates, last seen times
+- Integrate with existing Grafana dashboards
+- Leverage existing metrics infrastructure
+- **Acceptance Criteria**:
+  - At least 4 dashboard widgets implemented
+  - Charts showing agent popularity, trends, and usage
+  - Real-time metrics updates
+  - Responsive design matching existing UI
+  - Works with example agents
+
 ## Implementation Order
 1. **Phase 1**: Analytics Agent (foundation)
 2. **Phase 2**: Code Review Agent (Strands+AgentCore comparison)
@@ -101,6 +135,8 @@ Build example A2A agents that demonstrate:
 4. **Phase 4**: Documentation Generator Agent (multi-agent orchestration)
 5. **Phase 5**: Developer Guide & Tests (enablement)
 6. **Phase 6**: Demo Script (show & tell)
+7. **Phase 7**: Metrics & Analytics (observability)
+8. **Phase 8**: Dashboard Visualization (insights)
 
 ## Success Metrics
 - [ ] All example agents successfully register with registry
@@ -109,6 +145,9 @@ Build example A2A agents that demonstrate:
 - [ ] Clear documentation for building new agents
 - [ ] Integration tests passing
 - [ ] Working demo showing complete workflow
+- [ ] Agent metrics collected and stored in metrics database
+- [ ] Dashboard displays agent popularity, trends, and usage analytics
+- [ ] Discovery and usage patterns tracked and visualized
 
 ## Related
 - Main Issue: #195 - Add A2A Protocol Support to Registry
@@ -120,3 +159,6 @@ Build example A2A agents that demonstrate:
 - Detailed implementation can be refined once #195 is fully implemented
 - These examples will serve as templates for users building their own agents
 - Focus on clear communication patterns and discovery mechanisms
+- Metrics collection should leverage existing Prometheus + SQLite infrastructure
+- Dashboard visualizations should integrate with Grafana and existing UI patterns
+- Metrics enable understanding of agent ecosystem health, adoption, and usage patterns
