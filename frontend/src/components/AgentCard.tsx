@@ -13,7 +13,8 @@ import {
   ClipboardDocumentIcon,
   ShieldCheckIcon,
   GlobeAltIcon,
-  LockClosedIcon
+  LockClosedIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 
 /**
@@ -38,7 +39,7 @@ interface Agent {
  * Props for the AgentCard component.
  */
 interface AgentCardProps {
-  agent: Agent;
+  agent: Agent & { [key: string]: any };  // Allow additional fields from full agent JSON
   onToggle: (path: string, enabled: boolean) => void;
   onEdit?: (agent: Agent) => void;
   canModify?: boolean;
@@ -108,6 +109,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
   onAgentUpdate
 }) => {
   const [showConfig, setShowConfig] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [selectedIDE, setSelectedIDE] = useState<'vscode' | 'cursor' | 'cline' | 'claude-code'>('vscode');
   const [loadingRefresh, setLoadingRefresh] = useState(false);
 
@@ -373,6 +375,15 @@ const AgentCard: React.FC<AgentCardProps> = ({
             >
               <CogIcon className="h-4 w-4" />
             </button>
+
+            {/* Full Details Button */}
+            <button
+              onClick={() => setShowDetails(true)}
+              className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-700/50 rounded-lg transition-all duration-200 flex-shrink-0"
+              title="View full agent details (JSON)"
+            >
+              <InformationCircleIcon className="h-4 w-4" />
+            </button>
           </div>
 
           {/* Description */}
@@ -507,6 +518,97 @@ const AgentCard: React.FC<AgentCardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Full Details Modal */}
+      {showDetails && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {agent.name} - Full Details (JSON)
+              </h3>
+              <button
+                onClick={() => setShowDetails(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Info Note */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                  Complete Agent Schema
+                </h4>
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  This is the complete A2A agent definition stored in the registry. It includes all metadata, skills, security schemes, and configuration details.
+                </p>
+              </div>
+
+              {/* Full JSON */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-gray-900 dark:text-white">
+                    Agent JSON Schema:
+                  </h4>
+                  <button
+                    onClick={() => {
+                      try {
+                        navigator.clipboard.writeText(JSON.stringify(agent, null, 2));
+                        if (onShowToast) {
+                          onShowToast('Full agent JSON copied to clipboard!', 'success');
+                        }
+                      } catch (error) {
+                        if (onShowToast) {
+                          onShowToast('Failed to copy JSON', 'error');
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
+                  >
+                    <ClipboardDocumentIcon className="h-4 w-4" />
+                    Copy JSON
+                  </button>
+                </div>
+
+                <pre className="p-4 bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded-lg overflow-x-auto text-xs text-gray-900 dark:text-gray-100 max-h-[50vh] overflow-y-auto">
+                  {JSON.stringify(agent, null, 2)}
+                </pre>
+              </div>
+
+              {/* Field Legend */}
+              <div className="bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+                  Field Reference
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Core Fields</h5>
+                    <ul className="space-y-1 text-gray-600 dark:text-gray-400">
+                      <li><code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">protocol_version</code> - A2A protocol version</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">name</code> - Agent display name</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">description</code> - Agent purpose</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">url</code> - Agent endpoint URL</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">path</code> - Registry path</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Metadata Fields</h5>
+                    <ul className="space-y-1 text-gray-600 dark:text-gray-400">
+                      <li><code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">skills</code> - Agent capabilities</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">security_schemes</code> - Auth methods</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">tags</code> - Categorization</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">trust_level</code> - Verification status</li>
+                      <li><code className="bg-gray-200 dark:bg-gray-700 px-1 rounded">metadata</code> - Custom data</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Configuration Modal */}
       {showConfig && (

@@ -6,10 +6,15 @@
   "version": "1.0.0",
   "visibility": "public",
   "trust_level": "community",
-  "tags": "test, code-review, quality-analysis",
+  "tags": [
+    "test",
+    "code-review",
+    "quality-analysis"
+  ],
   "security_schemes": {
     "bearer": {
-      "type": "bearer"
+      "type": "http",
+      "scheme": "bearer"
     }
   },
   "protocol_version": "1.0"

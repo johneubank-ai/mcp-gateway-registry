@@ -2050,8 +2050,8 @@ async def generate_user_token(
                         "token_type": token_data.get("token_type", "Bearer"),
                         "scope": token_data.get("scope", "")
                     },
-                    "keycloak_url": settings.keycloak_url or "http://keycloak:8080",
-                    "realm": settings.keycloak_realm or "mcp-gateway",
+                    "keycloak_url": "http://keycloak:8080",
+                    "realm": "mcp-gateway",
                     "client_id": "user-generated",
                     # Legacy fields for backward compatibility
                     "token_data": token_data,

@@ -6,7 +6,12 @@
   "version": "1.6.3",
   "provider": "Doc Systems",
   "path": "/documentation",
-  "tags": "documentation, code-generation, api-docs, knowledge-management",
+  "tags": [
+    "documentation",
+    "code-generation",
+    "api-docs",
+    "knowledge-management"
+  ],
   "is_enabled": true,
   "num_stars": 31,
   "license": "MIT",

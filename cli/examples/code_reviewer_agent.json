@@ -6,7 +6,12 @@
   "version": "2.1.0",
   "provider": "Example Corp",
   "path": "/code-reviewer",
-  "tags": "code-review, quality-analysis, testing, best-practices",
+  "tags": [
+    "code-review",
+    "quality-analysis",
+    "testing",
+    "best-practices"
+  ],
   "is_enabled": true,
   "num_stars": 42,
   "license": "MIT",
@@ -39,13 +44,25 @@
           },
           "language": {
             "type": "string",
-            "enum": ["python", "javascript", "java", "go", "rust"],
+            "enum": [
+              "python",
+              "javascript",
+              "java",
+              "go",
+              "rust"
+            ],
             "description": "Programming language"
           }
         },
-        "required": ["code", "language"]
+        "required": [
+          "code",
+          "language"
+        ]
       },
-      "tags": ["analysis", "metrics"]
+      "tags": [
+        "analysis",
+        "metrics"
+      ]
     },
     {
       "id": "detect_bugs",
@@ -60,13 +77,23 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["critical", "high", "medium", "low"],
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ],
             "description": "Minimum severity level to report"
           }
         },
-        "required": ["code"]
+        "required": [
+          "code"
+        ]
       },
-      "tags": ["bug-detection", "validation"]
+      "tags": [
+        "bug-detection",
+        "validation"
+      ]
     },
     {
       "id": "suggest_improvements",
@@ -83,19 +110,33 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["performance", "readability", "testability", "security"]
+              "enum": [
+                "performance",
+                "readability",
+                "testability",
+                "security"
+              ]
             },
             "description": "Areas to focus improvements on"
           }
         },
-        "required": ["code"]
+        "required": [
+          "code"
+        ]
       },
-      "tags": ["improvement", "refactoring"]
+      "tags": [
+        "improvement",
+        "refactoring"
+      ]
     }
   ],
   "metadata": {
     "max_code_size_mb": 10,
-    "supported_formats": ["json", "xml", "yaml"],
+    "supported_formats": [
+      "json",
+      "xml",
+      "yaml"
+    ],
     "response_time_ms": 2000,
     "availability": "99.9%"
   }

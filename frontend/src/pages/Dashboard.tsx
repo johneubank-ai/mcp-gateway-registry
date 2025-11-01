@@ -175,21 +175,23 @@ const Dashboard: React.FC = () => {
 
       // Transform agent data from API format to frontend format
       const transformedAgents: Agent[] = agentsList.map((agentInfo: any) => {
-        console.log(`Agent ${agentInfo.name}: last_checked_iso =`, agentInfo.last_checked_iso);
+        // API returns nested structure: agentInfo.server contains the actual agent data
+        const serverData = agentInfo.server || agentInfo;
+        console.log(`Agent ${serverData.name}: last_checked_iso =`, agentInfo._meta);
 
         const transformed = {
-          name: agentInfo.name || 'Unknown Agent',
-          path: agentInfo.path || '',
-          description: agentInfo.description || '',
-          version: agentInfo.version || '1.0.0',
-          visibility: agentInfo.visibility || 'private',
-          trust_level: agentInfo.trust_level || 'community',
-          enabled: agentInfo.enabled !== undefined ? agentInfo.enabled : true,
-          tags: agentInfo.tags || [],
-          last_checked_time: agentInfo.last_checked_iso,
-          usersCount: agentInfo.usersCount || 0,
-          rating: agentInfo.rating || 0,
-          status: mapHealthStatus(agentInfo.health_status || 'healthy')
+          name: serverData.name || 'Unknown Agent',
+          path: serverData.path || '',
+          description: serverData.description || '',
+          version: serverData.version || '1.0.0',
+          visibility: serverData.visibility || 'private',
+          trust_level: serverData.trust_level || 'community',
+          enabled: serverData.enabled !== undefined ? serverData.enabled : true,
+          tags: serverData.tags || [],
+          last_checked_time: agentInfo._meta?.['io.anthropic/registry']?.last_checked || null,
+          usersCount: serverData.usersCount || 0,
+          rating: serverData.rating || 0,
+          status: mapHealthStatus(agentInfo._meta?.['io.anthropic/registry']?.health_status || 'healthy')
         };
 
         console.log(`Transformed agent ${transformed.name}:`, {

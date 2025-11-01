@@ -73,21 +73,15 @@ async def list_agents(
     all_agents = agent_service.list_agents()
     logger.debug(f"Found {len(all_agents)} agents total")
 
-    # Filter to only enabled agents
-    enabled_agents = [
-        agent for agent in all_agents
-        if agent_service.is_agent_enabled(agent.get("path"))
-    ]
-    logger.debug(f"After filtering enabled: {len(enabled_agents)} agents")
-
     # Add metadata for transformation
     agents_with_meta = []
-    for agent in enabled_agents:
-        agent_with_meta = agent.copy()
-        agent_with_meta["is_enabled"] = True
-        agent_with_meta["health_status"] = "healthy"  # A2A agents default to healthy
-        agent_with_meta["last_checked_iso"] = None
-        agents_with_meta.append(agent_with_meta)
+    for agent in all_agents:
+        agent_dict = agent.model_dump()
+        is_enabled = agent_service.is_agent_enabled(agent.path)
+        agent_dict["is_enabled"] = is_enabled
+        agent_dict["health_status"] = "healthy"  # A2A agents default to healthy
+        agent_dict["last_checked_iso"] = None
+        agents_with_meta.append(agent_dict)
 
     # Transform to Anthropic format with pagination
     agent_list = transform_to_agent_list(
@@ -160,14 +154,14 @@ async def list_agent_versions(
         )
 
     # Verify agent is enabled
-    if not agent_service.is_agent_enabled(agent_info.get("path")):
+    if not agent_service.is_agent_enabled(agent_info.path):
         logger.warning(f"Agent is disabled: {lookup_path}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
         )
 
     # Add metadata for transformation
-    agent_with_meta = agent_info.copy()
+    agent_with_meta = agent_info.model_dump()
     agent_with_meta["is_enabled"] = True
     agent_with_meta["health_status"] = "healthy"
     agent_with_meta["last_checked_iso"] = None
@@ -260,7 +254,7 @@ async def get_agent_version(
         )
 
     # Add metadata for transformation
-    agent_with_meta = agent_info.copy()
+    agent_with_meta = agent_info.model_dump()
     agent_with_meta["is_enabled"] = True
     agent_with_meta["health_status"] = "healthy"
     agent_with_meta["last_checked_iso"] = None

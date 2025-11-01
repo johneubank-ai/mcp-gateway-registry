@@ -6,7 +6,12 @@
   "version": "3.2.1",
   "provider": "Analytics Solutions Inc",
   "path": "/data-analysis",
-  "tags": "analytics, data-science, visualization, statistics",
+  "tags": [
+    "analytics",
+    "data-science",
+    "visualization",
+    "statistics"
+  ],
   "is_enabled": true,
   "num_stars": 56,
   "license": "GPL-3.0",
