@@ -37,6 +37,8 @@ UI-Scopes:
     - all
     modify_service:
     - all
+    toggle_service:
+    - all
     delete_agent:
     - all
     list_agents:
@@ -46,6 +48,8 @@ UI-Scopes:
     publish_agent:
     - all
     modify_service:
+    - all
+    toggle_service:
     - all
     list_agents:
     - all
