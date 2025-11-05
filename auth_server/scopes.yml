@@ -35,7 +35,7 @@ UI-Scopes:
   a2a-agent-admin:
     publish_agent:
     - all
-    modify_agent:
+    modify_service:
     - all
     delete_agent:
     - all
@@ -45,7 +45,7 @@ UI-Scopes:
   a2a-agent-publisher:
     publish_agent:
     - all
-    modify_agent:
+    modify_service:
     - all
     list_agents:
     - all
