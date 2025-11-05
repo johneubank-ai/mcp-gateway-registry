@@ -575,11 +575,11 @@ class FaissService:
         if entity_types is None:
             entity_types = ["a2a_agent", "mcp_server"]
 
-        results = await self.search_mixed(
+        results = await asyncio.to_thread(
+            self.search_mixed,
             query=query,
             entity_types=entity_types,
-            enabled_only=enabled_only,
-            max_k=max_results,
+            max_results=max_results,
         )
 
         all_results = []
