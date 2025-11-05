@@ -156,7 +156,7 @@ const Dashboard: React.FC = () => {
       const jwtToken = tokenResponse.data.token_data.access_token;
 
       // Fetch agents with JWT token
-      const response = await axios.get('/v0.1/agents', {
+      const response = await axios.get('/api/agents', {
         headers: {
           'Authorization': `Bearer ${jwtToken}`
         }
