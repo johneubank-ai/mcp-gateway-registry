@@ -125,14 +125,6 @@ const Dashboard: React.FC = () => {
   });
   const [editAgentLoading, setEditAgentLoading] = useState(false);
 
-  // Helper function to map backend health status to frontend status
-  const mapHealthStatus = (healthStatus: string): 'healthy' | 'unhealthy' | 'unknown' => {
-    if (!healthStatus || healthStatus === 'unknown') return 'unknown';
-    if (healthStatus === 'healthy') return 'healthy';
-    if (healthStatus.includes('unhealthy') || healthStatus.includes('error') || healthStatus.includes('timeout')) return 'unhealthy';
-    return 'unknown';
-  };
-
   // Fetch agents from the API
   const fetchAgents = useCallback(async () => {
     try {
@@ -163,7 +155,7 @@ const Dashboard: React.FC = () => {
       });
 
       const responseData = response.data || {};
-      const agentsList = responseData.servers || [];
+      const agentsList = responseData.agents || [];
 
       console.log('Agent filtering debug info:');
       console.log(`Total agents returned from API: ${agentsList.length}`);
@@ -175,29 +167,22 @@ const Dashboard: React.FC = () => {
 
       // Transform agent data from API format to frontend format
       const transformedAgents: Agent[] = agentsList.map((agentInfo: any) => {
-        // API returns nested structure: agentInfo.server contains the actual agent data
-        const serverData = agentInfo.server || agentInfo;
-        console.log(`Agent ${serverData.name}: last_checked_iso =`, agentInfo._meta);
+        console.log(`Processing agent ${agentInfo.name}:`, agentInfo);
 
         const transformed = {
-          name: serverData.name || 'Unknown Agent',
-          path: serverData.path || '',
-          description: serverData.description || '',
-          version: serverData.version || '1.0.0',
-          visibility: serverData.visibility || 'private',
-          trust_level: serverData.trust_level || 'community',
-          enabled: serverData.enabled !== undefined ? serverData.enabled : true,
-          tags: serverData.tags || [],
-          last_checked_time: agentInfo._meta?.['io.anthropic/registry']?.last_checked || null,
-          usersCount: serverData.usersCount || 0,
-          rating: serverData.rating || 0,
-          status: mapHealthStatus(agentInfo._meta?.['io.anthropic/registry']?.health_status || 'healthy')
+          name: agentInfo.name || 'Unknown Agent',
+          path: agentInfo.path || '',
+          description: agentInfo.description || '',
+          trust_level: agentInfo.trust_level || 'community',
+          enabled: agentInfo.is_enabled !== undefined ? agentInfo.is_enabled : false,
+          tags: agentInfo.tags || [],
+          rating: agentInfo.num_stars || 0
         };
 
         console.log(`Transformed agent ${transformed.name}:`, {
-          last_checked_time: transformed.last_checked_time,
-          status: transformed.status,
-          enabled: transformed.enabled
+          enabled: transformed.enabled,
+          trust_level: transformed.trust_level,
+          rating: transformed.rating
         });
 
         return transformed;

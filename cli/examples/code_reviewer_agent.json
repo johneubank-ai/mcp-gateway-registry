@@ -6,12 +6,7 @@
   "version": "2.1.0",
   "provider": "Example Corp",
   "path": "/code-reviewer",
-  "tags": [
-    "code-review",
-    "quality-analysis",
-    "testing",
-    "best-practices"
-  ],
+  "tags": "code-review,quality-analysis,testing,best-practices",
   "is_enabled": true,
   "num_stars": 42,
   "license": "MIT",

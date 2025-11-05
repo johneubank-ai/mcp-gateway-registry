@@ -6,13 +6,7 @@
   "version": "2.3.0",
   "provider": "CloudOps Inc",
   "path": "/devops-deployment",
-  "tags": [
-    "devops",
-    "deployment",
-    "infrastructure",
-    "ci-cd",
-    "cloud"
-  ],
+  "tags": "devops,deployment,infrastructure,ci-cd,cloud",
   "is_enabled": true,
   "num_stars": 64,
   "license": "Apache-2.0",

@@ -6,12 +6,7 @@
   "version": "1.8.2",
   "provider": "Quality Assurance Labs",
   "path": "/test-automation",
-  "tags": [
-    "testing",
-    "automation",
-    "qa",
-    "test-generation"
-  ],
+  "tags": "testing,automation,qa,test-generation",
   "is_enabled": true,
   "num_stars": 38,
   "license": "Apache-2.0",

@@ -6,12 +6,7 @@
   "version": "2.5.0",
   "provider": "CyberSec Corp",
   "path": "/security-analyzer",
-  "tags": [
-    "security",
-    "vulnerability-detection",
-    "compliance",
-    "penetration-testing"
-  ],
+  "tags": "security,vulnerability-detection,compliance,penetration-testing",
   "is_enabled": true,
   "num_stars": 72,
   "license": "MIT",
