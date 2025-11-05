@@ -47,6 +47,7 @@ service account must be assigned to the a2a-agent-admin group in Keycloak.
 """
 
 import argparse
+import base64
 import json
 import logging
 import os
@@ -68,8 +69,33 @@ REQUEST_TIMEOUT: int = 10
 API_BASE: str = "/api/agents"
 
 
-def _load_token(token_file: str) -> str:
-    """Load JWT token from file."""
+def _extract_username_from_jwt(token: str) -> str:
+    """Extract username from JWT token payload."""
+    try:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return "unknown"
+
+        payload = parts[1]
+        padding = 4 - (len(payload) % 4)
+        if padding != 4:
+            payload += "=" * padding
+
+        decoded = base64.urlsafe_b64decode(payload)
+        claims = json.loads(decoded)
+
+        username = claims.get("preferred_username") or claims.get("sub") or "unknown"
+        return username
+    except Exception:
+        return "unknown"
+
+
+def _load_token(token_file: str) -> tuple[str, str]:
+    """Load JWT token from file and extract username.
+
+    Returns:
+        Tuple of (token, username)
+    """
     import os
     abs_path = os.path.abspath(token_file)
     try:
@@ -78,11 +104,12 @@ def _load_token(token_file: str) -> str:
             token = data.get("access_token") or data.get("token")
             if not token:
                 raise ValueError("No access_token found in token file")
+
+            username = _extract_username_from_jwt(token)
             logger.info(f"✓ Token loaded from: {abs_path}")
+            logger.info(f"  User: {username}")
             logger.info(f"  Token length: {len(token)} characters")
-            # Log token prefix for debugging (first 50 chars + ...)
-            logger.debug(f"  Token prefix: {token[:50]}...")
-            return token
+            return token, username
     except FileNotFoundError:
         logger.error(f"✗ Token file not found: {abs_path}")
         logger.error(f"  Current directory: {os.getcwd()}")
@@ -812,7 +839,7 @@ For more information on creating agent JSON files:
 
     # Load token
     try:
-        token = _load_token(args.token_file)
+        token, username = _load_token(args.token_file)
     except (FileNotFoundError, ValueError) as e:
         print(f"Error: {e}")
         sys.exit(1)
