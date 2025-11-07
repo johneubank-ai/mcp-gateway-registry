@@ -19,7 +19,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 
-from ..auth.dependencies import nginx_proxied_auth
+from ..auth.dependencies import nginx_proxied_auth, SCOPES_CONFIG
 from ..services.agent_service import agent_service
 from ..schemas.agent_models import (
     AgentCard,
@@ -110,12 +110,36 @@ def _filter_agents_by_access(
     """
     accessible = []
     user_groups = set(user_context.get("groups", []))
+    user_scopes = user_context.get("scopes", [])
     username = user_context["username"]
     is_admin = user_context.get("is_admin", False)
+
+    # Build set of allowed agents from user's scopes (IAM-style)
+    # agents: { actions: [{ action: list_agents, resources: [/test-automation, /documentation] }] }
+    allowed_agents = set()
+    has_agent_restrictions = False
+
+    # Check if there's a top-level "agents" key with IAM-style config
+    agents_config = SCOPES_CONFIG.get("agents", {})
+    if isinstance(agents_config, dict) and "actions" in agents_config:
+        has_agent_restrictions = True
+        actions = agents_config.get("actions", [])
+        for action_item in actions:
+            if isinstance(action_item, dict):
+                resources = action_item.get("resources", [])
+                allowed_agents.update(resources)
+                logger.debug(
+                    f"Found agent restrictions for actions, allowed resources: {resources}"
+                )
 
     for agent in agents:
         if is_admin:
             accessible.append(agent)
+            continue
+
+        # Check if user has agent-level restrictions from scopes
+        if has_agent_restrictions and agent.path not in allowed_agents:
+            logger.debug(f"Agent {agent.path} filtered out: not in allowed agents {allowed_agents}")
             continue
 
         if agent.visibility == "public":

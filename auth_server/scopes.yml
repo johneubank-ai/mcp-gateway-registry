@@ -54,10 +54,6 @@ UI-Scopes:
     list_agents:
     - all
 
-  a2a-agent-user:
-    list_agents:
-    - all
-
 group_mappings:
   mcp-registry-admin:
   - mcp-registry-admin
@@ -90,7 +86,6 @@ group_mappings:
   - mcp-servers-restricted/execute
   a2a-agent-user:
   - a2a-agent-user
-  - mcp-servers-restricted/read
 mcp-servers-unrestricted/read:
 - server: auth_server
   methods:
@@ -610,13 +605,35 @@ a2a-agent-publisher:
   - modify_agent
 
 a2a-agent-user:
-- server: a2a-gateway
+- server: currenttime
   methods:
   - initialize
   - notifications/initialized
   - ping
-  - list_agents
-  - get_agent
+  - tools/list
+  - tools/call
+  - resources/list
+  - resources/templates/list
   tools:
-  - list_agents
-  - get_agent
+  - current_time_by_timezone
+- server: mcpgw
+  methods:
+  - initialize
+  - notifications/initialized
+  - ping
+  - tools/list
+  - tools/call
+  - resources/list
+  - resources/templates/list
+  tools:
+  - intelligent_tool_finder
+agents:
+  actions:
+  - action: list_agents
+    resources:
+    - /test-automation
+    - /documentation
+  - action: get_agent
+    resources:
+    - /test-automation
+    - /documentation

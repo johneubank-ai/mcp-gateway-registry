@@ -1032,18 +1032,20 @@ async def validate_request(request: Request):
             logger.info(f"Mapped Keycloak groups {user_groups} to scopes: {user_scopes}")
         else:
             user_scopes = validation_result.get('scopes', [])
-        if request_payload and server_name and tool_name:
-            # Extract method and actual tool name
-            method = tool_name  # The extracted tool_name is actually the method
+        if server_name:
+            # For ANY server access, enforce scope validation (fail closed principle)
+            # This includes MCP initialization methods that may not have a specific tool
+
+            method = tool_name if tool_name else "initialize"  # Default to initialize if no tool specified
             actual_tool_name = None
-            
+
             # For tools/call, extract the actual tool name from params
             if method == 'tools/call' and isinstance(request_payload, dict):
                 params = request_payload.get('params', {})
                 if isinstance(params, dict):
                     actual_tool_name = params.get('name')
                     logger.info(f"Extracted actual tool name for tools/call: '{actual_tool_name}'")
-            
+
             # Check if user has any scopes - if not, deny access (fail closed)
             if not user_scopes:
                 logger.warning(f"Access denied for user {hash_username(validation_result.get('username', ''))} to {server_name}.{method} (tool: {actual_tool_name}) - no scopes configured")
@@ -1052,7 +1054,7 @@ async def validate_request(request: Request):
                     detail=f"Access denied to {server_name}.{method} - user has no scopes configured",
                     headers={"Connection": "close"}
                 )
-            
+
             if not validate_server_tool_access(server_name, method, actual_tool_name, user_scopes):
                 logger.warning(f"Access denied for user {hash_username(validation_result.get('username', ''))} to {server_name}.{method} (tool: {actual_tool_name})")
                 raise HTTPException(
@@ -1061,10 +1063,8 @@ async def validate_request(request: Request):
                     headers={"Connection": "close"}
                 )
             logger.info(f"Scope validation passed for {server_name}.{method} (tool: {actual_tool_name})")
-        elif server_name or tool_name:
-            logger.debug(f"Partial server/tool info available (server='{server_name}', tool='{tool_name}'), skipping scope validation")
         else:
-            logger.debug("No server/tool information available, skipping scope validation")
+            logger.debug("No server information available, skipping scope validation")
         
         # Prepare JSON response data
         response_data = {

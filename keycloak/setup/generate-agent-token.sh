@@ -11,7 +11,11 @@ CLIENT_ID=""
 CLIENT_SECRET=""
 KEYCLOAK_URL=""
 KEYCLOAK_REALM="mcp-gateway"
-OAUTH_TOKENS_DIR="../../.oauth-tokens"
+
+# Determine the project root directory (parent of keycloak/setup directory)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+OAUTH_TOKENS_DIR="${PROJECT_ROOT}/.oauth-tokens"
 VERBOSE=false
 
 # Colors for output

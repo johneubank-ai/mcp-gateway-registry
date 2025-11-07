@@ -51,7 +51,9 @@ import base64
 import json
 import logging
 import os
+import subprocess
 import sys
+import time
 from typing import Any, Dict, Optional
 
 import requests
@@ -90,13 +92,123 @@ def _extract_username_from_jwt(token: str) -> str:
         return "unknown"
 
 
+def _get_token_expiration(token: str) -> Optional[int]:
+    """Extract expiration timestamp from JWT token.
+
+    Returns:
+        Expiration timestamp (seconds since epoch) or None if unable to extract
+    """
+    try:
+        parts = token.split(".")
+        if len(parts) != 3:
+            return None
+
+        payload = parts[1]
+        padding = 4 - (len(payload) % 4)
+        if padding != 4:
+            payload += "=" * padding
+
+        decoded = base64.urlsafe_b64decode(payload)
+        claims = json.loads(decoded)
+        return claims.get("exp")
+    except Exception:
+        return None
+
+
+def _is_token_expired(token: str, buffer_seconds: int = 30) -> bool:
+    """Check if token is expired or about to expire.
+
+    Args:
+        token: JWT token string
+        buffer_seconds: Seconds before actual expiration to consider token expired
+
+    Returns:
+        True if token is expired or expiring soon, False otherwise
+    """
+    exp_timestamp = _get_token_expiration(token)
+    if exp_timestamp is None:
+        return False
+
+    current_time = time.time()
+    return current_time >= (exp_timestamp - buffer_seconds)
+
+
+def _regenerate_token(token_file: str) -> bool:
+    """Regenerate token using generate_creds.sh script.
+
+    Args:
+        token_file: Path to the token file
+
+    Returns:
+        True if regeneration succeeded, False otherwise
+    """
+    logger.info(f"Token expired, regenerating credentials...")
+
+    # Extract the agent name from token file if it's a bot account
+    # e.g., .oauth-tokens/bot-x-token.json -> bot-x
+    token_filename = os.path.basename(token_file)
+    if token_filename.endswith("-token.json"):
+        agent_name = token_filename[:-11]  # Remove "-token.json"
+    else:
+        # Fallback to running generate_creds.sh for main ingress token
+        agent_name = None
+
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+
+        if agent_name:
+            # Use generate-agent-token.sh for specific agent
+            # Call from keycloak/setup directory so relative paths work
+            token_script = os.path.join(project_root, "keycloak/setup/generate-agent-token.sh")
+            keycloak_setup_dir = os.path.join(project_root, "keycloak/setup")
+            logger.info(f"Running: {token_script} {agent_name}")
+            result = subprocess.run(
+                [token_script, agent_name],
+                cwd=keycloak_setup_dir,  # Run from keycloak/setup so ../../.oauth-tokens works
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+        else:
+            # Use generate_creds.sh for ingress token
+            creds_script = os.path.join(project_root, "credentials-provider/generate_creds.sh")
+            logger.info(f"Running: {creds_script} --ingress-only")
+            result = subprocess.run(
+                [creds_script, "--ingress-only"],
+                cwd=project_root,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+        if result.returncode == 0:
+            logger.info(f"✓ Token regenerated successfully")
+            return True
+        else:
+            logger.error(f"✗ Token regeneration failed")
+            logger.error(f"  Error output: {result.stderr}")
+            return False
+
+    except FileNotFoundError as e:
+        logger.error(f"✗ Token regeneration script not found: {e}")
+        return False
+    except subprocess.TimeoutExpired:
+        logger.error(f"✗ Token regeneration script timed out")
+        return False
+    except Exception as e:
+        logger.error(f"✗ Token regeneration failed: {e}")
+        return False
+
+
 def _load_token(token_file: str) -> tuple[str, str]:
     """Load JWT token from file and extract username.
+
+    If token is expired, automatically regenerate it.
 
     Returns:
         Tuple of (token, username)
     """
-    import os
     abs_path = os.path.abspath(token_file)
     try:
         with open(abs_path) as f:
@@ -104,6 +216,19 @@ def _load_token(token_file: str) -> tuple[str, str]:
             token = data.get("access_token") or data.get("token")
             if not token:
                 raise ValueError("No access_token found in token file")
+
+            # Check if token is expired
+            if _is_token_expired(token):
+                logger.warning(f"Token is expired or expiring soon, regenerating...")
+                if _regenerate_token(token_file):
+                    # Reload token from file after regeneration
+                    with open(abs_path) as f2:
+                        data = json.load(f2)
+                        token = data.get("access_token") or data.get("token")
+                        if not token:
+                            raise ValueError("No access_token found after regeneration")
+                else:
+                    raise RuntimeError("Failed to regenerate expired token")
 
             username = _extract_username_from_jwt(token)
             logger.info(f"✓ Token loaded from: {abs_path}")
