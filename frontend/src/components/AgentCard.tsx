@@ -113,6 +113,7 @@ const AgentCard: React.FC<AgentCardProps> = ({
   const [loadingRefresh, setLoadingRefresh] = useState(false);
   const [fullAgentDetails, setFullAgentDetails] = useState<any>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [selectedCliCommand, setSelectedCliCommand] = useState<'register' | 'list' | 'get' | 'test' | 'test-all' | 'search' | 'update' | 'toggle' | 'delete'>('list');
 
   const getStatusIcon = () => {
     switch (agent.status) {
@@ -195,6 +196,79 @@ const AgentCard: React.FC<AgentCardProps> = ({
       setLoadingRefresh(false);
     }
   }, [agent.path, loadingRefresh, onRefreshSuccess, onShowToast, onAgentUpdate]);
+
+  /**
+   * Generate CLI command for agent management.
+   */
+  const generateCliCommand = useCallback((): string => {
+    const agentPath = agent.path;
+    const agentName = agent.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+    switch (selectedCliCommand) {
+      case 'list':
+        return 'uv run python cli/agent_mgmt.py list';
+
+      case 'get':
+        return `uv run python cli/agent_mgmt.py get ${agentPath}`;
+
+      case 'test':
+        return `uv run python cli/agent_mgmt.py test ${agentPath}`;
+
+      case 'test-all':
+        return 'uv run python cli/agent_mgmt.py test-all';
+
+      case 'search':
+        return `uv run python cli/agent_mgmt.py search "${agent.name}"`;
+
+      case 'update':
+        return `uv run python cli/agent_mgmt.py update ${agentPath} cli/examples/${agentName}_agent.json`;
+
+      case 'toggle':
+        return `uv run python cli/agent_mgmt.py toggle ${agentPath} true   # Enable\nuv run python cli/agent_mgmt.py toggle ${agentPath} false  # Disable`;
+
+      case 'delete':
+        return `uv run python cli/agent_mgmt.py delete ${agentPath}`;
+
+      case 'register':
+      default:
+        return `uv run python cli/agent_mgmt.py register cli/examples/${agentName}_agent.json`;
+    }
+  }, [selectedCliCommand, agent.path, agent.name]);
+
+  /**
+   * Get description for the selected CLI command.
+   */
+  const getCliCommandDescription = useCallback((): string => {
+    switch (selectedCliCommand) {
+      case 'list':
+        return 'List all agents (filtered by your permissions). Shows agent summaries with basic metadata.';
+
+      case 'get':
+        return 'Retrieve the complete agent card for a specific agent, including all metadata, skills, and configuration.';
+
+      case 'test':
+        return 'Verify agent registration in registry and test endpoint accessibility. Checks health status.';
+
+      case 'test-all':
+        return 'Test all registered agents to verify they are accessible and healthy.';
+
+      case 'search':
+        return 'Perform semantic search to find agents by capability. Searches by name, description, and tags.';
+
+      case 'update':
+        return 'Update an agent\'s metadata and configuration. Requires the agent JSON file with updated values.';
+
+      case 'toggle':
+        return 'Enable or disable an agent in the registry without deleting it. Useful for maintenance.';
+
+      case 'delete':
+        return 'Remove an agent from the registry. This action is permanent.';
+
+      case 'register':
+      default:
+        return 'Register a new agent with the registry. Requires a properly formatted agent JSON file with metadata, skills, and security schemes.';
+    }
+  }, [selectedCliCommand]);
 
   /**
    * Generate agent configuration for discovery/information.
@@ -315,6 +389,25 @@ const AgentCard: React.FC<AgentCardProps> = ({
       }
     }
   }, [generateAgentConfig, onShowToast]);
+
+  /**
+   * Copy CLI command to clipboard.
+   */
+  const copyCliCommandToClipboard = useCallback(async () => {
+    try {
+      const command = generateCliCommand();
+      await navigator.clipboard.writeText(command);
+
+      if (onShowToast) {
+        onShowToast('CLI command copied to clipboard!', 'success');
+      }
+    } catch (error) {
+      console.error('Failed to copy CLI command:', error);
+      if (onShowToast) {
+        onShowToast('Failed to copy CLI command', 'error');
+      }
+    }
+  }, [generateCliCommand, onShowToast]);
 
   return (
     <>
@@ -661,6 +754,62 @@ const AgentCard: React.FC<AgentCardProps> = ({
                 <p className="text-sm text-amber-800 dark:text-amber-200">
                   This configuration requires gateway authentication tokens. The tokens authenticate your AI assistant
                   with the MCP Gateway, not the individual agent. Visit the authentication documentation for setup instructions.
+                </p>
+              </div>
+
+              {/* CLI Commands Section */}
+              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                <h4 className="font-medium text-purple-900 dark:text-purple-100 mb-3">
+                  CLI Agent Management Commands
+                </h4>
+                <p className="text-sm text-purple-800 dark:text-purple-200 mb-4">
+                  Manage agents from the command line using the A2A CLI. Reference the <a href="https://github.com/agentic-community/mcp-gateway-registry/blob/main/docs/a2a-agent-management.md" target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline">A2A Agent Management Guide</a> for complete documentation.
+                </p>
+
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-purple-900 dark:text-purple-100 mb-2">
+                    Select Command:
+                  </label>
+                  <select
+                    value={selectedCliCommand}
+                    onChange={(e) => setSelectedCliCommand(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-purple-300 dark:border-purple-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="list">List agents</option>
+                    <option value="get">Get agent details</option>
+                    <option value="test">Test agent (single)</option>
+                    <option value="test-all">Test all agents</option>
+                    <option value="search">Search agents</option>
+                    <option value="register">Register agent</option>
+                    <option value="update">Update agent</option>
+                    <option value="toggle">Toggle agent (enable/disable)</option>
+                    <option value="delete">Delete agent</option>
+                  </select>
+                </div>
+
+                <div className="mb-3">
+                  <p className="text-xs text-purple-700 dark:text-purple-300 mb-2">
+                    <strong>Description:</strong> {getCliCommandDescription()}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-xs font-medium text-purple-900 dark:text-purple-100">Command:</span>
+                  <button
+                    onClick={copyCliCommandToClipboard}
+                    className="flex items-center gap-1 px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded transition-colors duration-200"
+                  >
+                    <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+                    Copy
+                  </button>
+                </div>
+
+                <pre className="p-3 bg-gray-900 text-green-400 border border-purple-300 dark:border-purple-600 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap break-words">
+                  {generateCliCommand()}
+                </pre>
+
+                <p className="text-xs text-purple-700 dark:text-purple-300 mt-3">
+                  <strong>Note:</strong> Generate fresh credentials before running: <code className="bg-purple-100 dark:bg-purple-900 px-1 rounded">./credentials-provider/generate_creds.sh</code>
                 </p>
               </div>
 
