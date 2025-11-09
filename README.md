@@ -19,7 +19,7 @@
 
 ## What is MCP Gateway & Registry?
 
-The **MCP Gateway & Registry** is an enterprise-ready platform that centralizes access to MCP Servers and AI Agents using the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction). It serves as both a unified MCP Server Gateway and an Agent Registry where autonomous AI agents can register, discover, and communicate with other agents through the [A2A (Agent-to-Agent) Protocol](docs/a2a.md). The platform integrates with external registries such as Anthropic's MCP Registry (and more to come), providing a single control plane for both tool access and agent orchestration.
+The **MCP Gateway & Registry** is an enterprise-ready platform that centralizes access to MCP Servers and AI Agents using the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction). It serves as both a unified MCP Server Gateway and an Agent Registry where autonomous AI agents can register, discover, and communicate with other agents through the [A2A (Agent-to-Agent) Protocol](https://a2a-protocol.org/latest/specification/). The platform integrates with external registries such as Anthropic's MCP Registry (and more to come), providing a single control plane for both tool access and agent orchestration.
 
 Instead of managing hundreds of individual MCP server configurations and agent connections across your development teams, provide secure, governed access to curated MCP servers and registered agents through a single platform.
 
