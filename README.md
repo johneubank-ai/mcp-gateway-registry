@@ -80,7 +80,7 @@ https://github.com/user-attachments/assets/f539f784-17f5-4658-99b3-d664bd5cecaa
 
 ## MCP Tools in Action
 
-[![MCP Tools Demo](docs/img/MCP_tools.gif)](docs/img/MCP_tools.gif)
+[View MCP Tools Demo GIF](docs/img/MCP_tools.gif)
 
 ---
 
