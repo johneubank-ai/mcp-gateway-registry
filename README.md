@@ -325,6 +325,22 @@ For detailed information about all Docker images used with `--prebuilt`, see [Pr
 **Step 5: Initialize Keycloak**
 Complete: **[Initialize Keycloak Configuration](docs/complete-setup-guide.md#initialize-keycloak-configuration)** - Set up identity provider and security policies
 
+**Step 5.5: Set up users and service accounts**
+Run the bootstrap script to create default users and M2M service accounts:
+```bash
+./cli/bootstrap_user_and_m2m_setup.sh
+```
+
+This script:
+- Creates 3 Keycloak groups: `registry-users-lob1`, `registry-users-lob2`, `registry-admins`
+- Creates 6 users for testing and management:
+  - **LOB1**: `lob1-bot` (M2M service account) and `lob1-user` (human user)
+  - **LOB2**: `lob2-bot` (M2M service account) and `lob2-user` (human user)
+  - **Admin**: `admin-bot` (M2M service account) and `admin-user` (human user)
+- Generates and saves OAuth credentials to `.oauth-tokens/` directory
+
+All user passwords default to the value set in your `.env` file (`INITIAL_USER_PASSWORD`).
+
 **Step 6: Access the registry**
 ```bash
 open http://localhost:7860
