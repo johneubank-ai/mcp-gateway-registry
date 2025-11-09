@@ -376,6 +376,27 @@ else
 fi
 
 ################################################################################
+# STEP 9: RE-CREATE the Agent (Restore to Clean State)
+################################################################################
+section "STEP 9: RE-CREATE - Restore Agent to Clean State"
+
+print_cmd "POST /api/agents/register"
+
+RESPONSE=$(curl -s -X POST \
+  "$HOST/api/agents/register" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{\n    "protocol_version": "1.0",\n    "name": "Code Reviewer Agent",\n    "description": "Reviews code for quality and best practices",\n    "url": "https://code-reviewer.example.com",\n    "path": "'"$FULL_PATH"'",\n    "skills": [\n      {\n        "id": "review-python",\n        "name": "Python Code Review",\n        "description": "Reviews Python code",\n        "parameters": {\n          "code_snippet": {"type": "string"}\n        },\n        "tags": ["python", "review"]\n      }\n    ],\n    "security_schemes": {\n      "bearer": {"type": "bearer", "description": "Bearer token"}\n    },\n    "security": ["bearer"],\n    "tags": ["code-review", "qa"],\n    "visibility": "public",\n    "trust_level": "verified"\n  }')
+
+print_response "$RESPONSE"
+
+if echo "$RESPONSE" | jq -e '.path' >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ Agent re-created successfully!${NC}"
+else
+    echo -e "${RED}✗ Failed to re-create agent${NC}"
+fi
+
+################################################################################
 # Summary
 ################################################################################
 section "CRUD Operations Summary"
@@ -391,8 +412,10 @@ What we just did:
 6. TOGGLE    - Re-enabled the agent
 7. DELETE    - Removed the agent
 8. VERIFY    - Confirmed the agent no longer exists
+9. RE-CREATE - Restored the agent to clean state
 
 All operations shown with actual HTTP requests and responses!
+The agent is now registered and ready for use.
 
 Next steps:
 - Check files: cat registry/agents/agent_state.json | jq .

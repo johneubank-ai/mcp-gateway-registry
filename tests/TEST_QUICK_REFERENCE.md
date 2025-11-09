@@ -44,7 +44,7 @@
 ./tests/run_all_tests.sh --skip-production
 
 # LOB Bot Access Control Tests (separate)
-# See LOB_BOT_ACCESS_CONTROL_TESTING.md for details
+# See lob-bot-access-control-testing.md for details
 bash tests/run-lob-bot-tests.sh
 ```
 
@@ -119,7 +119,7 @@ Failed Tests:  5
 
 For comprehensive testing of access control for LOB1, LOB2, and Admin bots:
 
-**See:** [LOB_BOT_ACCESS_CONTROL_TESTING.md](./LOB_BOT_ACCESS_CONTROL_TESTING.md)
+**See:** [lob-bot-access-control-testing.md](./lob-bot-access-control-testing.md)
 
 This covers:
 - **MCP Service Access** (Tests 1-6): Verify bots can only call permitted services
@@ -166,7 +166,7 @@ If tests are failing and you can't figure out why:
 
 - [Full Testing Guide](../docs/testing.md)
 - [Anthropic API](../docs/anthropic_registry_api.md)
-- [LOB Bot Access Control Testing](./LOB_BOT_ACCESS_CONTROL_TESTING.md)
+- [LOB Bot Access Control Testing](./lob-bot-access-control-testing.md)
 - [Scopes Configuration](../auth_server/scopes.yml)
 - [Agent Routes](../registry/api/agent_routes.py)
 
@@ -177,7 +177,7 @@ If tests are failing and you can't figure out why:
 3. **Check logs immediately** if any test fails
 4. **Production tests are mandatory** for PR merge
 5. **Don't skip tests** - they catch real issues!
-6. **Test access control separately** with LOB bot tests - see [LOB_BOT_ACCESS_CONTROL_TESTING.md](./LOB_BOT_ACCESS_CONTROL_TESTING.md)
+6. **Test access control separately** with LOB bot tests - see [lob-bot-access-control-testing.md](./lob-bot-access-control-testing.md)
 
 ## Typical Runtimes
 
