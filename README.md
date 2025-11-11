@@ -144,7 +144,7 @@ Interactive terminal interface for chatting with AI models and discovering MCP t
 
 ## A2A Agents - Example Implementations
 
-The registry includes two example A2A agents built with [AWS Bedrock AgentCore](https://docs.aws.amazon.com/bedrock/latest/userguide/agentcore-setup.html) and the [Strands framework](https://docs.strands-ai.com/). These agents demonstrate how to implement, register, and discover agents through the unified Agent Registry.
+The registry includes two example A2A agents built with [Amazon Bedrock AgentCore](https://docs.aws.amazon.com/bedrock/latest/userguide/agentcore-setup.html) and the [Strands framework](https://docs.strands-ai.com/). These agents demonstrate how to implement, register, and discover agents through the unified Agent Registry.
 
 ### Example Agents
 
