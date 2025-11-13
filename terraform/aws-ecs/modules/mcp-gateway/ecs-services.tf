@@ -574,6 +574,10 @@ module "ecs_service_keycloak" {
           value = "edge"
         },
         {
+          name  = "KC_PROXY_ADDRESS_FORWARDING"
+          value = "true"
+        },
+        {
           name  = "KC_FEATURES"
           value = "token-exchange,admin-api"
         },
