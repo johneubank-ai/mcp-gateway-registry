@@ -30,13 +30,17 @@ resource "aws_db_proxy_target" "keycloak" {
   db_proxy_name         = aws_db_proxy.keycloak.name
   target_group_name     = "default"
   db_cluster_identifier = aws_rds_cluster.keycloak.cluster_identifier
+
+  depends_on = [
+    aws_rds_cluster_instance.keycloak
+  ]
 }
 
 # Aurora MySQL Serverless v2 Cluster
 resource "aws_rds_cluster" "keycloak" {
   cluster_identifier      = "keycloak"
   engine                  = "aurora-mysql"
-  engine_version          = "8.0.mysql_aurora.3.02.0"
+  engine_version          = "8.0.mysql_aurora.3.04.0"
   database_name           = "keycloak"
   master_username         = var.keycloak_database_username
   master_password         = var.keycloak_database_password
@@ -48,7 +52,7 @@ resource "aws_rds_cluster" "keycloak" {
   # Backup and maintenance
   backup_retention_period      = 7
   preferred_backup_window      = "02:00-04:00"
-  preferred_maintenance_window = "sun:03:00-sun:04:00"
+  preferred_maintenance_window = "sun:04:00-sun:05:00"
   copy_tags_to_snapshot        = true
 
   # Encryption
@@ -58,6 +62,12 @@ resource "aws_rds_cluster" "keycloak" {
   # Deletion protection
   deletion_protection = false
   skip_final_snapshot = true
+
+  # Serverless v2 scaling
+  serverlessv2_scaling_configuration {
+    max_capacity = var.keycloak_database_max_acu
+    min_capacity = var.keycloak_database_min_acu
+  }
 
   tags = local.common_tags
 }
@@ -180,7 +190,7 @@ resource "aws_secretsmanager_secret_version" "keycloak_db_secret" {
 resource "aws_ssm_parameter" "keycloak_database_url" {
   name  = "/keycloak/database/url"
   type  = "SecureString"
-  value = "jdbc:mysql://${aws_db_proxy.keycloak.endpoint}:3306/keycloak"
+  value = "jdbc:mysql://${aws_rds_cluster.keycloak.endpoint}:3306/keycloak"
   tags  = local.common_tags
 }
 
