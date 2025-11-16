@@ -1,0 +1,150 @@
+{
+  "deployment_summary": {
+    "sensitive": false,
+    "type": [
+      "object",
+      {
+        "autoscaling_enabled": "bool",
+        "https_enabled": "bool",
+        "mcp_gateway_deployed": "bool",
+        "monitoring_enabled": "bool",
+        "multi_az_nat": "bool"
+      }
+    ],
+    "value": {
+      "autoscaling_enabled": true,
+      "https_enabled": true,
+      "mcp_gateway_deployed": true,
+      "monitoring_enabled": true,
+      "multi_az_nat": true
+    }
+  },
+  "ecs_cluster_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:ecs:us-west-2:605134468121:cluster/mcp-gateway-ecs-cluster"
+  },
+  "ecs_cluster_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "mcp-gateway-ecs-cluster"
+  },
+  "keycloak_admin_console": {
+    "sensitive": false,
+    "type": "string",
+    "value": "https://kc.mycorp.click/admin"
+  },
+  "keycloak_alb_dns": {
+    "sensitive": false,
+    "type": "string",
+    "value": "keycloak-alb-441165282.us-west-2.elb.amazonaws.com"
+  },
+  "keycloak_ecr_repository": {
+    "sensitive": false,
+    "type": "string",
+    "value": "605134468121.dkr.ecr.us-west-2.amazonaws.com/keycloak"
+  },
+  "keycloak_url": {
+    "sensitive": false,
+    "type": "string",
+    "value": "https://kc.mycorp.click"
+  },
+  "mcp_gateway_alb_dns": {
+    "sensitive": false,
+    "type": "string",
+    "value": "mcp-gateway-v2-alb-1744109939.us-west-2.elb.amazonaws.com"
+  },
+  "mcp_gateway_auth_url": {
+    "sensitive": false,
+    "type": "string",
+    "value": "https://registry.mycorp.click:8888"
+  },
+  "mcp_gateway_autoscaling_enabled": {
+    "sensitive": false,
+    "type": "bool",
+    "value": true
+  },
+  "mcp_gateway_https_enabled": {
+    "sensitive": false,
+    "type": "bool",
+    "value": true
+  },
+  "mcp_gateway_monitoring_enabled": {
+    "sensitive": false,
+    "type": "bool",
+    "value": true
+  },
+  "mcp_gateway_url": {
+    "sensitive": false,
+    "type": "string",
+    "value": "https://registry.mycorp.click"
+  },
+  "private_subnet_ids": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "subnet-0b5eb80ca8fa1cd82",
+      "subnet-056bb8feff2b7c0d9",
+      "subnet-0b792532624087047"
+    ]
+  },
+  "public_subnet_ids": {
+    "sensitive": false,
+    "type": [
+      "tuple",
+      [
+        "string",
+        "string",
+        "string"
+      ]
+    ],
+    "value": [
+      "subnet-067e919ff6d9fa673",
+      "subnet-046fc71554f05a4ff",
+      "subnet-075a33aaddc35b188"
+    ]
+  },
+  "registry_certificate_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:acm:us-west-2:605134468121:certificate/e4af93fb-c417-43b7-83ec-76f13297c2d1"
+  },
+  "registry_dns_record": {
+    "sensitive": false,
+    "type": [
+      "object",
+      {
+        "name": "string",
+        "type": "string",
+        "zone_id": "string"
+      }
+    ],
+    "value": {
+      "name": "registry.mycorp.click",
+      "type": "A",
+      "zone_id": "Z06844641MWBZH6RFWBDI"
+    }
+  },
+  "registry_url": {
+    "sensitive": false,
+    "type": "string",
+    "value": "https://registry.mycorp.click"
+  },
+  "vpc_cidr": {
+    "sensitive": false,
+    "type": "string",
+    "value": "10.0.0.0/16"
+  },
+  "vpc_id": {
+    "sensitive": false,
+    "type": "string",
+    "value": "vpc-03e5ac90fafe98a38"
+  }
+}

@@ -40,7 +40,7 @@ resource "aws_db_proxy_target" "keycloak" {
 resource "aws_rds_cluster" "keycloak" {
   cluster_identifier      = "keycloak"
   engine                  = "aurora-mysql"
-  engine_version          = "8.0.mysql_aurora.3.04.0"
+  engine_version          = "8.0.mysql_aurora.3.08.2"
   database_name           = "keycloak"
   master_username         = var.keycloak_database_username
   master_password         = var.keycloak_database_password

@@ -215,6 +215,144 @@ aws logs tail /aws/ecs/mcp-gateway/registry --follow
 - Keycloak for user authentication
 - Fine-grained authorization via scopes
 
+## 🎬 Post-Deployment Setup
+
+After Terraform completes, follow these steps to configure Keycloak, create users, and register servers.
+
+### **Step 1: Save Terraform Outputs**
+```bash
+cd /home/ubuntu/repos/mcp-gateway-registry/terraform/aws-ecs
+
+# Save outputs to JSON file for scripts to use
+./scripts/save-terraform-outputs.sh
+```
+
+### **Step 2: Initialize Keycloak**
+```bash
+# Initialize Keycloak realm, clients, groups, and users
+# This automatically loads configuration from terraform-outputs.json
+cd scripts
+./init-keycloak.sh
+```
+
+**What this creates:**
+- Realm: `mcp-gateway`
+- OAuth2 Clients: `mcp-gateway-web`, `mcp-gateway-m2m`
+- Groups: `mcp-registry-admin`, `mcp-servers-unrestricted`, `mcp-servers-restricted`, etc.
+- Users: `admin`, `testuser`
+- Service account: `service-account-mcp-gateway-m2m`
+
+**⚠️ IMPORTANT:** You must complete this step before creating additional users in Step 3, as it creates the required groups.
+
+### **Step 3: Create M2M Admin Bot Account**
+```bash
+# Create a generic M2M admin bot for server management
+# The script automatically loads Keycloak URL and credentials
+./user_mgmt.sh create-m2m \
+  --name registry-admin-bot \
+  --groups 'mcp-registry-admin' \
+  --description 'Registry admin bot for server management and administration tasks'
+```
+
+**Credentials saved to:**
+- `.oauth-tokens/registry-admin-bot.json` - Client credentials
+- `.oauth-tokens/registry-admin-bot-token.json` - Access token
+- `.oauth-tokens/registry-admin-bot.env` - Environment variables
+
+### **Step 4: Register MCP Servers**
+
+#### **Example: Register Cloudflare Documentation Server**
+```bash
+# The script automatically loads Gateway URL from terraform-outputs.json
+./service_mgmt.sh add /home/ubuntu/repos/mcp-gateway-registry/cli/examples/cloudflare-docs-server-config.json
+```
+
+#### **Register Your Own Server**
+Create a config file:
+```json
+{
+  "server_name": "My MCP Server",
+  "path": "/my-server",
+  "proxy_pass_url": "https://my-server.example.com/mcp",
+  "description": "Description of what this server does",
+  "tags": ["productivity", "automation"],
+  "supported_transports": ["streamable-http"]
+}
+```
+
+Then register:
+```bash
+./service_mgmt.sh add /path/to/your-server-config.json
+```
+
+### **Step 5: Create Additional Users**
+
+#### **Create M2M Service Account**
+```bash
+# For agent/bot access
+./user_mgmt.sh create-m2m \
+  --name finance-analyst-bot \
+  --groups 'mcp-servers-finance/read,mcp-servers-finance/execute' \
+  --description 'Finance analyst bot with restricted access'
+```
+
+#### **Create Human User**
+```bash
+# For web UI access
+./user_mgmt.sh create-human \
+  --username jdoe \
+  --email jdoe@example.com \
+  --firstname John \
+  --lastname Doe \
+  --groups 'mcp-servers-restricted/read'
+```
+
+### **Step 6: Verify Deployment**
+
+#### **Test Keycloak Login**
+```bash
+# Web UI login
+open https://registry.mycorp.click
+# Login with: admin / changeme (change this password!)
+
+# Keycloak admin console
+open https://kc.mycorp.click/admin
+# Login with Keycloak admin credentials
+```
+
+#### **Monitor Services**
+```bash
+# Check all services health
+./service_mgmt.sh monitor
+
+# View CloudWatch logs
+./scripts/view-cloudwatch-logs.sh --component auth-server --minutes 10
+```
+
+#### **List Users and Groups**
+```bash
+# List all users
+./user_mgmt.sh list-users
+
+# List all groups
+./user_mgmt.sh list-groups
+```
+
+### **Configuration Loading**
+
+All scripts automatically load configuration from:
+1. **Environment variables** (highest priority)
+2. **terraform-outputs.json** (automatic fallback)
+3. **AWS SSM Parameter Store** (for sensitive values)
+4. **Default values** (last resort)
+
+You can override with environment variables:
+```bash
+export KEYCLOAK_URL="https://kc.mycorp.click"
+export GATEWAY_URL="https://registry.mycorp.click"
+export KEYCLOAK_ADMIN_PASSWORD="your-password"
+```
+
 ## 🔄 Updates and Maintenance
 
 ### **Update Infrastructure**

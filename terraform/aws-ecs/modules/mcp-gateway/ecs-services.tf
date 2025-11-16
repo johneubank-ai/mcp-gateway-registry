@@ -86,11 +86,35 @@ module "ecs_service_auth" {
       environment = [
         {
           name  = "REGISTRY_URL"
-          value = "http://registry:7860"
+          value = "https://${var.domain_name}"
+        },
+        {
+          name  = "AUTH_SERVER_EXTERNAL_URL"
+          value = "https://${var.domain_name}:8888"
         },
         {
           name  = "AWS_REGION"
           value = data.aws_region.current.id
+        },
+        {
+          name  = "AUTH_PROVIDER"
+          value = var.keycloak_domain != "" ? "keycloak" : "default"
+        },
+        {
+          name  = "KEYCLOAK_URL"
+          value = var.keycloak_domain != "" ? "https://${var.keycloak_domain}" : ""
+        },
+        {
+          name  = "KEYCLOAK_EXTERNAL_URL"
+          value = var.keycloak_domain != "" ? "https://${var.keycloak_domain}" : ""
+        },
+        {
+          name  = "KEYCLOAK_REALM"
+          value = "mcp-gateway"
+        },
+        {
+          name  = "KEYCLOAK_CLIENT_ID"
+          value = "mcp-gateway-web"
         }
       ]
 
@@ -98,6 +122,10 @@ module "ecs_service_auth" {
         {
           name      = "SECRET_KEY"
           valueFrom = aws_secretsmanager_secret.secret_key.arn
+        },
+        {
+          name      = "KEYCLOAK_CLIENT_SECRET"
+          valueFrom = "${data.aws_secretsmanager_secret.keycloak_client_secret.arn}:client_secret::"
         }
       ]
 
@@ -144,7 +172,7 @@ module "ecs_service_auth" {
   subnet_ids = var.private_subnet_ids
   security_group_ingress_rules = {
     alb_8888 = {
-      description                  = "Auth server port"
+      description                  = "Auth server port from ALB"
       from_port                    = 8888
       to_port                      = 8888
       ip_protocol                  = "tcp"
@@ -256,6 +284,10 @@ module "ecs_service_registry" {
 
       environment = [
         {
+          name  = "GATEWAY_ADDITIONAL_SERVER_NAMES"
+          value = var.domain_name != "" ? var.domain_name : ""
+        },
+        {
           name  = "EC2_PUBLIC_DNS"
           value = var.domain_name != "" ? var.domain_name : module.alb.dns_name
         },
@@ -266,6 +298,26 @@ module "ecs_service_registry" {
         {
           name  = "AUTH_SERVER_EXTERNAL_URL"
           value = var.domain_name != "" ? "https://${var.domain_name}:8888" : "http://${module.alb.dns_name}:8888"
+        },
+        {
+          name  = "KEYCLOAK_URL"
+          value = var.keycloak_domain != "" ? "https://${var.keycloak_domain}" : ""
+        },
+        {
+          name  = "KEYCLOAK_ENABLED"
+          value = var.keycloak_domain != "" ? "true" : "false"
+        },
+        {
+          name  = "KEYCLOAK_REALM"
+          value = "mcp-gateway"
+        },
+        {
+          name  = "KEYCLOAK_CLIENT_ID"
+          value = "mcp-gateway-web"
+        },
+        {
+          name  = "AUTH_PROVIDER"
+          value = var.keycloak_domain != "" ? "keycloak" : "default"
         },
         {
           name  = "AWS_REGION"
@@ -281,6 +333,10 @@ module "ecs_service_registry" {
         {
           name      = "ADMIN_PASSWORD"
           valueFrom = aws_secretsmanager_secret.admin_password.arn
+        },
+        {
+          name      = "KEYCLOAK_CLIENT_SECRET"
+          valueFrom = "${data.aws_secretsmanager_secret.keycloak_client_secret.arn}:client_secret::"
         }
       ]
 
@@ -389,3 +445,15 @@ module "ecs_service_registry" {
   depends_on = [module.ecs_service_auth]
 }
 
+
+# Allow registry to communicate with auth server on port 8888
+resource "aws_vpc_security_group_ingress_rule" "registry_to_auth" {
+  security_group_id            = module.ecs_service_auth.security_group_id
+  referenced_security_group_id = module.ecs_service_registry.security_group_id
+  from_port                    = 8888
+  to_port                      = 8888
+  ip_protocol                  = "tcp"
+  description                  = "Allow registry to access auth server"
+  
+  tags = local.common_tags
+}

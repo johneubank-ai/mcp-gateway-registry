@@ -65,8 +65,9 @@ module "alb" {
         }
       }
       auth = {
-        port     = 8888
-        protocol = "HTTP"
+        port            = 8888
+        protocol        = var.certificate_arn != "" ? "HTTPS" : "HTTP"
+        certificate_arn = var.certificate_arn != "" ? var.certificate_arn : null
         forward = {
           target_group_key = "auth"
         }
@@ -94,7 +95,7 @@ module "alb" {
   target_groups = {
     registry = {
       backend_protocol                  = "HTTP"
-      backend_port                      = 80
+      backend_port                      = 7860
       target_type                       = "ip"
       deregistration_delay              = 5
       load_balancing_cross_zone_enabled = true
@@ -105,7 +106,7 @@ module "alb" {
         interval            = 30
         matcher             = "200"
         path                = "/health"
-        port                = "traffic-port"
+        port                = 7860
         protocol            = "HTTP"
         timeout             = 5
         unhealthy_threshold = 2

@@ -16,12 +16,6 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
-variable "certificate_arn" {
-  description = "ARN of ACM certificate for HTTPS (optional, creates HTTP-only if not provided)"
-  type        = string
-  default     = ""
-}
-
 variable "enable_monitoring" {
   description = "Whether to enable CloudWatch monitoring and alarms"
   type        = bool

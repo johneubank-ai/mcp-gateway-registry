@@ -55,15 +55,15 @@ FILTER_PATTERN=""
 START_TIME=""
 END_TIME=""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 TERRAFORM_DIR="$REPO_ROOT/terraform/aws-ecs"
-OUTPUTS_FILE="$TERRAFORM_DIR/terraform-outputs.json"
+OUTPUTS_FILE="$SCRIPT_DIR/terraform-outputs.json"
 
 # Log groups mapping
 declare -A LOG_GROUPS=(
     [keycloak]="/ecs/keycloak"
-    [registry]="/ecs/mcp-gateway-registry"
-    [auth-server]="/ecs/mcp-gateway-auth-server"
+    [registry]="/ecs/mcp-gateway-v2-registry"
+    [auth-server]="/ecs/mcp-gateway-v2-auth-server"
     [alb]="/aws/alb"
 )
 

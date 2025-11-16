@@ -212,8 +212,13 @@ class NginxConfigService:
             keycloak_url = os.environ.get('KEYCLOAK_URL', 'http://keycloak:8080')
             try:
                 parsed_keycloak = urlparse(keycloak_url)
+                keycloak_scheme = parsed_keycloak.scheme or 'http'
                 keycloak_host = parsed_keycloak.hostname or 'keycloak'
-                keycloak_port = str(parsed_keycloak.port or 8080)
+                # Use default port based on scheme if not specified
+                if parsed_keycloak.port:
+                    keycloak_port = str(parsed_keycloak.port)
+                else:
+                    keycloak_port = '443' if keycloak_scheme == 'https' else '8080'
 
                 # Validate that we can actually resolve the hostname
                 if not keycloak_host or keycloak_host == 'keycloak':
@@ -221,9 +226,10 @@ class NginxConfigService:
                     keycloak_host = parsed_keycloak.netloc.split(':')[0] if parsed_keycloak.netloc else 'keycloak'
                     logger.warning(f"Keycloak hostname is 'keycloak', using netloc instead: {keycloak_host}")
 
-                logger.info(f"Using Keycloak configuration from KEYCLOAK_URL '{keycloak_url}': {keycloak_host}:{keycloak_port}")
+                logger.info(f"Using Keycloak configuration from KEYCLOAK_URL '{keycloak_url}': {keycloak_scheme}://{keycloak_host}:{keycloak_port}")
             except Exception as e:
                 logger.warning(f"Failed to parse KEYCLOAK_URL '{keycloak_url}': {e}. Using defaults.")
+                keycloak_scheme = 'http'
                 keycloak_host = 'keycloak'
                 keycloak_port = '8080'
 
@@ -231,6 +237,7 @@ class NginxConfigService:
             config_content = template_content.replace("{{LOCATION_BLOCKS}}", "\n".join(location_blocks))
             config_content = config_content.replace("{{ADDITIONAL_SERVER_NAMES}}", additional_server_names)
             config_content = config_content.replace("{{ANTHROPIC_API_VERSION}}", api_version)
+            config_content = config_content.replace("{{KEYCLOAK_SCHEME}}", keycloak_scheme)
             config_content = config_content.replace("{{KEYCLOAK_HOST}}", keycloak_host)
             config_content = config_content.replace("{{KEYCLOAK_PORT}}", keycloak_port)
 

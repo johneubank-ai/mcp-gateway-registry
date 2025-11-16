@@ -39,3 +39,8 @@ resource "aws_secretsmanager_secret_version" "admin_password" {
   secret_id     = aws_secretsmanager_secret.admin_password.id
   secret_string = random_password.admin_password.result
 }
+
+# Reference to externally created Keycloak client secret
+data "aws_secretsmanager_secret" "keycloak_client_secret" {
+  name = "mcp-gateway-keycloak-client-secret"
+}

@@ -75,7 +75,7 @@ output "deployment_summary" {
   description = "Summary of deployed components"
   value = {
     mcp_gateway_deployed = true
-    https_enabled        = var.certificate_arn != ""
+    https_enabled        = aws_acm_certificate.registry.arn != ""
     monitoring_enabled   = var.enable_monitoring
     multi_az_nat         = true
     autoscaling_enabled  = true

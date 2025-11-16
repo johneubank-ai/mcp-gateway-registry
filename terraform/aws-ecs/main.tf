@@ -21,7 +21,7 @@ module "mcp_gateway" {
   source = "./modules/mcp-gateway"
 
   # Basic configuration
-  name = var.name
+  name = "${var.name}-v2"
 
   # Network configuration
   vpc_id             = module.vpc.vpc_id
@@ -34,7 +34,14 @@ module "mcp_gateway" {
   task_execution_role_arn = module.ecs_cluster.task_exec_iam_role_arn
 
   # HTTPS configuration
-  certificate_arn = var.certificate_arn
+  certificate_arn = aws_acm_certificate.registry.arn
+  domain_name     = "registry.${var.root_domain}"
+
+  # Keycloak configuration
+  keycloak_domain = var.keycloak_domain
+
+  # Container images
+  registry_image_uri = "605134468121.dkr.ecr.us-west-2.amazonaws.com/mcp-gateway-registry:latest"
 
   # Auto-scaling configuration
   enable_autoscaling        = true

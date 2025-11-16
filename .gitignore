@@ -309,3 +309,5 @@ override.tf.json
 .terraform.lock.hcl
 crash.log
 crash.*.log
+tfplan*
+terraform-outputs.json.backup*

@@ -59,8 +59,17 @@ get_admin_token() {
         -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
         -d "grant_type=password" \
         -d "client_id=admin-cli")
-    
+
     echo "$response" | grep -o '"access_token":"[^"]*' | cut -d'"' -f4
+}
+
+# Function to refresh admin token (call before each major operation)
+refresh_token() {
+    TOKEN=$(get_admin_token)
+    if [ -z "$TOKEN" ]; then
+        echo -e "${RED}Error: Failed to refresh authentication token${NC}"
+        exit 1
+    fi
 }
 
 # Function to check if realm exists
@@ -205,8 +214,10 @@ create_groups() {
 
 # Function to create custom scopes
 create_scopes() {
-    local token=$1
-    
+    # Refresh token to ensure it's valid
+    refresh_token
+    local token=$TOKEN
+
     echo "Creating custom MCP scopes..."
     
     local scopes=("mcp-servers-unrestricted/read" "mcp-servers-unrestricted/execute" "mcp-servers-restricted/read" "mcp-servers-restricted/execute")
@@ -238,14 +249,16 @@ create_scopes() {
 
 # Function to assign scopes to M2M client
 setup_m2m_scopes() {
-    local token=$1
-    
+    # Refresh token to ensure it's valid
+    refresh_token
+    local token=$TOKEN
+
     echo "Setting up M2M client scopes..."
     
     # Get M2M client ID
     local m2m_client_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=mcp-gateway-m2m" | \
-        jq -r '.[0].id')
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=mcp-gateway-m2m" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
     
     if [ -z "$m2m_client_id" ] || [ "$m2m_client_id" = "null" ]; then
         echo -e "${RED}Error: Could not find mcp-gateway-m2m client${NC}"
@@ -258,8 +271,8 @@ setup_m2m_scopes() {
     for scope in "${scopes[@]}"; do
         # Get scope ID
         local scope_id=$(curl -s -H "Authorization: Bearer ${token}" \
-            "${KEYCLOAK_URL}/admin/realms/${REALM}/client-scopes" | \
-            jq -r '.[] | select(.name=="'$scope'") | .id')
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/client-scopes" 2>/dev/null | \
+            jq -r 'if type == "array" then (.[] | select(.name=="'$scope'") | .id) else empty end' 2>/dev/null)
         
         if [ ! -z "$scope_id" ] && [ "$scope_id" != "null" ]; then
             # Add scope as default client scope
@@ -282,15 +295,17 @@ setup_m2m_scopes() {
 
 # Function to create service account user for M2M client
 create_service_account_user() {
-    local token=$1
+    # Refresh token to ensure it's valid
+    refresh_token
+    local token=$TOKEN
     local service_account_username="service-account-mcp-gateway-m2m"
-    
+
     echo "Creating service account user: $service_account_username"
     
     # Check if user already exists
     local existing_user=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$service_account_username" | \
-        jq -r '.[0].id // empty')
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$service_account_username" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
     
     if [ ! -z "$existing_user" ]; then
         echo -e "${YELLOW}Service account user already exists with ID: $existing_user${NC}"
@@ -316,15 +331,15 @@ create_service_account_user() {
         
         # Get the newly created user ID
         local user_id=$(curl -s -H "Authorization: Bearer ${token}" \
-            "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$service_account_username" | \
-            jq -r '.[0].id')
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$service_account_username" 2>/dev/null | \
+            jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
         
         echo "Created service account user with ID: $user_id"
         
         # Assign user to mcp-servers-unrestricted group
         local group_id=$(curl -s -H "Authorization: Bearer ${token}" \
-            "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" | \
-            jq -r '.[] | select(.name=="mcp-servers-unrestricted") | .id')
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+            jq -r 'if type == "array" then (.[] | select(.name=="mcp-servers-unrestricted") | .id) else empty end' 2>/dev/null)
 
         if [ ! -z "$group_id" ] && [ "$group_id" != "null" ]; then
             local group_response=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -342,8 +357,8 @@ create_service_account_user() {
 
         # Assign user to a2a-agent-admin group for A2A agent access
         local a2a_group_id=$(curl -s -H "Authorization: Bearer ${token}" \
-            "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" | \
-            jq -r '.[] | select(.name=="a2a-agent-admin") | .id')
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+            jq -r 'if type == "array" then (.[] | select(.name=="a2a-agent-admin") | .id) else empty end' 2>/dev/null)
 
         if [ ! -z "$a2a_group_id" ] && [ "$a2a_group_id" != "null" ]; then
             local a2a_response=$(curl -s -o /dev/null -w "%{http_code}" \
@@ -371,8 +386,10 @@ create_service_account_user() {
 
 # Function to create test users
 create_users() {
-    local token=$1
-    
+    # Refresh token to ensure it's valid
+    refresh_token
+    local token=$TOKEN
+
     echo "Creating test users..."
     
     # Define usernames for consistency
@@ -427,37 +444,37 @@ create_users() {
     
     # Get user IDs
     local admin_user_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$admin_username" | \
-        jq -r '.[0].id')
-    
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$admin_username" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
+
     local test_user_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$test_username" | \
-        jq -r '.[0].id')
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$test_username" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
     
     # Get all group IDs
     local admin_group_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" | \
-        jq -r '.[] | select(.name=="mcp-registry-admin") | .id')
-    
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[] | select(.name=="mcp-registry-admin") | .id) else empty end' 2>/dev/null)
+
     local user_group_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" | \
-        jq -r '.[] | select(.name=="mcp-registry-user") | .id')
-    
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[] | select(.name=="mcp-registry-user") | .id) else empty end' 2>/dev/null)
+
     local developer_group_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" | \
-        jq -r '.[] | select(.name=="mcp-registry-developer") | .id')
-    
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[] | select(.name=="mcp-registry-developer") | .id) else empty end' 2>/dev/null)
+
     local operator_group_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" | \
-        jq -r '.[] | select(.name=="mcp-registry-operator") | .id')
-    
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[] | select(.name=="mcp-registry-operator") | .id) else empty end' 2>/dev/null)
+
     local unrestricted_group_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" | \
-        jq -r '.[] | select(.name=="mcp-servers-unrestricted") | .id')
-    
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[] | select(.name=="mcp-servers-unrestricted") | .id) else empty end' 2>/dev/null)
+
     local restricted_group_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" | \
-        jq -r '.[] | select(.name=="mcp-servers-restricted") | .id')
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[] | select(.name=="mcp-servers-restricted") | .id) else empty end' 2>/dev/null)
     
     # Define usernames for consistent logging
     local admin_username="admin"
@@ -501,54 +518,81 @@ create_users() {
 
 # Function to create client secrets
 setup_client_secrets() {
-    local token=$1
-    
+    # Refresh token to ensure it's valid
+    refresh_token
+    local token=$TOKEN
+
     echo "Setting up client secrets..."
-    
+
     # Get web client ID
     local web_client_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=mcp-gateway-web" | \
-        jq -r '.[0].id')
-    
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=mcp-gateway-web" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
+
     # Generate secret for web client
     curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${web_client_id}/client-secret" \
         -H "Authorization: Bearer ${token}" \
         -H "Content-Type: application/json" > /dev/null
-    
+
     local web_secret_response=$(curl -s "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${web_client_id}/client-secret" \
         -H "Authorization: Bearer ${token}")
     web_secret=$(echo "$web_secret_response" | jq -r '.value // empty')
-    
+
     # Get M2M client ID
     local m2m_client_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=mcp-gateway-m2m" | \
-        jq -r '.[0].id')
-    
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=mcp-gateway-m2m" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
+
     # Generate secret for M2M client
     curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${m2m_client_id}/client-secret" \
         -H "Authorization: Bearer ${token}" \
         -H "Content-Type: application/json" > /dev/null
-    
+
     local m2m_secret_response=$(curl -s "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${m2m_client_id}/client-secret" \
         -H "Authorization: Bearer ${token}")
     m2m_secret=$(echo "$m2m_secret_response" | jq -r '.value // empty')
-    
+
     echo -e "${GREEN}Client secrets generated!${NC}"
+
+    # Save web client secret to AWS Secrets Manager
+    if [ -n "$web_secret" ] && command -v aws &> /dev/null; then
+        echo "Saving web client secret to AWS Secrets Manager..."
+        if aws secretsmanager update-secret \
+            --secret-id mcp-gateway-keycloak-client-secret \
+            --secret-string "{\"client_id\": \"mcp-gateway-web\", \"client_secret\": \"${web_secret}\"}" \
+            --region us-west-2 &>/dev/null; then
+            echo -e "${GREEN}Web client secret saved to AWS Secrets Manager!${NC}"
+        else
+            echo -e "${YELLOW}Warning: Could not save web client secret to Secrets Manager${NC}"
+            echo "You can manually update it with:"
+            echo "  aws secretsmanager update-secret --secret-id mcp-gateway-keycloak-client-secret \\"
+            echo "    --secret-string '{\"client_id\": \"mcp-gateway-web\", \"client_secret\": \"${web_secret}\"}' \\"
+            echo "    --region us-west-2"
+        fi
+    fi
+
     echo ""
     echo "=============================================="
     echo -e "${YELLOW}Client credentials have been created.${NC}"
     echo "=============================================="
     echo ""
-    echo -e "${GREEN}To retrieve all client credentials, run:${NC}"
-    echo "  ./keycloak/setup/get-all-client-credentials.sh"
+    echo "Web Client:"
+    echo "  Client ID: mcp-gateway-web"
+    echo "  Secret: ${web_secret}"
     echo ""
-    echo "This will save all credentials to .oauth-tokens/"
+    echo "M2M Client:"
+    echo "  Client ID: mcp-gateway-m2m"
+    echo "  Secret: ${m2m_secret}"
+    echo ""
+    echo -e "${GREEN}Note: Web client secret has been saved to AWS Secrets Manager${NC}"
     echo "=============================================="
 }
 
 # Function to setup groups mapper for OAuth2 clients
 setup_groups_mapper() {
-    local token=$1
+    # Refresh token to ensure it's valid
+    refresh_token
+    local token=$TOKEN
 
     echo "Setting up groups mapper for OAuth2 clients..."
 
@@ -570,8 +614,8 @@ setup_groups_mapper() {
     # Setup groups mapper for mcp-gateway-web client
     echo "Setting up groups mapper for mcp-gateway-web client..."
     local web_client_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=mcp-gateway-web" | \
-        jq -r '.[0].id')
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=mcp-gateway-web" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
 
     if [ -z "$web_client_id" ] || [ "$web_client_id" = "null" ]; then
         echo -e "${RED}Error: Could not find mcp-gateway-web client${NC}"
@@ -596,8 +640,8 @@ setup_groups_mapper() {
     # Setup groups mapper for mcp-gateway-m2m client
     echo "Setting up groups mapper for mcp-gateway-m2m client..."
     local m2m_client_id=$(curl -s -H "Authorization: Bearer ${token}" \
-        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=mcp-gateway-m2m" | \
-        jq -r '.[0].id')
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=mcp-gateway-m2m" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
 
     if [ -z "$m2m_client_id" ] || [ "$m2m_client_id" = "null" ]; then
         echo -e "${RED}Error: Could not find mcp-gateway-m2m client${NC}"
@@ -633,13 +677,35 @@ load_from_terraform_outputs() {
 
     # Extract values from JSON
     if command -v jq &> /dev/null; then
-        # Use jq if available for reliable JSON parsing
-        local alb_dns=$(jq -r '.mcp_gateway_alb_dns.value // empty' "$terraform_outputs" 2>/dev/null)
+        # Load KEYCLOAK_ADMIN_URL if not set
+        if [ -z "$KEYCLOAK_ADMIN_URL" ]; then
+            local keycloak_url=$(jq -r '.keycloak_url.value // empty' "$terraform_outputs" 2>/dev/null)
+            if [ -n "$keycloak_url" ] && [ "$keycloak_url" != "null" ]; then
+                KEYCLOAK_ADMIN_URL="$keycloak_url"
+                echo "  - Loaded KEYCLOAK_ADMIN_URL: $KEYCLOAK_ADMIN_URL"
+            fi
+        fi
 
-        if [ -n "$alb_dns" ] && [ "$alb_dns" != "null" ]; then
-            AUTH_SERVER_EXTERNAL_URL="${AUTH_SERVER_EXTERNAL_URL:-http://${alb_dns}:8888}"
-            REGISTRY_URL="${REGISTRY_URL:-http://${alb_dns}}"
-            echo "  - Extracted ALB DNS: $alb_dns"
+        # Load AUTH_SERVER_EXTERNAL_URL if not set
+        if [ -z "$AUTH_SERVER_EXTERNAL_URL" ]; then
+            local auth_url=$(jq -r '.mcp_gateway_auth_url.value // empty' "$terraform_outputs" 2>/dev/null)
+            if [ -n "$auth_url" ] && [ "$auth_url" != "null" ]; then
+                AUTH_SERVER_EXTERNAL_URL="$auth_url"
+                echo "  - Loaded AUTH_SERVER_EXTERNAL_URL: $AUTH_SERVER_EXTERNAL_URL"
+            fi
+        fi
+
+        # Load REGISTRY_URL if not set
+        if [ -z "$REGISTRY_URL" ]; then
+            local registry_url=$(jq -r '.registry_url.value // empty' "$terraform_outputs" 2>/dev/null)
+            if [ -n "$registry_url" ] && [ "$registry_url" != "null" ]; then
+                REGISTRY_URL="$registry_url"
+                echo "  - Loaded REGISTRY_URL: $REGISTRY_URL"
+            fi
+        fi
+
+        # Check if we successfully loaded values
+        if [ -n "$AUTH_SERVER_EXTERNAL_URL" ] || [ -n "$REGISTRY_URL" ] || [ -n "$KEYCLOAK_ADMIN_URL" ]; then
             return 0
         fi
     else
@@ -669,7 +735,7 @@ main() {
     fi
 
     # Try to load missing values from terraform-outputs.json
-    if [ -z "$AUTH_SERVER_EXTERNAL_URL" ] || [ -z "$REGISTRY_URL" ]; then
+    if [ -z "$AUTH_SERVER_EXTERNAL_URL" ] || [ -z "$REGISTRY_URL" ] || [ -z "$KEYCLOAK_ADMIN_URL" ]; then
         echo "Attempting to load missing values from terraform-outputs.json..."
         load_from_terraform_outputs || true
     fi
@@ -678,6 +744,14 @@ main() {
     KEYCLOAK_URL="${KEYCLOAK_ADMIN_URL:-https://kc.mycorp.click}"
     KEYCLOAK_ADMIN="${KEYCLOAK_ADMIN:-admin}"
     echo "Using Keycloak API URL: $KEYCLOAK_URL"
+
+    # Display loaded configuration
+    echo ""
+    echo "Configuration:"
+    echo "  - KEYCLOAK_URL: $KEYCLOAK_URL"
+    echo "  - AUTH_SERVER_EXTERNAL_URL: ${AUTH_SERVER_EXTERNAL_URL:-<not set>}"
+    echo "  - REGISTRY_URL: ${REGISTRY_URL:-<not set>}"
+    echo ""
 
     # Try to load admin credentials from SSM Parameter Store if not set
     if [ -z "$KEYCLOAK_ADMIN_PASSWORD" ]; then
@@ -714,16 +788,32 @@ main() {
     fi
     
     echo -e "${GREEN}Authentication successful!${NC}"
-    
+
     # Create realm and configure it step by step
+    # Refresh token before each operation to prevent expiration
     if create_realm "$TOKEN"; then
+        refresh_token
         create_clients "$TOKEN"
+
+        refresh_token
         create_scopes "$TOKEN"
+
+        refresh_token
         create_groups "$TOKEN"
+
+        refresh_token
         create_users "$TOKEN"
+
+        refresh_token
         create_service_account_user "$TOKEN"
+
+        refresh_token
         setup_client_secrets "$TOKEN"
+
+        refresh_token
         setup_groups_mapper "$TOKEN"
+
+        refresh_token
         setup_m2m_scopes "$TOKEN"
     else
         exit 1

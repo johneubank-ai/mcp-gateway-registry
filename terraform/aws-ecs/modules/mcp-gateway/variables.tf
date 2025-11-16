@@ -117,6 +117,12 @@ variable "certificate_arn" {
   default     = ""
 }
 
+variable "keycloak_domain" {
+  description = "Domain name for Keycloak (e.g., kc.mycorp.click)"
+  type        = string
+  default     = ""
+}
+
 variable "enable_autoscaling" {
   description = "Whether to enable auto-scaling for ECS services"
   type        = bool
