@@ -570,11 +570,17 @@ def cmd_agent_register(args: argparse.Namespace) -> int:
 
         # Convert skills list of dicts to Skill objects
         # Handle both 'input_schema' and 'parameters' field names
+        # Also handle 'id' vs 'name' field for skill identifier
         skills = []
         for skill_data in config.get('skills', []):
+            # Get skill identifier - prefer 'id', fall back to 'name'
+            skill_id = skill_data.get('id') or skill_data.get('name', '')
+            skill_name = skill_data.get('name', skill_id)
+
             # Normalize field names
             skill_dict = {
-                'name': skill_data.get('name', skill_data.get('id', '')),
+                'id': skill_id,  # Always include id field
+                'name': skill_name,
                 'description': skill_data.get('description', '')
             }
             # Use 'input_schema' if present, otherwise use 'parameters'
@@ -613,24 +619,29 @@ def cmd_agent_register(args: argparse.Namespace) -> int:
                 config['visibility'] = AgentVisibility.PUBLIC
 
         # Handle security_schemes conversion
-        # Map common OpenAPI security types to our enum
+        # Normalize common security type variations to A2A spec values
         if 'security_schemes' in config:
             transformed_schemes = {}
             for scheme_name, scheme_data in config['security_schemes'].items():
                 scheme_type = scheme_data.get('type', '').lower()
-                # Map OpenAPI types to our enum values
+                # Normalize to A2A spec values: apiKey, http, oauth2, openIdConnect
+                # Keep 'http' as is (for bearer auth), not 'bearer'
                 type_map = {
-                    'http': 'bearer',  # HTTP bearer auth
-                    'bearer': 'bearer',
-                    'apikey': 'api_key',
-                    'api_key': 'api_key',
-                    'oauth2': 'oauth2'
+                    'http': 'http',  # HTTP auth (including bearer)
+                    'bearer': 'http',  # Bearer is a type of HTTP auth
+                    'apikey': 'apiKey',
+                    'api_key': 'apiKey',
+                    'oauth2': 'oauth2',
+                    'openidconnect': 'openIdConnect',
+                    'openid': 'openIdConnect'
                 }
-                mapped_type = type_map.get(scheme_type, 'bearer')
-                transformed_schemes[scheme_name] = {
-                    'type': mapped_type,
-                    'description': scheme_data.get('description', '')
-                }
+                mapped_type = type_map.get(scheme_type, 'http')
+
+                # Preserve all fields from the original scheme data
+                transformed_scheme = dict(scheme_data)
+                transformed_scheme['type'] = mapped_type
+
+                transformed_schemes[scheme_name] = transformed_scheme
             config['security_schemes'] = transformed_schemes
 
         # Remove fields that aren't in AgentRegistration model

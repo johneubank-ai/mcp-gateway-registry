@@ -192,9 +192,22 @@ create_groups() {
     local token=$1
     
     echo "Creating user groups..."
-    
-    local groups=("mcp-registry-admin" "mcp-registry-user" "mcp-registry-developer" "mcp-registry-operator" "mcp-servers-unrestricted" "mcp-servers-restricted" "a2a-agent-admin" "a2a-agent-publisher" "a2a-agent-user")
-    
+
+    local groups=(
+        "mcp-registry-admin"
+        "mcp-registry-user"
+        "mcp-registry-developer"
+        "mcp-registry-operator"
+        "mcp-servers-unrestricted"
+        "mcp-servers-restricted"
+        "a2a-agent-admin"
+        "a2a-agent-publisher"
+        "a2a-agent-user"
+        "registry-admins"
+        "registry-users-lob1"
+        "registry-users-lob2"
+    )
+
     for group in "${groups[@]}"; do
         local group_json='{
             "name": "'$group'",
@@ -202,13 +215,13 @@ create_groups() {
                 "description": ["'$group' group for MCP Gateway access"]
             }
         }'
-        
+
         curl -s -X POST "${KEYCLOAK_URL}/admin/realms/mcp-gateway/groups" \
             -H "Authorization: Bearer ${token}" \
             -H "Content-Type: application/json" \
             -d "$group_json" > /dev/null
     done
-    
+
     echo -e "${GREEN}Groups created successfully!${NC}"
 }
 
@@ -373,7 +386,7 @@ create_service_account_user() {
         else
             echo -e "${YELLOW}Warning: a2a-agent-admin group not found. Create it manually if A2A agent support is needed.${NC}"
         fi
-        
+
         return 0
     elif [ "$response" = "409" ]; then
         echo -e "${YELLOW}Service account user already exists. Continuing...${NC}"
@@ -384,6 +397,98 @@ create_service_account_user() {
     fi
 }
 
+# Function to create service account clients for A2A agents
+create_service_account_clients() {
+    # Refresh token to ensure it's valid
+    refresh_token
+    local token=$TOKEN
+
+    echo "Creating service account clients for A2A agents..."
+
+    # Define service account clients
+    local clients=("registry-admin-bot" "lob1-bot" "lob2-bot")
+    local groups=("registry-admins" "registry-users-lob1" "registry-users-lob2")
+
+    for i in "${!clients[@]}"; do
+        local client_name="${clients[$i]}"
+        local group_name="${groups[$i]}"
+
+        echo "  Creating client: $client_name"
+
+        # Create M2M service account client
+        local client_json='{
+            "clientId": "'$client_name'",
+            "name": "'$client_name' Service Account",
+            "description": "Service account for '$client_name' operations",
+            "enabled": true,
+            "serviceAccountsEnabled": true,
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "publicClient": false,
+            "protocol": "openid-connect"
+        }'
+
+        local response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients" \
+            -H "Authorization: Bearer ${token}" \
+            -H "Content-Type: application/json" \
+            -d "$client_json")
+
+        if [ "$response" = "201" ]; then
+            echo "    - Client created successfully"
+        elif [ "$response" = "409" ]; then
+            echo "    - Client already exists"
+        else
+            echo -e "${RED}    - Failed to create client (HTTP $response)${NC}"
+            continue
+        fi
+
+        # Get the client UUID
+        local client_uuid=$(curl -s -H "Authorization: Bearer ${token}" \
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/clients?clientId=${client_name}" 2>/dev/null | \
+            jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
+
+        if [ -z "$client_uuid" ] || [ "$client_uuid" = "null" ]; then
+            echo -e "${RED}    - Error: Could not find client UUID${NC}"
+            continue
+        fi
+
+        # Get the service account user ID
+        local service_account_user=$(curl -s -H "Authorization: Bearer ${token}" \
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${client_uuid}/service-account-user" 2>/dev/null | \
+            jq -r '.id // empty' 2>/dev/null)
+
+        if [ -z "$service_account_user" ] || [ "$service_account_user" = "null" ]; then
+            echo -e "${RED}    - Error: Could not get service account user ID${NC}"
+            continue
+        fi
+
+        # Get the group ID
+        local group_id=$(curl -s -H "Authorization: Bearer ${token}" \
+            "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+            jq -r 'if type == "array" then (.[] | select(.name=="'$group_name'") | .id) else empty end' 2>/dev/null)
+
+        if [ -z "$group_id" ] || [ "$group_id" = "null" ]; then
+            echo -e "${RED}    - Error: Could not find group: $group_name${NC}"
+            continue
+        fi
+
+        # Assign service account to the group
+        local group_response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/users/${service_account_user}/groups/${group_id}" \
+            -H "Authorization: Bearer ${token}")
+
+        if [ "$group_response" = "204" ]; then
+            echo "    - Service account assigned to group: $group_name"
+        else
+            echo -e "${YELLOW}    - Warning: Could not assign to group (HTTP $group_response)${NC}"
+        fi
+    done
+
+    echo -e "${GREEN}Service account clients created successfully!${NC}"
+}
+
 # Function to create test users
 create_users() {
     # Refresh token to ensure it's valid
@@ -391,11 +496,13 @@ create_users() {
     local token=$TOKEN
 
     echo "Creating test users..."
-    
+
     # Define usernames for consistency
     local admin_username="admin"
     local test_username="testuser"
-    
+    local lob1_username="lob1-user"
+    local lob2_username="lob2-user"
+
     # Create admin user
     local admin_user_json='{
         "username": "'$admin_username'",
@@ -439,7 +546,51 @@ create_users() {
         -H "Authorization: Bearer ${token}" \
         -H "Content-Type: application/json" \
         -d "$test_user_json" > /dev/null
-    
+
+    # Create lob1-user
+    local lob1_user_json='{
+        "username": "'$lob1_username'",
+        "email": "'$lob1_username'@example.com",
+        "enabled": true,
+        "emailVerified": true,
+        "firstName": "LOB1",
+        "lastName": "User",
+        "credentials": [
+            {
+                "type": "password",
+                "value": "'${LOB1_USER_PASSWORD:-lob1pass}'",
+                "temporary": false
+            }
+        ]
+    }'
+
+    curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users" \
+        -H "Authorization: Bearer ${token}" \
+        -H "Content-Type: application/json" \
+        -d "$lob1_user_json" > /dev/null
+
+    # Create lob2-user
+    local lob2_user_json='{
+        "username": "'$lob2_username'",
+        "email": "'$lob2_username'@example.com",
+        "enabled": true,
+        "emailVerified": true,
+        "firstName": "LOB2",
+        "lastName": "User",
+        "credentials": [
+            {
+                "type": "password",
+                "value": "'${LOB2_USER_PASSWORD:-lob2pass}'",
+                "temporary": false
+            }
+        ]
+    }'
+
+    curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users" \
+        -H "Authorization: Bearer ${token}" \
+        -H "Content-Type: application/json" \
+        -d "$lob2_user_json" > /dev/null
+
     echo "Assigning users to groups..."
     
     # Get user IDs
@@ -449,6 +600,14 @@ create_users() {
 
     local test_user_id=$(curl -s -H "Authorization: Bearer ${token}" \
         "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$test_username" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
+
+    local lob1_user_id=$(curl -s -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$lob1_username" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
+
+    local lob2_user_id=$(curl -s -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=$lob2_username" 2>/dev/null | \
         jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
     
     # Get all group IDs
@@ -475,10 +634,20 @@ create_users() {
     local restricted_group_id=$(curl -s -H "Authorization: Bearer ${token}" \
         "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
         jq -r 'if type == "array" then (.[] | select(.name=="mcp-servers-restricted") | .id) else empty end' 2>/dev/null)
-    
+
+    local lob1_group_id=$(curl -s -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[] | select(.name=="registry-users-lob1") | .id) else empty end' 2>/dev/null)
+
+    local lob2_group_id=$(curl -s -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/groups" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[] | select(.name=="registry-users-lob2") | .id) else empty end' 2>/dev/null)
+
     # Define usernames for consistent logging
     local admin_username="admin"
     local test_username="testuser"
+    local lob1_username="lob1-user"
+    local lob2_username="lob2-user"
     
     # Assign admin user to admin group and unrestricted servers group
     if [ ! -z "$admin_user_id" ] && [ ! -z "$admin_group_id" ]; then
@@ -512,7 +681,21 @@ create_users() {
             fi
         done
     fi
-    
+
+    # Assign lob1-user to registry-users-lob1 group
+    if [ ! -z "$lob1_user_id" ] && [ ! -z "$lob1_group_id" ]; then
+        curl -s -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/users/$lob1_user_id/groups/$lob1_group_id" \
+            -H "Authorization: Bearer ${token}" > /dev/null
+        echo "  - $lob1_username assigned to registry-users-lob1 group"
+    fi
+
+    # Assign lob2-user to registry-users-lob2 group
+    if [ ! -z "$lob2_user_id" ] && [ ! -z "$lob2_group_id" ]; then
+        curl -s -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/users/$lob2_user_id/groups/$lob2_group_id" \
+            -H "Authorization: Bearer ${token}" > /dev/null
+        echo "  - $lob2_username assigned to registry-users-lob2 group"
+    fi
+
     echo -e "${GREEN}Users created and assigned to groups successfully!${NC}"
 }
 
@@ -808,6 +991,9 @@ main() {
         create_service_account_user "$TOKEN"
 
         refresh_token
+        create_service_account_clients "$TOKEN"
+
+        refresh_token
         setup_client_secrets "$TOKEN"
 
         refresh_token
@@ -829,12 +1015,20 @@ main() {
     echo "Users created:"
     echo "  - admin/${INITIAL_ADMIN_PASSWORD:-changeme} (realm admin - all groups including mcp-registry-admin)"
     echo "  - testuser/${INITIAL_USER_PASSWORD:-testpass} (test user - user/developer/operator groups)"
+    echo "  - lob1-user/${LOB1_USER_PASSWORD:-lob1pass} (LOB1 user - registry-users-lob1 group)"
+    echo "  - lob2-user/${LOB2_USER_PASSWORD:-lob2pass} (LOB2 user - registry-users-lob2 group)"
     echo "  - service-account-mcp-gateway-m2m (service account for M2M access)"
+    echo ""
+    echo "Service Account Clients (M2M):"
+    echo "  - registry-admin-bot (in registry-admins group)"
+    echo "  - lob1-bot (in registry-users-lob1 group)"
+    echo "  - lob2-bot (in registry-users-lob2 group)"
     echo ""
     echo "Groups created:"
     echo "  - mcp-registry-admin, mcp-registry-user, mcp-registry-developer"
     echo "  - mcp-registry-operator, mcp-servers-unrestricted, mcp-servers-restricted"
     echo "  - a2a-agent-admin, a2a-agent-publisher, a2a-agent-user"
+    echo "  - registry-admins, registry-users-lob1, registry-users-lob2"
     echo ""
     echo "OAuth2 Clients:"
     echo "  - mcp-gateway-web (for UI authentication)"

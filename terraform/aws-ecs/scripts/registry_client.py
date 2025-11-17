@@ -11,6 +11,7 @@ Authentication is handled via JWT tokens retrieved from AWS SSM Parameter Store 
 the get-m2m-token.sh script.
 """
 
+import json
 import logging
 import subprocess
 from typing import Optional, List, Dict, Any
@@ -141,25 +142,53 @@ class AgentVisibility(str, Enum):
 
 
 class SecuritySchemeType(str, Enum):
-    """Security scheme type enumeration."""
-    BEARER = "bearer"
-    API_KEY = "api_key"
+    """Security scheme type enumeration (A2A spec values)."""
+    API_KEY = "apiKey"
+    HTTP = "http"
     OAUTH2 = "oauth2"
+    OPENID_CONNECT = "openIdConnect"
 
 
 class SecurityScheme(BaseModel):
     """Security scheme model."""
 
     type: SecuritySchemeType = Field(..., description="Security scheme type")
+    scheme: Optional[str] = Field(
+        None,
+        description="HTTP auth scheme: basic, bearer, digest",
+    )
+    in_: Optional[str] = Field(
+        None,
+        alias="in",
+        description="API key location: header, query, cookie",
+    )
+    name: Optional[str] = Field(
+        None,
+        description="Name of header/query/cookie for API key",
+    )
+    bearer_format: Optional[str] = Field(
+        None,
+        description="Bearer token format hint (e.g., JWT)",
+    )
+    flows: Optional[Dict[str, Any]] = Field(
+        None,
+        description="OAuth2 flows configuration",
+    )
+    openid_connect_url: Optional[str] = Field(
+        None,
+        description="OpenID Connect discovery URL",
+    )
     description: Optional[str] = Field(None, description="Security scheme description")
 
 
 class Skill(BaseModel):
     """Skill model for agent capabilities."""
 
+    id: str = Field(..., description="Unique skill identifier")
     name: str = Field(..., description="Skill name")
     description: str = Field(..., description="Skill description")
-    input_schema: Optional[Dict[str, Any]] = Field(None, description="JSON schema for skill input parameters")
+    parameters: Optional[Dict[str, Any]] = Field(None, description="JSON schema for skill parameters")
+    tags: List[str] = Field(default_factory=list, description="Skill categorization tags")
 
 
 class AgentRegistration(BaseModel):
@@ -226,19 +255,27 @@ class AgentDetail(BaseModel):
 
 
 class AgentListItem(BaseModel):
-    """Agent list item model."""
+    """Agent list item model (AgentInfo from server)."""
 
     name: str = Field(..., description="Agent name")
+    description: str = Field(default="", description="Agent description")
     path: str = Field(..., description="Agent path")
-    description: str = Field(..., description="Agent description")
-    is_enabled: bool = Field(..., description="Whether agent is enabled")
-    total_count: int = Field(..., description="Total count")
+    url: str = Field(..., description="Agent URL")
+    tags: List[str] = Field(default_factory=list, description="Categorization tags")
+    skills: List[str] = Field(default_factory=list, description="Skill names")
+    num_skills: int = Field(default=0, description="Number of skills")
+    num_stars: int = Field(default=0, description="Community rating")
+    is_enabled: bool = Field(default=False, description="Whether agent is enabled")
+    provider: Optional[str] = Field(None, description="Agent provider")
+    streaming: bool = Field(default=False, description="Supports streaming")
+    trust_level: str = Field(default="unverified", description="Trust level")
 
 
 class AgentListResponse(BaseModel):
     """Agent list response model."""
 
     agents: List[AgentListItem] = Field(..., description="List of agents")
+    total_count: int = Field(..., description="Total count of agents")
 
 
 class AgentToggleResponse(BaseModel):
@@ -679,10 +716,13 @@ class RegistryClient:
         """
         logger.info(f"Registering agent: {agent.path}")
 
+        agent_data = agent.model_dump(exclude_none=True)
+        logger.debug(f"Agent data being sent: {json.dumps(agent_data, indent=2, default=str)}")
+
         response = self._make_request(
             method="POST",
             endpoint="/api/agents/register",
-            data=agent.model_dump(exclude_none=True)
+            data=agent_data
         )
 
         result = AgentRegistrationResponse(**response.json())
