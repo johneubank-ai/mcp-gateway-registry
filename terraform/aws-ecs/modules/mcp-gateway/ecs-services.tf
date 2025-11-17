@@ -367,6 +367,11 @@ module "ecs_service_registry" {
           readOnly      = false
         },
         {
+          sourceVolume  = "mcp-agents"
+          containerPath = "/app/registry/agents"
+          readOnly      = false
+        },
+        {
           sourceVolume  = "mcp-models"
           containerPath = "/app/registry/models"
           readOnly      = false
@@ -374,6 +379,11 @@ module "ecs_service_registry" {
         {
           sourceVolume  = "mcp-logs"
           containerPath = "/app/logs"
+          readOnly      = false
+        },
+        {
+          sourceVolume  = "auth-config"
+          containerPath = "/app/auth_server"
           readOnly      = false
         }
       ]
@@ -400,6 +410,13 @@ module "ecs_service_registry" {
         transit_encryption = "ENABLED"
       }
     }
+    mcp-agents = {
+      efs_volume_configuration = {
+        file_system_id     = module.efs.id
+        access_point_id    = module.efs.access_points["agents"].id
+        transit_encryption = "ENABLED"
+      }
+    }
     mcp-models = {
       efs_volume_configuration = {
         file_system_id     = module.efs.id
@@ -411,6 +428,13 @@ module "ecs_service_registry" {
       efs_volume_configuration = {
         file_system_id     = module.efs.id
         access_point_id    = module.efs.access_points["logs"].id
+        transit_encryption = "ENABLED"
+      }
+    }
+    auth-config = {
+      efs_volume_configuration = {
+        file_system_id     = module.efs.id
+        access_point_id    = module.efs.access_points["auth_config"].id
         transit_encryption = "ENABLED"
       }
     }

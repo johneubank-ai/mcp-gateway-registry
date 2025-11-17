@@ -100,6 +100,25 @@ module "efs" {
       })
     }
 
+    agents = {
+      name = "${local.name_prefix}-agents"
+      posix_user = {
+        gid = 1000
+        uid = 1000
+      }
+      root_directory = {
+        path = "/agents"
+        creation_info = {
+          owner_gid   = 1000
+          owner_uid   = 1000
+          permissions = "755"
+        }
+      }
+      tags = merge(local.common_tags, {
+        Name = "${local.name_prefix} Agents"
+      })
+    }
+
     auth_config = {
       name = "${local.name_prefix}-auth-config"
       posix_user = {

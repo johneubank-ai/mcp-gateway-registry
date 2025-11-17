@@ -52,7 +52,7 @@ DEFAULT_TOKEN_LIFETIME_HOURS = 8
 
 # Rate limiting for token generation (simple in-memory counter)
 user_token_generation_counts = {}
-MAX_TOKENS_PER_USER_PER_HOUR = 10
+MAX_TOKENS_PER_USER_PER_HOUR = int(os.environ.get('MAX_TOKENS_PER_USER_PER_HOUR', '100'))
 
 # Load scopes configuration
 def load_scopes_config():
