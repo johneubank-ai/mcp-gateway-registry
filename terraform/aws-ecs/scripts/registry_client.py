@@ -455,8 +455,7 @@ class RegistryClient:
             Dictionary of HTTP headers
         """
         return {
-            "Authorization": f"Bearer {self._token}",
-            "Content-Type": "application/json"
+            "Authorization": f"Bearer {self._token}"
         }
 
     def _make_request(
@@ -472,7 +471,7 @@ class RegistryClient:
         Args:
             method: HTTP method (GET, POST, etc.)
             endpoint: API endpoint path
-            data: Request body data
+            data: Request body data (sent as form-encoded for POST)
             params: Query parameters
 
         Returns:
@@ -490,7 +489,7 @@ class RegistryClient:
             method=method,
             url=url,
             headers=headers,
-            json=data,
+            data=data,
             params=params,
             timeout=30
         )
