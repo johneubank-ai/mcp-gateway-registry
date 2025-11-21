@@ -542,7 +542,7 @@ class RegistryClient:
         response = self._make_request(
             method="POST",
             endpoint="/api/servers/remove",
-            data={"service_path": service_path}
+            data={"path": service_path}
         )
 
         logger.info(f"Service removed successfully: {service_path}")
