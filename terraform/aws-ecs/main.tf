@@ -24,9 +24,10 @@ module "mcp_gateway" {
   name = "${var.name}-v2"
 
   # Network configuration
-  vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
-  public_subnet_ids  = module.vpc.public_subnets
+  vpc_id              = module.vpc.vpc_id
+  private_subnet_ids  = module.vpc.private_subnets
+  public_subnet_ids   = module.vpc.public_subnets
+  ingress_cidr_blocks = var.ingress_cidr_blocks
 
   # ECS configuration
   ecs_cluster_arn         = module.ecs_cluster.arn

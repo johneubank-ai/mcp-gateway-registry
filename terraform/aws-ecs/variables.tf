@@ -16,6 +16,12 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
+variable "ingress_cidr_blocks" {
+  description = "List of CIDR blocks allowed to access the ALB (main ALB + auth server + registry)"
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
 variable "enable_monitoring" {
   description = "Whether to enable CloudWatch monitoring and alarms"
   type        = bool
