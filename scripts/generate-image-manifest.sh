@@ -8,27 +8,43 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/build-config.yaml"
 OUTPUT_FILE="${SCRIPT_DIR}/image-manifest.json"
 
+# Get AWS region from environment or default to us-west-2
+AWS_REGION="${AWS_REGION:-us-west-2}"
+
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "Error: $CONFIG_FILE not found"
     exit 1
 fi
 
 echo "Generating image manifest from $CONFIG_FILE..."
+echo "Using AWS Region: $AWS_REGION"
+
+# Get AWS account ID
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+if [ -z "$AWS_ACCOUNT_ID" ]; then
+    echo "Error: Could not determine AWS Account ID"
+    exit 1
+fi
+
+# Construct ECR registry URL dynamically
+ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+echo "ECR Registry: $ECR_REGISTRY"
 
 python3 << EOF
 import yaml
 import json
 import sys
+import os
 
 with open('$CONFIG_FILE') as f:
     cfg = yaml.safe_load(f)
 
-aws_config = cfg.get('aws', {})
-ecr_registry = aws_config.get('ecr_registry')
+# Use the dynamically constructed ECR registry from environment
+ecr_registry = '$ECR_REGISTRY'
 images = cfg.get('images', {})
 
 if not ecr_registry:
-    print("Error: ecr_registry not found in config")
+    print("Error: ecr_registry not available")
     sys.exit(1)
 
 manifest = {}

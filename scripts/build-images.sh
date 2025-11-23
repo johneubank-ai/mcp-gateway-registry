@@ -45,12 +45,12 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# Parse AWS account ID and registry
+# Parse AWS account ID and construct ECR registry dynamically based on AWS_REGION
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-ECR_REGISTRY=$(grep 'ecr_registry:' "$CONFIG_FILE" | head -1 | awk '{print $2}' | tr -d '"')
+ECR_REGISTRY="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
-if [ -z "$ECR_REGISTRY" ]; then
-    log_error "Could not parse ecr_registry from $CONFIG_FILE"
+if [ -z "$AWS_ACCOUNT_ID" ]; then
+    log_error "Could not determine AWS Account ID"
     exit 1
 fi
 

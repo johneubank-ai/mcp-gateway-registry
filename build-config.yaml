@@ -1,11 +1,21 @@
 # Unified Container Build Configuration
 # Central definition of all Docker images to build and push to ECR
 # This is the SINGLE SOURCE OF TRUTH for all container builds
+#
+# NOTE: The build scripts now dynamically construct the ECR registry URL
+# based on the AWS_REGION environment variable and current AWS credentials.
+# The values below are DEFAULTS and will be overridden if AWS_REGION is set.
+#
+# To deploy to a different region:
+#   export AWS_REGION=us-east-1
+#   make build-push
+#
+# The build scripts will automatically use the correct ECR registry for your region.
 
 aws:
-  account_id: "605134468121"
-  region: "us-west-2"
-  ecr_registry: "605134468121.dkr.ecr.us-west-2.amazonaws.com"
+  account_id: "605134468121"  # Default account (overridden by AWS credentials)
+  region: "us-west-2"         # Default region (overridden by AWS_REGION env var)
+  ecr_registry: "605134468121.dkr.ecr.us-west-2.amazonaws.com"  # Default registry (constructed dynamically)
 
 images:
   # ========================================
