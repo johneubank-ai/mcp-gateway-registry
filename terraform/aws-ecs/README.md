@@ -554,6 +554,15 @@ echo "Your Public IP: $MY_IP"
 
 **Step 3: Deploy Infrastructure**
 
+**IMPORTANT: First-time deployments require a two-stage process due to SSL certificate dependencies.**
+
+**Why two stages are needed:**
+- The ALB listeners depend on ACM certificate ARNs
+- Certificate ARNs are not known until after certificates are created and validated
+- Terraform cannot resolve the `for_each` dependency during initial plan phase
+
+**Stage 1: Create and validate SSL certificates**
+
 ```bash
 # Initialize Terraform (downloads AWS provider, creates state file)
 terraform init
@@ -561,18 +570,34 @@ terraform init
 # Validate configuration syntax
 terraform validate
 
-# See what will be created (DRY RUN)
-terraform plan
+# Create ONLY the certificates first
+terraform apply \
+  -target=aws_acm_certificate.keycloak \
+  -target=aws_acm_certificate.registry \
+  -target=aws_acm_certificate_validation.keycloak \
+  -target=aws_acm_certificate_validation.registry
 
-# Review the plan output carefully:
-# - Should create ~50-70 resources
-# - Check VPC CIDR, region, domain names
-# - Verify ECR image URIs are correct
+# Type 'yes' when prompted
+# This will:
+# 1. Request SSL certificates from AWS ACM
+# 2. Create DNS validation records in Route53
+# 3. Wait for certificate validation to complete (may take 5-10 minutes)
+```
 
-# Apply the configuration (creates actual AWS resources)
+**Stage 2: Deploy all remaining infrastructure**
+
+```bash
+# Now deploy everything else
 terraform apply
 # Type 'yes' when prompted
+
+# Review the plan output carefully:
+# - Should create ~50-70 resources total (minus the ~10 from stage 1)
+# - Check VPC CIDR, region, domain names
+# - Verify ECR image URIs are correct
 ```
+
+**Note:** Subsequent deployments (updates, changes) do NOT require two stages - only the initial deployment.
 
 **Expected output:**
 ```
