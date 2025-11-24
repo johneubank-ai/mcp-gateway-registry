@@ -119,9 +119,9 @@ async def read_root(
 @router.get("/servers")
 async def get_servers_json(
     query: str | None = None,
-    user_context: Annotated[dict, Depends(enhanced_auth)] = None,
+    user_context: Annotated[dict, Depends(nginx_proxied_auth)] = None,
 ):
-    """Get servers data as JSON for React frontend (reuses root route logic)."""
+    """Get servers data as JSON for React frontend and external API (supports both session cookies and Bearer tokens)."""
     service_data = []
     search_query = query.lower() if query else ""
     
@@ -2385,34 +2385,6 @@ async def register_service_api(
             status_code=500,
             detail=f"Service registration failed: {str(e)}"
         )
-
-
-@router.get("/servers")
-async def list_services_api(
-    user_context: Annotated[dict, Depends(nginx_proxied_auth)] = None,
-):
-    """
-    List all registered services via JWT Bearer Token authentication (External API).
-
-    This endpoint provides the same functionality as GET /api/internal/list
-    but uses modern JWT Bearer token authentication.
-
-    **Authentication:** JWT Bearer token (via nginx X-User header)
-    **Authorization:** Requires valid JWT token from auth system
-
-    **Response:**
-    Returns a list of all registered services with their metadata.
-
-    **Example:**
-    ```bash
-    curl -X GET https://registry.example.com/api/servers \\
-      -H "Authorization: Bearer $JWT_TOKEN"
-    ```
-    """
-    logger.info(f"API list services request from user '{user_context.get('username') if user_context else 'unknown'}'")
-
-    # Call the existing internal_list_services function
-    return await internal_list_services(user_context=user_context)
 
 
 @router.post("/servers/toggle")
