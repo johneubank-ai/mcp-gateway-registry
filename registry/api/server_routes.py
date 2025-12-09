@@ -278,17 +278,72 @@ async def register_service(
     # Add to FAISS index with current enabled state
     is_enabled = server_service.is_service_enabled(path)
     await faiss_service.add_or_update_service(path, server_entry, is_enabled)
-    
+
     # Regenerate Nginx configuration
     enabled_servers = {
-        server_path: server_service.get_server_info(server_path) 
+        server_path: server_service.get_server_info(server_path)
         for server_path in server_service.get_enabled_services()
     }
     await nginx_service.generate_config_async(enabled_servers)
-    
+
     # Broadcast health status update to WebSocket clients
     await health_service.broadcast_health_update(path)
-    
+
+    # Security scanning if enabled
+    from ..services.security_scanner import security_scanner_service
+
+    scan_config = security_scanner_service.get_scan_config()
+    if scan_config.enabled and scan_config.scan_on_registration:
+        logger.info(f"Running security scan for newly registered server: {path}")
+        try:
+            # Construct the server URL for scanning
+            scan_url = proxy_pass_url
+
+            # Run the security scan
+            scan_result = await security_scanner_service.scan_server(
+                server_url=scan_url,
+                analyzers=scan_config.analyzers,
+                api_key=scan_config.llm_api_key,
+                timeout=scan_config.scan_timeout_seconds,
+            )
+
+            # Handle unsafe servers
+            if not scan_result.is_safe:
+                logger.warning(
+                    f"Server {path} failed security scan. "
+                    f"Critical: {scan_result.critical_issues}, High: {scan_result.high_severity}"
+                )
+
+                # Add security-pending tag if configured
+                if scan_config.add_security_pending_tag:
+                    current_tags = server_entry.get("tags", [])
+                    if "security-pending" not in current_tags:
+                        current_tags.append("security-pending")
+                        server_entry["tags"] = current_tags
+                        server_service.update_server(path, server_entry)
+                        logger.info(f"Added 'security-pending' tag to {path}")
+
+                # Disable server if configured
+                if scan_config.block_unsafe_servers:
+                    server_service.toggle_service(path, False)
+                    logger.warning(f"Disabled server {path} due to failed security scan")
+
+                    # Update FAISS with disabled state
+                    await faiss_service.add_or_update_service(path, server_entry, False)
+
+                    # Regenerate Nginx config to remove disabled server
+                    enabled_servers = {
+                        server_path: server_service.get_server_info(server_path)
+                        for server_path in server_service.get_enabled_services()
+                    }
+                    await nginx_service.generate_config_async(enabled_servers)
+            else:
+                logger.info(f"Server {path} passed security scan")
+
+        except Exception as e:
+            logger.error(f"Security scan failed for {path}: {e}")
+            # Non-fatal error - server is registered but scan failed
+
     logger.info(f"New service registered: '{name}' at path '{path}' by user '{user_context['username']}'")
 
     return JSONResponse(
@@ -524,6 +579,67 @@ async def internal_register_service(
     except Exception as e:
         logger.error(f"Failed to update scopes for server {path}: {e}")
         # Non-fatal error - server is registered but scopes not updated
+
+    # Security scanning if enabled
+    from ..services.security_scanner import security_scanner_service
+
+    scan_config = security_scanner_service.get_scan_config()
+    if scan_config.enabled and scan_config.scan_on_registration:
+        logger.info(f"Running security scan for newly registered server: {path}")
+        try:
+            # Construct the server URL for scanning
+            scan_url = proxy_pass_url
+
+            # Prepare headers if needed (for authenticated endpoints)
+            headers_json = None
+            if headers_list:
+                headers_json = json.dumps(headers_list)
+
+            # Run the security scan
+            scan_result = await security_scanner_service.scan_server(
+                server_url=scan_url,
+                analyzers=scan_config.analyzers,
+                api_key=scan_config.llm_api_key,
+                headers=headers_json,
+                timeout=scan_config.scan_timeout_seconds,
+            )
+
+            # Handle unsafe servers
+            if not scan_result.is_safe:
+                logger.warning(
+                    f"Server {path} failed security scan. "
+                    f"Critical: {scan_result.critical_issues}, High: {scan_result.high_severity}"
+                )
+
+                # Add security-pending tag if configured
+                if scan_config.add_security_pending_tag:
+                    current_tags = server_entry.get("tags", [])
+                    if "security-pending" not in current_tags:
+                        current_tags.append("security-pending")
+                        server_entry["tags"] = current_tags
+                        server_service.update_server(path, server_entry)
+                        logger.info(f"Added 'security-pending' tag to {path}")
+
+                # Disable server if configured
+                if scan_config.block_unsafe_servers:
+                    server_service.toggle_service(path, False)
+                    logger.warning(f"Disabled server {path} due to failed security scan")
+
+                    # Update FAISS with disabled state
+                    await faiss_service.add_or_update_service(path, server_entry, False)
+
+                    # Regenerate Nginx config to remove disabled server
+                    enabled_servers = {
+                        server_path: server_service.get_server_info(server_path)
+                        for server_path in server_service.get_enabled_services()
+                    }
+                    await nginx_service.generate_config_async(enabled_servers)
+            else:
+                logger.info(f"Server {path} passed security scan")
+
+        except Exception as e:
+            logger.error(f"Security scan failed for {path}: {e}")
+            # Non-fatal error - server is registered but scan failed
 
     logger.warning(f"INTERNAL REGISTER: Registration complete, returning success response")  # TODO: replace with debug
     logger.info(f"New service registered via internal endpoint: '{name}' at path '{path}' by admin '{username}'")
@@ -2310,6 +2426,67 @@ async def register_service_api(
             )
 
         logger.info(f"Service registered successfully via API: {path} by user {user_context.get('username')}")
+
+        # Security scanning if enabled
+        from ..services.security_scanner import security_scanner_service
+
+        scan_config = security_scanner_service.get_scan_config()
+        if scan_config.enabled and scan_config.scan_on_registration:
+            logger.info(f"Running security scan for newly registered server: {path}")
+            try:
+                # Construct the server URL for scanning
+                scan_url = proxy_pass_url
+
+                # Prepare headers if needed (for authenticated endpoints)
+                headers_json = None
+                if headers_list:
+                    headers_json = json.dumps(headers_list)
+
+                # Run the security scan
+                scan_result = await security_scanner_service.scan_server(
+                    server_url=scan_url,
+                    analyzers=scan_config.analyzers,
+                    api_key=scan_config.llm_api_key,
+                    headers=headers_json,
+                    timeout=scan_config.scan_timeout_seconds,
+                )
+
+                # Handle unsafe servers
+                if not scan_result.is_safe:
+                    logger.warning(
+                        f"Server {path} failed security scan. "
+                        f"Critical: {scan_result.critical_issues}, High: {scan_result.high_severity}"
+                    )
+
+                    # Add security-pending tag if configured
+                    if scan_config.add_security_pending_tag:
+                        current_tags = server_entry.get("tags", [])
+                        if "security-pending" not in current_tags:
+                            current_tags.append("security-pending")
+                            server_entry["tags"] = current_tags
+                            server_service.update_server(path, server_entry)
+                            logger.info(f"Added 'security-pending' tag to {path}")
+
+                    # Disable server if configured
+                    if scan_config.block_unsafe_servers:
+                        server_service.toggle_service(path, False)
+                        logger.warning(f"Disabled server {path} due to failed security scan")
+
+                        # Update FAISS with disabled state
+                        await faiss_service.add_or_update_service(path, server_entry, False)
+
+                        # Regenerate Nginx config to remove disabled server
+                        enabled_servers = {
+                            server_path: server_service.get_server_info(server_path)
+                            for server_path in server_service.get_enabled_services()
+                        }
+                        await nginx_service.generate_config_async(enabled_servers)
+                else:
+                    logger.info(f"Server {path} passed security scan")
+
+            except Exception as e:
+                logger.error(f"Security scan failed for {path}: {e}")
+                # Non-fatal error - server is registered but scan failed
 
         # Trigger async tasks for health check and FAISS sync
         asyncio.create_task(health_service.perform_immediate_health_check(path))
