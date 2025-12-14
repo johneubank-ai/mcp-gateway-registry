@@ -379,11 +379,23 @@ def _scan_all_servers(
     logger.info("Scan All MCP Servers - Security Vulnerability Scanner")
     logger.info("=" * 80)
 
+    # Load access token from file
+    try:
+        with open(token_file, 'r') as f:
+            token_data = json.load(f)
+            access_token = token_data.get("access_token")
+            if not access_token:
+                raise ValueError(f"No access_token found in {token_file}")
+        logger.info(f"Loaded token from: {token_file}")
+    except Exception as e:
+        logger.error(f"Failed to load token: {e}")
+        sys.exit(1)
+
     # Create registry client
     try:
         client = RegistryClient(
-            base_url=base_url,
-            token_file=str(token_file)
+            registry_url=base_url,
+            token=access_token
         )
         logger.info(f"Connected to registry at: {base_url}")
     except Exception as e:
@@ -446,14 +458,7 @@ def _scan_all_servers(
     logger.info("=" * 80)
     logger.info("")
 
-    # Load access token for authentication
-    access_token = None
-    try:
-        with open(token_file, 'r') as f:
-            token_data = json.load(f)
-            access_token = token_data.get("access_token")
-    except Exception as e:
-        logger.warning(f"Could not load access token for scan authentication: {e}")
+    # Note: access_token already loaded above for RegistryClient
 
     for idx, server in enumerate(enabled_servers, 1):
         # Handle both dict and object responses
