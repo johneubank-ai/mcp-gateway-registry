@@ -1,0 +1,202 @@
+# MCP Gateway Registry Management API
+
+Command-line tools for managing users, groups, servers, and agents in the MCP Gateway Registry.
+
+## Quick Start
+
+### Local Development Testing
+
+```bash
+# 1. Start local services
+docker-compose up -d
+
+# 2. Generate credentials for localhost
+cd credentials-provider
+./generate_creds.sh
+cd ..
+
+# 3. Run management commands
+uv run python api/registry_management.py --token-file .oauth-tokens/ingress.json <command>
+
+# Example: Create a user
+uv run python api/registry_management.py \
+  --token-file .oauth-tokens/ingress.json \
+  user-create-human \
+  --username johndoe \
+  --email john@example.com \
+  --first-name John \
+  --last-name Doe \
+  --groups mcp-registry-user \
+  --password MySecurePass123
+```
+
+### Production (AWS ECS Deployment)
+
+```bash
+# 1. Get M2M token from Keycloak (requires AWS credentials)
+./api/get-m2m-token.sh \
+  --aws-region us-east-1 \
+  --keycloak-url https://kc.us-east-1.aroraai.people.aws.dev \
+  --output-file api/.token \
+  registry-admin-bot
+
+# 2. Run management commands against production
+uv run python api/registry_management.py \
+  --token-file api/.token \
+  --registry-url https://registry.us-east-1.aroraai.people.aws.dev \
+  --aws-region us-east-1 \
+  --keycloak-url https://kc.us-east-1.aroraai.people.aws.dev \
+  <command>
+
+# Example: List all users in production
+uv run python api/registry_management.py \
+  --token-file api/.token \
+  --registry-url https://registry.us-east-1.aroraai.people.aws.dev \
+  --aws-region us-east-1 \
+  --keycloak-url https://kc.us-east-1.aroraai.people.aws.dev \
+  user-list
+```
+
+## Token Generation
+
+### For Localhost
+Use `credentials-provider/generate_creds.sh` which creates tokens for local Keycloak instance:
+```bash
+cd credentials-provider && ./generate_creds.sh && cd ..
+```
+Token saved to: `.oauth-tokens/ingress.json`
+
+### For Production (AWS)
+Use `api/get-m2m-token.sh` which retrieves tokens from AWS-deployed Keycloak:
+```bash
+./api/get-m2m-token.sh \
+  --aws-region us-east-1 \
+  --keycloak-url https://kc.us-east-1.aroraai.people.aws.dev \
+  --output-file api/.token \
+  registry-admin-bot
+```
+Token saved to: `api/.token`
+
+**Note:** `get-m2m-token.sh` is for AWS deployments only and requires AWS credentials. It retrieves secrets from SSM Parameter Store.
+
+## End-to-End Testing
+
+### Test Localhost
+```bash
+./api/test-management-api-e2e.sh --token-file .oauth-tokens/ingress.json
+```
+
+### Test Production
+```bash
+./api/test-management-api-e2e.sh \
+  --token-file api/.token \
+  --registry-url https://registry.us-east-1.aroraai.people.aws.dev \
+  --aws-region us-east-1 \
+  --keycloak-url https://kc.us-east-1.aroraai.people.aws.dev
+```
+
+## Common Management Operations
+
+### User Management
+
+```bash
+# Create human user
+uv run python api/registry_management.py --token-file <token> \
+  user-create-human \
+  --username alice \
+  --email alice@example.com \
+  --first-name Alice \
+  --last-name Smith \
+  --groups engineering \
+  --password SecurePass123
+
+# Create M2M service account
+uv run python api/registry_management.py --token-file <token> \
+  user-create-m2m \
+  --name service-bot \
+  --groups engineering \
+  --description "Automated service account"
+
+# List users
+uv run python api/registry_management.py --token-file <token> user-list
+
+# Delete user
+uv run python api/registry_management.py --token-file <token> \
+  user-delete --username alice --force
+```
+
+### Group Management
+
+```bash
+# Create group
+uv run python api/registry_management.py --token-file <token> \
+  group-create \
+  --name engineering \
+  --description "Engineering team"
+
+# List groups
+uv run python api/registry_management.py --token-file <token> group-list
+
+# Delete group
+uv run python api/registry_management.py --token-file <token> \
+  group-delete --name engineering --force
+```
+
+### Server Registration
+
+```bash
+# Register server from JSON config
+uv run python api/registry_management.py --token-file <token> \
+  register --config server-config.json
+
+# List servers
+uv run python api/registry_management.py --token-file <token> list
+
+# Remove server
+uv run python api/registry_management.py --token-file <token> \
+  remove --path /my-server --force
+```
+
+### Agent Registration
+
+```bash
+# Register agent from JSON config
+uv run python api/registry_management.py --token-file <token> \
+  agent-register --config agent-config.json
+
+# List agents
+uv run python api/registry_management.py --token-file <token> agent-list
+
+# Delete agent
+uv run python api/registry_management.py --token-file <token> \
+  agent-delete --path /my-agent --force
+```
+
+## Environment Summary
+
+| Environment | Token Script | Registry URL | Keycloak URL |
+|-------------|--------------|--------------|--------------|
+| **Localhost** | `credentials-provider/generate_creds.sh` | `http://localhost` (default) | `http://localhost:8080` (default) |
+| **Production** | `api/get-m2m-token.sh --aws-region ... --keycloak-url ...` | `https://registry.us-east-1.aroraai.people.aws.dev` | `https://kc.us-east-1.aroraai.people.aws.dev` |
+
+## Files
+
+- `registry_management.py` - Main CLI for user/group/server/agent management
+- `registry_client.py` - Python client library for Registry API
+- `get-m2m-token.sh` - Get M2M tokens from AWS Keycloak (production only)
+- `test-management-api-e2e.sh` - End-to-end test suite
+- `.gitignore` - Excludes token files and temporary JSON files
+
+## Requirements
+
+- Python 3.11+ with `uv` package manager
+- For production: AWS credentials with access to SSM Parameter Store
+- For localhost: Running `docker-compose` stack with Keycloak
+
+## Authentication
+
+All commands require a valid JWT token:
+- **Localhost**: Session-based tokens from `generate_creds.sh`
+- **Production**: M2M client credentials from `get-m2m-token.sh`
+
+Tokens are passed via `--token-file` parameter and must have appropriate scopes for the operations being performed.
