@@ -36,24 +36,24 @@ uv run python api/registry_management.py \
 # 1. Get M2M token from Keycloak (requires AWS credentials)
 ./api/get-m2m-token.sh \
   --aws-region us-east-1 \
-  --keycloak-url https://kc.us-east-1.aroraai.people.aws.dev \
+  --keycloak-url https://keycloak.us-east-1.example.com \
   --output-file api/.token \
   registry-admin-bot
 
 # 2. Run management commands against production
 uv run python api/registry_management.py \
   --token-file api/.token \
-  --registry-url https://registry.us-east-1.aroraai.people.aws.dev \
+  --registry-url https://registry.us-east-1.example.com \
   --aws-region us-east-1 \
-  --keycloak-url https://kc.us-east-1.aroraai.people.aws.dev \
+  --keycloak-url https://keycloak.us-east-1.example.com \
   <command>
 
 # Example: List all users in production
 uv run python api/registry_management.py \
   --token-file api/.token \
-  --registry-url https://registry.us-east-1.aroraai.people.aws.dev \
+  --registry-url https://registry.us-east-1.example.com \
   --aws-region us-east-1 \
-  --keycloak-url https://kc.us-east-1.aroraai.people.aws.dev \
+  --keycloak-url https://keycloak.us-east-1.example.com \
   user-list
 ```
 
@@ -71,7 +71,7 @@ Use `api/get-m2m-token.sh` which retrieves tokens from AWS-deployed Keycloak:
 ```bash
 ./api/get-m2m-token.sh \
   --aws-region us-east-1 \
-  --keycloak-url https://kc.us-east-1.aroraai.people.aws.dev \
+  --keycloak-url https://keycloak.us-east-1.example.com \
   --output-file api/.token \
   registry-admin-bot
 ```
@@ -90,9 +90,9 @@ Token saved to: `api/.token`
 ```bash
 ./api/test-management-api-e2e.sh \
   --token-file api/.token \
-  --registry-url https://registry.us-east-1.aroraai.people.aws.dev \
+  --registry-url https://registry.us-east-1.example.com \
   --aws-region us-east-1 \
-  --keycloak-url https://kc.us-east-1.aroraai.people.aws.dev
+  --keycloak-url https://keycloak.us-east-1.example.com
 ```
 
 ## Common Management Operations
@@ -177,7 +177,7 @@ uv run python api/registry_management.py --token-file <token> \
 | Environment | Token Script | Registry URL | Keycloak URL |
 |-------------|--------------|--------------|--------------|
 | **Localhost** | `credentials-provider/generate_creds.sh` | `http://localhost` (default) | `http://localhost:8080` (default) |
-| **Production** | `api/get-m2m-token.sh --aws-region ... --keycloak-url ...` | `https://registry.us-east-1.aroraai.people.aws.dev` | `https://kc.us-east-1.aroraai.people.aws.dev` |
+| **Production** | `api/get-m2m-token.sh --aws-region ... --keycloak-url ...` | `https://registry.<region>.example.com` | `https://keycloak.<region>.example.com` |
 
 ## Files
 
