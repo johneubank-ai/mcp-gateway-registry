@@ -313,6 +313,14 @@ async def health_check():
     """Simple health check for load balancers and monitoring."""
     return {"status": "healthy", "service": "mcp-gateway-registry"}
 
+
+# Version endpoint for UI
+@app.get("/api/version")
+async def get_version():
+    """Get application version."""
+    return {"version": __version__}
+
+
 # Serve React static files
 FRONTEND_BUILD_PATH = Path(__file__).parent.parent / "frontend" / "build"
 
