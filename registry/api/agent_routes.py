@@ -108,7 +108,7 @@ async def _perform_agent_security_scan_on_registration(
                     current_tags.append("security-pending")
                     agent_card.tags = current_tags
                     # Update agent with new tags
-                    agent_info = agent_service.get_agent_info(path)
+                    agent_info = await agent_service.get_agent_info(path)
                     if agent_info:
                         updated_card = agent_info.model_dump()
                         updated_card["tags"] = current_tags
@@ -299,7 +299,7 @@ async def register_agent(
 
     path = _normalize_path(request.path, request.name)
 
-    if agent_service.get_agent_info(path):
+    if await agent_service.get_agent_info(path):
         logger.error(f"Agent registration failed: path '{path}' already exists")
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
@@ -506,7 +506,7 @@ async def check_agent_health(
     """Perform a live /ping health check against an agent endpoint."""
     path = _normalize_path(path)
 
-    agent_card = agent_service.get_agent_info(path)
+    agent_card = await agent_service.get_agent_info(path)
     if not agent_card:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -585,7 +585,7 @@ async def rate_agent(
     """Save integer ratings to agent card."""
     path = _normalize_path(path)
 
-    agent_card = agent_service.get_agent_info(path)
+    agent_card = await agent_service.get_agent_info(path)
     if not agent_card:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -630,7 +630,7 @@ async def get_agent_rating(
     """Get agent rating information."""
     path = _normalize_path(path)
 
-    agent_card = agent_service.get_agent_info(path)
+    agent_card = await agent_service.get_agent_info(path)
     if not agent_card:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -674,7 +674,7 @@ async def toggle_agent(
     """
     path = _normalize_path(path)
 
-    agent_card = agent_service.get_agent_info(path)
+    agent_card = await agent_service.get_agent_info(path)
     if not agent_card:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -735,7 +735,7 @@ async def get_agent(
     """
     path = _normalize_path(path)
 
-    agent_card = agent_service.get_agent_info(path)
+    agent_card = await agent_service.get_agent_info(path)
     if not agent_card:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -788,7 +788,7 @@ async def update_agent(
     """
     path = _normalize_path(path)
 
-    existing_agent = agent_service.get_agent_info(path)
+    existing_agent = await agent_service.get_agent_info(path)
     if not existing_agent:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -902,7 +902,7 @@ async def delete_agent(
     """
     path = _normalize_path(path)
 
-    existing_agent = agent_service.get_agent_info(path)
+    existing_agent = await agent_service.get_agent_info(path)
     if not existing_agent:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1164,7 +1164,7 @@ async def get_agent_security_scan(
         path = "/" + path
 
     # Check if agent exists
-    agent_info = agent_service.get_agent_info(path)
+    agent_info = await agent_service.get_agent_info(path)
     if not agent_info:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -1230,7 +1230,7 @@ async def rescan_agent(
         path = "/" + path
 
     # Check if agent exists
-    agent_info = agent_service.get_agent_info(path)
+    agent_info = await agent_service.get_agent_info(path)
     if not agent_info:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

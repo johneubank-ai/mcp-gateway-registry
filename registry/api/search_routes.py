@@ -109,7 +109,7 @@ async def _user_can_access_server(path: str, server_name: str, user_context: dic
     )
 
 
-def _user_can_access_agent(agent_path: str, user_context: dict) -> bool:
+async def _user_can_access_agent(agent_path: str, user_context: dict) -> bool:
     """Validate user access for a given agent."""
     if user_context.get("is_admin"):
         return True
@@ -118,7 +118,7 @@ def _user_can_access_agent(agent_path: str, user_context: dict) -> bool:
     if "all" not in accessible_agents and agent_path not in accessible_agents:
         return False
 
-    agent_card = agent_service.get_agent_info(agent_path)
+    agent_card = await agent_service.get_agent_info(agent_path)
     if not agent_card:
         return False
 
@@ -230,10 +230,10 @@ async def semantic_search(
         if not agent_path:
             continue
 
-        if not _user_can_access_agent(agent_path, user_context):
+        if not await _user_can_access_agent(agent_path, user_context):
             continue
 
-        agent_card_obj = agent_service.get_agent_info(agent_path)
+        agent_card_obj = await agent_service.get_agent_info(agent_path)
         agent_card_dict = (
             agent_card_obj.model_dump()
             if agent_card_obj
