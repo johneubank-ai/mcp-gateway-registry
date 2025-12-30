@@ -253,7 +253,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
             # 1. Create server_scope document
             server_scope_id = self._create_doc_id("server_scope", group_name)
             server_scope_doc = {
-                "scope_type": "server_scope",
+                "scope_type": "server_scopes",
                 "scope_name": group_name,
                 "server_access": [],
                 "description": description,
@@ -271,7 +271,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
             # 2. Create group_mapping document (self-mapping)
             group_mapping_id = self._create_doc_id("group_mapping", group_name)
             group_mapping_doc = {
-                "scope_type": "group_mapping",
+                "scope_type": "group_mappings",
                 "group_name": group_name,
                 "group_mappings": [group_name],
                 "created_at": current_time,
@@ -288,7 +288,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
             # 3. Create ui_scope document
             ui_scope_id = self._create_doc_id("ui_scope", group_name)
             ui_scope_doc = {
-                "scope_type": "ui_scope",
+                "scope_type": "UI-Scopes",
                 "scope_name": group_name,
                 "ui_permissions": {
                     "list_service": []
@@ -436,7 +436,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
             # 1. Create/update server_scope document
             server_scope_id = self._create_doc_id("server_scope", group_name)
             server_scope_doc = {
-                "scope_type": "server_scope",
+                "scope_type": "server_scopes",
                 "scope_name": group_name,
                 "server_access": server_access,
                 "description": description,
@@ -455,7 +455,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
             # 2. Create/update group_mapping document
             group_mapping_id = self._create_doc_id("group_mapping", group_name)
             group_mapping_doc = {
-                "scope_type": "group_mapping",
+                "scope_type": "group_mappings",
                 "group_name": group_name,
                 "group_mappings": group_mappings,
                 "created_at": current_time,
@@ -473,7 +473,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
             # 3. Create/update ui_scope document
             ui_scope_id = self._create_doc_id("ui_scope", group_name)
             ui_scope_doc = {
-                "scope_type": "ui_scope",
+                "scope_type": "UI-Scopes",
                 "scope_name": group_name,
                 "ui_permissions": ui_permissions,
                 "created_at": current_time,
@@ -595,7 +595,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                         "query": {
                             "bool": {
                                 "must": [
-                                    {"term": {"scope_type": "ui_scope"}},
+                                    {"term": {"scope_type": "UI-Scopes"}},
                                     {"term": {"scope_name": group_name}}
                                 ]
                             }
@@ -651,7 +651,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                 index=self._index_name,
                 body={
                     "query": {
-                        "term": {"scope_type": "server_scope"}
+                        "term": {"scope_type": "server_scopes"}
                     },
                     "size": 10000
                 }
@@ -723,7 +723,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                 current_ui["list_service"] = list_service
 
             document = {
-                "scope_type": "ui_scope",
+                "scope_type": "UI-Scopes",
                 "scope_name": group_name,
                 "ui_permissions": current_ui,
                 "updated_at": datetime.utcnow().isoformat()
@@ -768,7 +768,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                 current_ui["list_service"] = list_service
 
                 document = {
-                    "scope_type": "ui_scope",
+                    "scope_type": "UI-Scopes",
                     "scope_name": group_name,
                     "ui_permissions": current_ui,
                     "updated_at": datetime.utcnow().isoformat()
@@ -810,7 +810,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                 current_mappings.append(scope_name)
 
             document = {
-                "scope_type": "group_mapping",
+                "scope_type": "group_mappings",
                 "group_name": group_name,
                 "group_mappings": current_mappings,
                 "updated_at": datetime.utcnow().isoformat()
@@ -852,7 +852,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                 current_mappings.remove(scope_name)
 
                 document = {
-                    "scope_type": "group_mapping",
+                    "scope_type": "group_mappings",
                     "group_name": group_name,
                     "group_mappings": current_mappings,
                     "updated_at": datetime.utcnow().isoformat()
@@ -886,7 +886,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                 index=self._index_name,
                 body={
                     "query": {
-                        "term": {"scope_type": "group_mapping"}
+                        "term": {"scope_type": "group_mappings"}
                     },
                     "size": 10000
                 }
@@ -958,7 +958,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                 index=self._index_name,
                 body={
                     "query": {
-                        "term": {"scope_type": "server_scope"}
+                        "term": {"scope_type": "server_scopes"}
                     },
                     "size": 10000
                 }

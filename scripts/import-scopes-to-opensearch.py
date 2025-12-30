@@ -98,7 +98,7 @@ async def _import_ui_scopes(
 
     for scope_name, permissions in ui_scopes.items():
         doc = {
-            "scope_type": "ui_scope",
+            "scope_type": "UI-Scopes",
             "scope_name": scope_name,
             "ui_permissions": permissions,
             "updated_at": datetime.utcnow().isoformat(),
@@ -128,7 +128,7 @@ async def _import_group_mappings(
 
     for group_name, mapped_scopes in group_mappings.items():
         doc = {
-            "scope_type": "group_mapping",
+            "scope_type": "group_mappings",
             "group_name": group_name,
             "group_mappings": mapped_scopes,
             "updated_at": datetime.utcnow().isoformat(),
@@ -167,7 +167,7 @@ async def _import_server_scopes(
             continue
 
         doc = {
-            "scope_type": "server_scope",
+            "scope_type": "server_scopes",
             "scope_name": scope_name,
             "server_access": server_access_list,
             "updated_at": datetime.utcnow().isoformat(),
