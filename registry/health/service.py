@@ -307,24 +307,24 @@ class HealthMonitoringService:
         """Perform health checks on all enabled services."""
         from ..services.server_service import server_service
         import httpx
-        
-        enabled_services = server_service.get_enabled_services()
+
+        enabled_services = await server_service.get_enabled_services()
         if not enabled_services:
             return
-            
+
         # Only log if there are many services to avoid spam
         if len(enabled_services) > 1:
             logger.debug(f"Performing health checks on {len(enabled_services)} enabled services")
-        
+
         # Track if any status changed to minimize broadcasts
         status_changed = False
-        
+
         # Perform actual health checks concurrently for better performance
         async with httpx.AsyncClient(timeout=httpx.Timeout(settings.health_check_timeout_seconds)) as client:
             # Batch process enabled services
             check_tasks = []
             for service_path in enabled_services:
-                server_info = server_service.get_server_info(service_path)
+                server_info = await server_service.get_server_info(service_path)
                 if server_info and server_info.get("proxy_pass_url"):
                     check_tasks.append(self._check_single_service(client, service_path, server_info))
             

@@ -216,10 +216,12 @@ async def lifespan(app: FastAPI):
             logger.info("Continuing without federation")
 
         logger.info("🌐 Generating initial Nginx configuration...")
-        enabled_servers = {
-            path: server_service.get_server_info(path)
-            for path in server_service.get_enabled_services()
-        }
+        enabled_service_paths = await server_service.get_enabled_services()
+        enabled_servers = {}
+        for path in enabled_service_paths:
+            server_info = await server_service.get_server_info(path)
+            if server_info:
+                enabled_servers[path] = server_info
         await nginx_service.generate_config_async(enabled_servers)
 
         logger.info("✅ All services initialized successfully!")
