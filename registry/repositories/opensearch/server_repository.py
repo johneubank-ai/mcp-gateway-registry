@@ -242,7 +242,7 @@ class OpenSearchServerRepository(ServerRepositoryBase):
             if self._is_aoss():
                 search_response = await client.search(
                     index=self._index_name,
-                    body={"query": {"term": {"path.keyword": path}}}
+                    body={"query": {"match": {"path": path}}}
                 )
 
                 if search_response['hits']['total']['value'] == 0:
