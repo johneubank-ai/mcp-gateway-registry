@@ -39,17 +39,12 @@ if [ $? -ne 0 ]; then
 fi
 
 echo ""
-echo "Step 2/3: Forcing ECS service redeployment..."
+echo "Step 2/3: Updating ECS task definition with versioned image..."
 echo "----------------------------------------"
-aws ecs update-service \
-  --cluster "$ECS_CLUSTER" \
-  --service "$ECS_SERVICE" \
-  --force-new-deployment \
-  --region "$AWS_REGION" \
-  --output json | jq '{service: .service.serviceName, status: .service.status, desiredCount: .service.desiredCount}'
+"$SCRIPT_DIR/update-registry-task-def.sh"
 
 if [ $? -ne 0 ]; then
-    echo "Error: ECS service update failed"
+    echo "Error: Task definition update failed"
     exit 1
 fi
 
