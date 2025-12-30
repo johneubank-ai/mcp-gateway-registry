@@ -524,7 +524,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                         "query": {
                             "bool": {
                                 "must": [
-                                    {"term": {"scope_type": "server_scope"}},
+                                    {"term": {"scope_type": "server_scopes"}},
                                     {"term": {"scope_name": group_name}}
                                 ]
                             }
@@ -560,7 +560,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                         "query": {
                             "bool": {
                                 "must": [
-                                    {"term": {"scope_type": "group_mapping"}},
+                                    {"term": {"scope_type": "group_mappings"}},
                                     {"term": {"group_name": group_name}}
                                 ]
                             }
@@ -596,7 +596,7 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                             "bool": {
                                 "must": [
                                     {"term": {"scope_type": "UI-Scopes"}},
-                                    {"term": {"scope_name": group_name}}
+                                    {"term": {"group_name": group_name}}
                                 ]
                             }
                         },
