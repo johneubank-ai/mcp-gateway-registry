@@ -603,7 +603,7 @@ async def rate_agent(
         )
 
     try:
-        avg_rating = agent_service.update_rating(path, user_context["username"], request.rating)
+        avg_rating = await agent_service.update_rating(path, user_context["username"], request.rating)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
