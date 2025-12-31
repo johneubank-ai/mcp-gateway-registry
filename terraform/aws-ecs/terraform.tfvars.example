@@ -189,11 +189,13 @@ session_cookie_domain = ""
 # ============================================================================
 
 # DocumentDB Elastic Cluster credentials (REQUIRED)
-# Admin username for DocumentDB
-documentdb_admin_username = "docdbadmin"
-
-# Admin password for DocumentDB (minimum 8 characters)
-documentdb_admin_password = "CHANGE-ME-DocumentDB-Password123!"
+# RECOMMENDED: Set via environment variables instead of tfvars for security:
+#   export TF_VAR_documentdb_admin_username="docdbadmin"
+#   export TF_VAR_documentdb_admin_password="YourSecurePassword123!"
+#
+# Alternatively, uncomment below (less secure - credentials in file):
+# documentdb_admin_username = "docdbadmin"
+# documentdb_admin_password = "CHANGE-ME-DocumentDB-Password123!"
 
 # DocumentDB Elastic Cluster capacity configuration (OPTIONAL)
 # Uncomment to override defaults
