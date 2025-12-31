@@ -444,12 +444,19 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                 "updated_at": current_time
             }
 
-            await client.index(
-                index=self._index_name,
-                id=server_scope_id,
-                body=server_scope_doc,
-                refresh=True
-            )
+            if self._is_aoss():
+                # AOSS doesn't support custom IDs or refresh=true
+                await client.index(
+                    index=self._index_name,
+                    body=server_scope_doc
+                )
+            else:
+                await client.index(
+                    index=self._index_name,
+                    id=server_scope_id,
+                    body=server_scope_doc,
+                    refresh=True
+                )
             logger.info(f"Created/updated server_scope for {group_name}")
 
             # 2. Create/update group_mapping document
@@ -462,12 +469,19 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                 "updated_at": current_time
             }
 
-            await client.index(
-                index=self._index_name,
-                id=group_mapping_id,
-                body=group_mapping_doc,
-                refresh=True
-            )
+            if self._is_aoss():
+                # AOSS doesn't support custom IDs or refresh=true
+                await client.index(
+                    index=self._index_name,
+                    body=group_mapping_doc
+                )
+            else:
+                await client.index(
+                    index=self._index_name,
+                    id=group_mapping_id,
+                    body=group_mapping_doc,
+                    refresh=True
+                )
             logger.info(f"Created/updated group_mapping for {group_name}")
 
             # 3. Create/update ui_scope document
@@ -480,12 +494,19 @@ class OpenSearchScopeRepository(ScopeRepositoryBase):
                 "updated_at": current_time
             }
 
-            await client.index(
-                index=self._index_name,
-                id=ui_scope_id,
-                body=ui_scope_doc,
-                refresh=True
-            )
+            if self._is_aoss():
+                # AOSS doesn't support custom IDs or refresh=true
+                await client.index(
+                    index=self._index_name,
+                    body=ui_scope_doc
+                )
+            else:
+                await client.index(
+                    index=self._index_name,
+                    id=ui_scope_id,
+                    body=ui_scope_doc,
+                    refresh=True
+                )
             logger.info(f"Created/updated ui_scope for {group_name}")
 
             # Update in-memory cache
