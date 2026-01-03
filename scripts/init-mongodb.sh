@@ -23,7 +23,13 @@ echo "Waiting for MongoDB to be ready..."
 sleep 10
 
 echo "Initializing MongoDB replica set..."
-mongosh "mongodb://$DOCUMENTDB_HOST:$DOCUMENTDB_PORT" <<EOF
+# Check if authentication is configured
+if [ -n "$DOCUMENTDB_USERNAME" ] && [ -n "$DOCUMENTDB_PASSWORD" ] && [ "$DOCUMENTDB_USERNAME" != "admin" ] || [ "$DOCUMENTDB_PASSWORD" != "admin" ]; then
+  MONGO_URL="mongodb://$DOCUMENTDB_USERNAME:$DOCUMENTDB_PASSWORD@$DOCUMENTDB_HOST:$DOCUMENTDB_PORT/admin"
+else
+  MONGO_URL="mongodb://$DOCUMENTDB_HOST:$DOCUMENTDB_PORT"
+fi
+mongosh "$MONGO_URL" <<EOF
 // Initialize replica set (required for transactions and vector search)
 try {
   rs.initiate({
@@ -46,7 +52,7 @@ echo "Waiting for replica set to elect primary..."
 sleep 10
 
 echo "Creating database and collections with indexes..."
-mongosh "mongodb://$DOCUMENTDB_USERNAME:$DOCUMENTDB_PASSWORD@$DOCUMENTDB_HOST:$DOCUMENTDB_PORT/admin" <<EOF
+mongosh "$MONGO_URL" <<EOF
 // Switch to mcp_registry database
 use $DOCUMENTDB_DATABASE;
 
@@ -74,33 +80,21 @@ print("✓ " + agentsCollection + " indexes created");
 const scopesCollection = "mcp_scopes_$DOCUMENTDB_NAMESPACE";
 print("Creating collection: " + scopesCollection);
 db.createCollection(scopesCollection);
-db[scopesCollection].createIndex({ "scope_id": 1 }, { unique: true });
-db[scopesCollection].createIndex({ "group": 1 });
+// No additional indexes needed - scopes use _id as primary key
+// group_mappings is an array, not indexed
 print("✓ " + scopesCollection + " indexes created");
 
 // Collection 4: Vector Embeddings (1536 dimensions for Titan/OpenAI)
 const embeddingsCollection = "mcp_embeddings_1536_$DOCUMENTDB_NAMESPACE";
 print("Creating collection: " + embeddingsCollection);
 db.createCollection(embeddingsCollection);
-db[embeddingsCollection].createIndex({ item_id: 1 }, { unique: true });
-db[embeddingsCollection].createIndex({ item_type: 1 });
+db[embeddingsCollection].createIndex({ path: 1 }, { unique: true });
+db[embeddingsCollection].createIndex({ entity_type: 1 });
 
-// Create vector search index
-// Note: MongoDB 7.0 uses \$vectorSearch aggregation operator
-// Index will be used automatically when using \$vectorSearch
-print("Creating vector search index (HNSW)...");
-db[embeddingsCollection].createIndex(
-  { embedding: "vector" },
-  {
-    name: "vector_index",
-    vectorOptions: {
-      type: "hnsw",
-      dimensions: 1536,
-      similarity: "cosine"
-    }
-  }
-);
-print("✓ " + embeddingsCollection + " vector index created");
+// Vector search index for MongoDB CE
+// Note: MongoDB CE 8.2 vector search is implemented at the application level
+// See registry/repositories/documentdb/search_repository.py for semantic search implementation
+print("✓ " + embeddingsCollection + " indexes created (vector search via app code)");
 
 // Collection 5: Security Scans
 const scansCollection = "mcp_security_scans_$DOCUMENTDB_NAMESPACE";
@@ -132,6 +126,10 @@ print("  • " + scansCollection);
 print("  • " + federationCollection);
 print("");
 print("To use MongoDB CE:");
+print("  export STORAGE_BACKEND=mongodb-ce");
+print("  docker-compose up registry");
+print("");
+print("Or for AWS DocumentDB:");
 print("  export STORAGE_BACKEND=documentdb");
 print("  docker-compose up registry");
 print("========================================");

@@ -192,6 +192,9 @@ cookies.txt
 # Scratchpad for temporary notes and planning
 .scratchpad/
 
+# MongoDB keyfile for replica set authentication
+.mongodb-keyfile
+
 # Roo IDE files
 .roo/
 
