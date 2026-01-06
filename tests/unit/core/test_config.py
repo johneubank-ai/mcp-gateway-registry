@@ -23,8 +23,16 @@ from registry.core.config import Settings
 class TestSettingsInstantiation:
     """Test Settings class instantiation and default values."""
 
-    def test_settings_default_values(self) -> None:
+    def test_settings_default_values(self, monkeypatch, tmp_path) -> None:
         """Test Settings instantiation with default values."""
+        # Arrange - Clear environment variables and disable .env file loading
+        monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+        monkeypatch.delenv("AUTH_SERVER_URL", raising=False)
+        monkeypatch.delenv("SECRET_KEY", raising=False)
+
+        # Change to temp directory to prevent .env file loading
+        monkeypatch.chdir(tmp_path)
+
         # Act
         settings = Settings()
 
@@ -92,8 +100,12 @@ class TestSettingsInstantiation:
         assert settings.container_registry_dir == Path("/app/registry")
         assert settings.container_log_dir == Path("/app/logs")
 
-    def test_settings_secret_key_auto_generation(self) -> None:
+    def test_settings_secret_key_auto_generation(self, monkeypatch, tmp_path) -> None:
         """Test that secret_key is auto-generated when not provided."""
+        # Arrange - Clear SECRET_KEY env var and disable .env file loading
+        monkeypatch.delenv("SECRET_KEY", raising=False)
+        monkeypatch.chdir(tmp_path)
+
         # Act
         settings = Settings()
 
@@ -834,8 +846,13 @@ class TestSettingsSessionCookie:
 class TestSettingsAuthServerUrls:
     """Test auth server URL configuration."""
 
-    def test_auth_server_urls_default_to_localhost(self) -> None:
+    def test_auth_server_urls_default_to_localhost(self, monkeypatch, tmp_path) -> None:
         """Test that auth server URLs default to localhost."""
+        # Arrange - Clear AUTH_SERVER_URL env vars and disable .env file loading
+        monkeypatch.delenv("AUTH_SERVER_URL", raising=False)
+        monkeypatch.delenv("AUTH_SERVER_EXTERNAL_URL", raising=False)
+        monkeypatch.chdir(tmp_path)
+
         # Act
         settings = Settings()
 
