@@ -92,7 +92,7 @@ def mock_agent_service():
         Mock agent service instance
     """
     with patch("registry.services.agent_service.agent_service") as mock_agent:
-        mock_agent.load_agents_and_state = MagicMock()
+        mock_agent.load_agents_and_state = AsyncMock()
         mock_agent.list_agents = MagicMock(return_value=[])
         mock_agent.is_agent_enabled = MagicMock(return_value=False)
         yield mock_agent
@@ -109,6 +109,7 @@ def mock_federation_service():
     with patch("registry.services.federation_service.get_federation_service") as mock_get_fed:
         mock_fed_service = MagicMock()
         mock_fed_service.config.is_any_federation_enabled = MagicMock(return_value=False)
+        mock_fed_service.get_federated_servers = AsyncMock(return_value=[])
         mock_get_fed.return_value = mock_fed_service
         yield mock_fed_service
 

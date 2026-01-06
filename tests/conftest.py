@@ -233,8 +233,10 @@ def mock_scope_repository():
         AsyncMock instance with common scope repository methods
     """
     mock = AsyncMock()
+    mock.load_all = AsyncMock()
     mock.get_group_mappings.return_value = []
-    mock.list_groups.return_value = []
+    mock.list_groups.return_value = {}  # Return empty dict, not list
+    mock.get_group.return_value = None
     mock.get_scope_definition.return_value = None
     mock.list_scope_definitions.return_value = []
     return mock
@@ -249,8 +251,8 @@ def mock_server_repository():
         AsyncMock instance with common server repository methods
     """
     mock = AsyncMock()
-    mock.load_all.return_value = []
-    mock.list_all.return_value = []
+    mock.load_all.return_value = {}  # Return empty dict of servers
+    mock.list_all.return_value = {}  # Return empty dict of servers, not list
     mock.get.return_value = None
     mock.save.return_value = None
     mock.delete.return_value = None
