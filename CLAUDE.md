@@ -472,6 +472,85 @@ class TestFeatureName:
 - Use fixtures for common test data
 - Test both happy paths and error cases
 
+### Running Tests Before Pull Requests
+
+**CRITICAL**: Always run the full test suite before submitting a pull request or after completing a major feature.
+
+#### When to Run Tests
+1. **Before submitting a pull request**: All tests must pass before creating a PR
+2. **After completing a major feature**: Verify no regressions were introduced
+3. **After making significant refactoring changes**: Ensure existing functionality still works
+4. **After updating dependencies**: Verify compatibility with new versions
+
+#### How to Run Tests
+Run the complete test suite with parallel execution:
+
+```bash
+# Run all tests in parallel (using 8 workers)
+uv run pytest tests/ -n 8
+
+# Expected output (as of 2026-01-06):
+# - 701 passed
+# - 57 skipped
+# - Coverage: ~39.50%
+# - Execution time: ~30 seconds
+```
+
+#### Test Execution Options
+```bash
+# Run tests serially (slower, but uses less memory)
+uv run pytest tests/
+
+# Run only unit tests
+uv run pytest tests/unit/
+
+# Run only integration tests
+uv run pytest tests/integration/
+
+# Run with verbose output
+uv run pytest tests/ -n 8 -v
+
+# Run and stop at first failure
+uv run pytest tests/ -n 8 -x
+
+# Run with coverage report
+uv run pytest tests/ -n 8 --cov=registry --cov-report=term-missing
+```
+
+#### Test Prerequisites
+Before running tests, ensure:
+
+1. **MongoDB is running** (for integration tests):
+   ```bash
+   docker ps | grep mongo
+   # Should show: mcp-mongodb running on 0.0.0.0:27017
+   ```
+
+2. **Test environment is configured**:
+   - Tests automatically set `DOCUMENTDB_HOST=localhost`
+   - Tests use `mongodb-ce` storage backend
+   - Tests use `directConnection=true` for single-node MongoDB
+
+#### Continuous Integration
+Tests run automatically via GitHub Actions when:
+- Pull requests are created targeting `main` or `develop` branches
+- Code is pushed to `main` or `develop` branches
+
+See [.github/workflows/registry-test.yml](.github/workflows/registry-test.yml:7-8) for CI configuration.
+
+#### Acceptable Test Results
+- **All unit tests must pass** (no failures allowed in unit tests)
+- **Integration tests**: Some tests may be skipped due to known issues
+- **Coverage**: Minimum 35% coverage required (configured in pyproject.toml:87)
+- **Warnings**: Minor warnings are acceptable, but investigate new warnings
+
+#### What to Do If Tests Fail
+1. Review the test failure output carefully
+2. Fix the failing test(s) before submitting PR
+3. Re-run tests to verify the fix
+4. Never submit a PR with failing tests
+5. If a test failure is unrelated to your changes, investigate and fix it or document why it should be skipped
+
 ## Async/Await Best Practices
 
 ### Async Code Structure
