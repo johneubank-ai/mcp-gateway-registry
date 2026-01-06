@@ -554,9 +554,15 @@ def mock_scope_repository_with_data(mock_scopes_config):
         # Return the scope data if it exists, otherwise empty list
         return mock_scopes_config.get(scope_name, [])
 
+    # Mock get_group_mappings to return scopes for a group from mock_scopes_config
+    async def get_group_mappings_side_effect(group_name: str):
+        """Return scopes for a group from mock_scopes_config."""
+        group_mappings = mock_scopes_config.get("group_mappings", {})
+        return group_mappings.get(group_name, [])
+
     mock_repo.get_server_scopes.side_effect = get_server_scopes_side_effect
+    mock_repo.get_group_mappings.side_effect = get_group_mappings_side_effect
     mock_repo.load_all = AsyncMock()
-    mock_repo.get_group_mappings.return_value = mock_scopes_config.get("group_mappings", {})
     mock_repo.list_groups.return_value = {}
     mock_repo.get_group.return_value = None
     mock_repo.get_scope_definition.return_value = None
