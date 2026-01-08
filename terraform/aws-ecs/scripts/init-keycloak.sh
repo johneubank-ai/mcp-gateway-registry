@@ -537,6 +537,37 @@ create_service_account_clients() {
     echo -e "${GREEN}Service account clients created successfully!${NC}"
 }
 
+# Function to update user password (for existing users)
+update_user_password() {
+    local token=$1
+    local username=$2
+    local password=$3
+    
+    # Get user ID
+    local user_id=$(curl -s -H "Authorization: Bearer ${token}" \
+        "${KEYCLOAK_URL}/admin/realms/${REALM}/users?username=${username}" 2>/dev/null | \
+        jq -r 'if type == "array" then (.[0].id // empty) else empty end' 2>/dev/null)
+    
+    if [ -z "$user_id" ] || [ "$user_id" = "null" ]; then
+        return 1
+    fi
+    
+    # Reset password
+    local password_json='{
+        "type": "password",
+        "value": "'"${password}"'",
+        "temporary": false
+    }'
+    
+    local response=$(curl -s -o /dev/null -w "%{http_code}" \
+        -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/users/${user_id}/reset-password" \
+        -H "Authorization: Bearer ${token}" \
+        -H "Content-Type: application/json" \
+        -d "$password_json")
+    
+    [ "$response" = "204" ]
+}
+
 # Function to create test users
 create_users() {
     # Refresh token to ensure it's valid
@@ -568,10 +599,24 @@ create_users() {
         ]
     }'
     
-    curl -s -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users" \
+    local admin_response=$(curl -s -o /dev/null -w "%{http_code}" \
+        -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/users" \
         -H "Authorization: Bearer ${token}" \
         -H "Content-Type: application/json" \
-        -d "$admin_user_json" > /dev/null
+        -d "$admin_user_json")
+    
+    if [ "$admin_response" = "201" ]; then
+        echo "  - Created admin user with password from Secrets Manager"
+    elif [ "$admin_response" = "409" ]; then
+        echo "  - Admin user already exists, updating password..."
+        if update_user_password "$token" "$admin_username" "$INITIAL_ADMIN_PASSWORD"; then
+            echo "  - Admin password updated successfully"
+        else
+            echo -e "${YELLOW}  - Warning: Could not update admin password${NC}"
+        fi
+    else
+        echo -e "${RED}  - Failed to create admin user (HTTP $admin_response)${NC}"
+    fi
     
     # Create test user
     local test_user_json='{
