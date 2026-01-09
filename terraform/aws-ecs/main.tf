@@ -34,23 +34,29 @@ module "mcp_gateway" {
   ecs_cluster_name        = module.ecs_cluster.name
   task_execution_role_arn = module.ecs_cluster.task_exec_iam_role_arn
 
-  # HTTPS configuration - only use certificate when Route53 DNS is enabled
-  certificate_arn = var.enable_route53_dns ? aws_acm_certificate.registry[0].arn : ""
+  # HTTPS configuration - only use certificate when Route53 DNS is enabled (without CloudFront)
+  # When CloudFront is enabled, HTTPS termination happens at CloudFront, not ALB
+  certificate_arn = var.enable_route53_dns && !var.enable_cloudfront ? aws_acm_certificate.registry[0].arn : ""
   
   # Domain name for the registry - determines REGISTRY_URL and OAuth redirect URIs
-  # - Custom domain mode: use registry.${root_domain}
-  # - CloudFront mode: use CloudFront distribution domain
-  # - Neither: empty (development mode, uses ALB DNS)
+  # Simplified to 3 modes (no dual-access):
+  #   Mode 1: CloudFront-only - use CloudFront domain
+  #   Mode 2: Custom Domain → ALB - use custom domain
+  #   Mode 3: Custom Domain → CloudFront - use custom domain (traffic flows through CloudFront)
   domain_name = var.enable_route53_dns ? "registry.${local.root_domain}" : (
     var.enable_cloudfront ? aws_cloudfront_distribution.mcp_gateway[0].domain_name : ""
   )
   
-  # Additional server names for nginx - needed for dual-mode (CloudFront + custom domain)
-  # When both are enabled, nginx needs to accept requests for both hostnames
-  additional_server_names = var.enable_cloudfront && var.enable_route53_dns ? aws_cloudfront_distribution.mcp_gateway[0].domain_name : ""
+  # Additional server names for nginx - no longer needed with simplified modes
+  # Each deployment has a single entry point (either custom domain or CloudFront domain)
+  additional_server_names = ""
 
-  # Keycloak configuration - use CloudFront domain when CloudFront is enabled
-  keycloak_domain = var.enable_cloudfront && !var.enable_route53_dns ? aws_cloudfront_distribution.keycloak[0].domain_name : local.keycloak_domain
+  # Keycloak configuration
+  # Mode 1: CloudFront-only - use CloudFront domain
+  # Mode 2 & 3: Custom domain (Route53 enabled) - use custom domain
+  keycloak_domain = var.enable_route53_dns ? local.keycloak_domain : (
+    var.enable_cloudfront ? aws_cloudfront_distribution.keycloak[0].domain_name : local.keycloak_domain
+  )
 
   # CloudFront configuration - allows CloudFront IPs to reach ALB
   enable_cloudfront           = var.enable_cloudfront
@@ -114,17 +120,19 @@ resource "null_resource" "dual_ingress_warning" {
     command = <<-EOT
       echo ""
       echo "============================================================"
-      echo "WARNING: Dual Ingress Configuration Detected"
+      echo "INFO: Custom Domain → CloudFront Configuration (Mode 3)"
       echo "============================================================"
       echo "Both CloudFront (enable_cloudfront=true) and Route53 DNS"
       echo "(enable_route53_dns=true) are enabled."
       echo ""
-      echo "This creates TWO access paths:"
-      echo "  1. CloudFront URLs: https://*.cloudfront.net"
-      echo "  2. Custom Domain URLs: https://registry.${local.root_domain}"
+      echo "Traffic flow: Custom Domain → CloudFront → ALB → ECS"
       echo ""
-      echo "This is NOT a security risk, but may cause user confusion."
-      echo "Consider using only one ingress method for clarity."
+      echo "Access URL: https://registry.${local.root_domain}"
+      echo ""
+      echo "Benefits:"
+      echo "  - Custom branded domain"
+      echo "  - CloudFront edge caching and DDoS protection"
+      echo "  - Single entry point (no dual-access confusion)"
       echo "============================================================"
       echo ""
     EOT

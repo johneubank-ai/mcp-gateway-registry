@@ -58,6 +58,8 @@ resource "aws_acm_certificate_validation" "keycloak" {
 }
 
 # Create A record for Keycloak subdomain
+# Points to CloudFront when both CloudFront and Route53 are enabled (Mode 3)
+# Points to ALB when only Route53 is enabled (Mode 2)
 resource "aws_route53_record" "keycloak" {
   count   = var.enable_route53_dns ? 1 : 0
   zone_id = data.aws_route53_zone.root[0].zone_id
@@ -65,8 +67,10 @@ resource "aws_route53_record" "keycloak" {
   type    = "A"
 
   alias {
-    name                   = aws_lb.keycloak.dns_name
-    zone_id                = aws_lb.keycloak.zone_id
+    # Mode 3: Route53 → CloudFront (when both enabled)
+    # Mode 2: Route53 → ALB (when only Route53 enabled)
+    name                   = var.enable_cloudfront ? aws_cloudfront_distribution.keycloak[0].domain_name : aws_lb.keycloak.dns_name
+    zone_id                = var.enable_cloudfront ? aws_cloudfront_distribution.keycloak[0].hosted_zone_id : aws_lb.keycloak.zone_id
     evaluate_target_health = true
   }
 }

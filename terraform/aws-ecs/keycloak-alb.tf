@@ -90,19 +90,21 @@ resource "aws_lb_listener" "keycloak_https" {
 }
 
 # HTTP Listener - behavior depends on deployment mode
-# With Route53 DNS: redirect to HTTPS
-# Without Route53 DNS (CloudFront mode): forward to target (CloudFront handles HTTPS)
+# Mode 2 (Custom Domain → ALB): redirect to HTTPS
+# Mode 1 & 3 (CloudFront enabled): forward to target (CloudFront handles HTTPS)
 resource "aws_lb_listener" "keycloak_http" {
   load_balancer_arn = aws_lb.keycloak.arn
   port              = "80"
   protocol          = "HTTP"
 
+  # Redirect to HTTPS only when Route53 is enabled WITHOUT CloudFront (Mode 2)
+  # When CloudFront is enabled (Mode 1 or 3), forward to target group
   default_action {
-    type             = var.enable_route53_dns ? "redirect" : "forward"
-    target_group_arn = var.enable_route53_dns ? null : aws_lb_target_group.keycloak.arn
+    type             = var.enable_route53_dns && !var.enable_cloudfront ? "redirect" : "forward"
+    target_group_arn = var.enable_route53_dns && !var.enable_cloudfront ? null : aws_lb_target_group.keycloak.arn
 
     dynamic "redirect" {
-      for_each = var.enable_route53_dns ? [1] : []
+      for_each = var.enable_route53_dns && !var.enable_cloudfront ? [1] : []
       content {
         port        = "443"
         protocol    = "HTTPS"

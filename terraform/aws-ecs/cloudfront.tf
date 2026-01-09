@@ -1,19 +1,14 @@
 #
-# CloudFront Distributions for HTTPS without Custom Domain
+# CloudFront Distributions for HTTPS
 #
-# Enables HTTPS access using default *.cloudfront.net certificates
-# when custom Route53 DNS is not available (workshops, demos, evaluations)
-#
-# TODO: Simplify deployment modes to avoid dual-access complexity:
+# Supports three deployment modes:
 #   1. CloudFront-only: Use *.cloudfront.net URLs directly (no custom domain)
-#   2. Custom Domain → ALB: Traditional setup with ACM certificates
+#   2. Custom Domain → ALB: Traditional setup with ACM certificates (CloudFront disabled)
 #   3. Custom Domain → CloudFront: Route53 points to CloudFront (best of both)
 #
-# When enable_cloudfront=true AND enable_route53_dns=true, Route53 should
-# point to CloudFront distributions instead of ALBs. This eliminates the
-# need to handle dual-access (same deployment accessible via both CloudFront
-# and custom domain URLs), which causes OAuth2 callback_uri and session
-# cookie issues due to Host header rewriting.
+# When enable_cloudfront=true AND enable_route53_dns=true (Mode 3), CloudFront
+# is configured with custom domain aliases and ACM certificates from us-east-1.
+# Route53 points to CloudFront instead of ALBs.
 #
 
 # Data sources for managed CloudFront policies
@@ -34,6 +29,9 @@ resource "aws_cloudfront_distribution" "mcp_gateway" {
   default_root_object = ""
   price_class         = "PriceClass_100"
 
+  # Custom domain alias when Route53 is also enabled (Mode 3)
+  aliases = var.enable_route53_dns ? ["registry.${local.root_domain}"] : []
+
   origin {
     domain_name = module.mcp_gateway.alb_dns_name
     origin_id   = "mcp-gateway-alb"
@@ -53,7 +51,7 @@ resource "aws_cloudfront_distribution" "mcp_gateway" {
     }
 
     # Custom header to indicate this request came through CloudFront
-    # The auth server will use this to check X-Forwarded-Host for the original domain
+    # The auth server uses this for reliable HTTPS detection
     custom_header {
       name  = "X-Cloudfront-Forwarded-Proto"
       value = "https"
@@ -80,9 +78,17 @@ resource "aws_cloudfront_distribution" "mcp_gateway" {
     }
   }
 
+  # Use ACM certificate from us-east-1 when custom domain is configured (Mode 3)
+  # Otherwise use default CloudFront certificate (Mode 1)
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = var.enable_route53_dns ? false : true
+    acm_certificate_arn            = var.enable_route53_dns ? aws_acm_certificate.registry_cloudfront[0].arn : null
+    ssl_support_method             = var.enable_route53_dns ? "sni-only" : null
+    minimum_protocol_version       = var.enable_route53_dns ? "TLSv1.2_2021" : null
   }
+
+  # Ensure certificate is validated before CloudFront uses it
+  depends_on = [aws_acm_certificate_validation.registry_cloudfront]
 
   tags = merge(
     local.common_tags,
@@ -101,6 +107,9 @@ resource "aws_cloudfront_distribution" "keycloak" {
   comment     = "${var.name} Keycloak CloudFront Distribution"
   price_class = "PriceClass_100"
 
+  # Custom domain alias when Route53 is also enabled (Mode 3)
+  aliases = var.enable_route53_dns ? [local.keycloak_domain] : []
+
   origin {
     domain_name = aws_lb.keycloak.dns_name
     origin_id   = "keycloak-alb"
@@ -108,13 +117,14 @@ resource "aws_cloudfront_distribution" "keycloak" {
     custom_origin_config {
       http_port              = 80
       https_port             = 443
+      # Always use HTTP to ALB - the ALB HTTP listener is configured to forward
+      # (not redirect) when CloudFront is enabled. Using HTTPS would fail because
+      # the ALB cert is for the custom domain, not the ALB DNS name.
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
 
     # Custom header to tell Keycloak the original protocol was HTTPS
-    # Note: We use X-Forwarded-Proto directly because Keycloak checks this header
-    # The ALB will NOT overwrite this when using http-only origin protocol
     custom_header {
       name  = "X-Forwarded-Proto"
       value = "https"
@@ -139,9 +149,17 @@ resource "aws_cloudfront_distribution" "keycloak" {
     }
   }
 
+  # Use ACM certificate from us-east-1 when custom domain is configured (Mode 3)
+  # Otherwise use default CloudFront certificate (Mode 1)
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = var.enable_route53_dns ? false : true
+    acm_certificate_arn            = var.enable_route53_dns ? aws_acm_certificate.keycloak_cloudfront[0].arn : null
+    ssl_support_method             = var.enable_route53_dns ? "sni-only" : null
+    minimum_protocol_version       = var.enable_route53_dns ? "TLSv1.2_2021" : null
   }
+
+  # Ensure certificate is validated before CloudFront uses it
+  depends_on = [aws_acm_certificate_validation.keycloak_cloudfront]
 
   tags = merge(
     local.common_tags,

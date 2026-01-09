@@ -92,6 +92,7 @@ module "alb" {
         port            = 8888
         protocol        = var.certificate_arn != "" ? "HTTPS" : "HTTP"
         certificate_arn = var.certificate_arn != "" ? var.certificate_arn : null
+        ssl_policy      = var.certificate_arn != "" ? "ELBSecurityPolicy-TLS13-1-2-2021-06" : null
         forward = {
           target_group_key = "auth"
         }

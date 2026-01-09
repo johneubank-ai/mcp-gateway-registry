@@ -63,7 +63,9 @@ resource "aws_acm_certificate_validation" "registry" {
   validation_record_fqdns = [for record in aws_route53_record.registry_certificate_validation : record.fqdn]
 }
 
-# Create A record for registry subdomain pointing to main ALB
+# Create A record for registry subdomain
+# Points to CloudFront when both CloudFront and Route53 are enabled (Mode 3)
+# Points to ALB when only Route53 is enabled (Mode 2)
 resource "aws_route53_record" "registry" {
   count   = var.enable_route53_dns ? 1 : 0
   zone_id = data.aws_route53_zone.registry_root[0].zone_id
@@ -71,8 +73,10 @@ resource "aws_route53_record" "registry" {
   type    = "A"
 
   alias {
-    name                   = module.mcp_gateway.alb_dns_name
-    zone_id                = module.mcp_gateway.alb_zone_id
+    # Mode 3: Route53 → CloudFront (when both enabled)
+    # Mode 2: Route53 → ALB (when only Route53 enabled)
+    name                   = var.enable_cloudfront ? aws_cloudfront_distribution.mcp_gateway[0].domain_name : module.mcp_gateway.alb_dns_name
+    zone_id                = var.enable_cloudfront ? aws_cloudfront_distribution.mcp_gateway[0].hosted_zone_id : module.mcp_gateway.alb_zone_id
     evaluate_target_health = true
   }
 }
