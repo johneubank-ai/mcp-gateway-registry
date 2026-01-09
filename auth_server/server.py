@@ -1591,10 +1591,11 @@ async def oauth2_login(provider: str, request: Request, redirect_uri: str = None
         # This is critical for dual-mode (CloudFront + custom domain) deployments
         # The callback_uri MUST match exactly between authorization and token exchange
         host = request.headers.get("host", "localhost:8888")
-        # Check X-Forwarded-Proto header (case-insensitive) for HTTPS detection
+        # Check CloudFront header first, then X-Forwarded-Proto for HTTPS detection
+        cloudfront_proto = request.headers.get("x-cloudfront-forwarded-proto", "").lower()
         forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
-        scheme = "https" if forwarded_proto == "https" or request.url.scheme == "https" else "http"
-        logger.info(f"OAuth2 login - host: {host}, x-forwarded-proto: {forwarded_proto}, scheme: {scheme}")
+        scheme = "https" if cloudfront_proto == "https" or forwarded_proto == "https" or request.url.scheme == "https" else "http"
+        logger.info(f"OAuth2 login - host: {host}, x-cloudfront-forwarded-proto: {cloudfront_proto}, x-forwarded-proto: {forwarded_proto}, scheme: {scheme}")
         
         # Special case for localhost to include port
         if "localhost" in host and ":" not in host:
