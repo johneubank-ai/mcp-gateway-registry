@@ -169,8 +169,8 @@ The registry includes two example A2A agents that demonstrate how both human dev
 **View in Registry UI:**
 Open the registry and navigate to the **A2A Agents** tab to browse registered agents with their full metadata, capabilities, and skills.
 
-**Search via Semantic API:**
-Agents and developers can search for agents by natural language description:
+**Search via CLI:**
+Developers can search for agents by natural language description:
 
 ```bash
 # Search for agents that can help book a trip
@@ -187,6 +187,28 @@ Travel Assistant Agent                   | /travel-assistant-agent   |  0.8610
 Flight Booking Agent                     | /flight-booking-agent     |  1.2134
 --------------------------------------------------------------------------------------------------------------
 ```
+
+### Agent-to-Agent Discovery (A2A)
+
+Agents can autonomously discover and invoke other agents at runtime using the registry's semantic search API as a tool. This enables dynamic agent composition where agents find collaborators based on capabilities rather than hardcoded references.
+
+**How it works:**
+1. An agent uses the `discover_remote_agents` tool with a natural language query (e.g., "agent that can book flights")
+2. The registry returns matching agents ranked by relevance with their endpoint URLs and skills
+3. The agent caches discovered agents and invokes them via A2A protocol using `invoke_remote_agent`
+
+**Example - Travel Assistant discovering Flight Booking Agent:**
+```
+User: "I need to book a flight from NYC to LA"
+
+Travel Assistant:
+  1. Calls discover_remote_agents("agent that can book flights")
+  2. Registry returns Flight Booking Agent (score: 0.85)
+  3. Calls invoke_remote_agent("/flight-booking-agent", "Book a flight from NYC to LA")
+  4. Returns booking confirmation to user
+```
+
+This pattern enables agents to dynamically extend their capabilities by discovering specialized agents for tasks they cannot handle directly.
 
 **Agent Cards:** View the agent card metadata at [agents/a2a/test/](agents/a2a/test/) to see the complete agent definitions including skills, protocols, and capabilities.
 
