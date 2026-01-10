@@ -1964,8 +1964,8 @@ async def oauth2_logout(provider: str, request: Request, redirect_uri: str = Non
             redirect_url = redirect_uri or OAUTH2_CONFIG.get("registry", {}).get("success_redirect", "/login")
             return RedirectResponse(url=redirect_url, status_code=302)
         
-        # For Cognito, we need to construct the full redirect URI
-        full_redirect_uri = redirect_uri or "/logout"
+        # Build full redirect URI
+        full_redirect_uri = redirect_uri or "/login"
         if not full_redirect_uri.startswith("http"):
             # Make it a full URL - extract registry URL from request's referer or use environment
             registry_base = os.environ.get('REGISTRY_URL')
@@ -1981,11 +1981,20 @@ async def oauth2_logout(provider: str, request: Request, redirect_uri: str = Non
             
             full_redirect_uri = f"{registry_base.rstrip('/')}{full_redirect_uri}"
         
-        # Build logout URL with correct parameters for Cognito
-        logout_params = {
-            "client_id": provider_config["client_id"],
-            "logout_uri": full_redirect_uri
-        }
+        # Detect provider type and build appropriate logout URL
+        # Keycloak uses post_logout_redirect_uri, Cognito uses logout_uri
+        if "keycloak" in provider.lower() or "/realms/" in logout_url:
+            # Keycloak logout parameters
+            logout_params = {
+                "client_id": provider_config["client_id"],
+                "post_logout_redirect_uri": full_redirect_uri
+            }
+        else:
+            # Cognito logout parameters
+            logout_params = {
+                "client_id": provider_config["client_id"],
+                "logout_uri": full_redirect_uri
+            }
         
         logout_redirect_url = f"{logout_url}?{urllib.parse.urlencode(logout_params)}"
         
