@@ -36,6 +36,7 @@ module "mcp_gateway" {
 
   # HTTPS configuration - only use certificate when Route53 DNS is enabled (without CloudFront)
   # When CloudFront is enabled, HTTPS termination happens at CloudFront, not ALB
+  enable_https    = var.enable_route53_dns && !var.enable_cloudfront
   certificate_arn = var.enable_route53_dns && !var.enable_cloudfront ? aws_acm_certificate.registry[0].arn : ""
   
   # Domain name for the registry - determines REGISTRY_URL and OAuth redirect URIs

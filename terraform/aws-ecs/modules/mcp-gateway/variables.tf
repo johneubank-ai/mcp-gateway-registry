@@ -461,3 +461,11 @@ variable "additional_server_names" {
   type        = string
   default     = ""
 }
+
+
+# HTTPS Configuration
+variable "enable_https" {
+  description = "Whether to enable HTTPS listener on ALB. Set to true when certificate_arn is provided."
+  type        = bool
+  default     = false
+}

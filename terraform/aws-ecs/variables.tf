@@ -7,7 +7,7 @@ variable "name" {
 variable "aws_region" {
   description = "AWS region for deployment. Can be set via TF_VAR_aws_region environment variable or terraform.tfvars"
   type        = string
-  default     = "us-east-1"
+  default     = "us-west-2"
 }
 
 variable "vpc_cidr" {
@@ -257,9 +257,10 @@ variable "documentdb_admin_username" {
 }
 
 variable "documentdb_admin_password" {
-  description = "DocumentDB Elastic Cluster admin password (minimum 8 characters)"
+  description = "DocumentDB Elastic Cluster admin password (minimum 8 characters). Only required when storage_backend is 'documentdb'."
   type        = string
   sensitive   = true
+  default     = ""  # Not required when using file storage backend
 }
 
 variable "documentdb_shard_capacity" {

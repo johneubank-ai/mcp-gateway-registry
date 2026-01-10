@@ -171,24 +171,28 @@ module "ecs_service_auth" {
         }
       ]
 
-      secrets = [
-        {
-          name      = "SECRET_KEY"
-          valueFrom = aws_secretsmanager_secret.secret_key.arn
-        },
-        {
-          name      = "KEYCLOAK_CLIENT_SECRET"
-          valueFrom = "${aws_secretsmanager_secret.keycloak_client_secret.arn}:client_secret::"
-        },
-        {
-          name      = "DOCUMENTDB_USERNAME"
-          valueFrom = "${var.documentdb_credentials_secret_arn}:username::"
-        },
-        {
-          name      = "DOCUMENTDB_PASSWORD"
-          valueFrom = "${var.documentdb_credentials_secret_arn}:password::"
-        }
-      ]
+      secrets = concat(
+        [
+          {
+            name      = "SECRET_KEY"
+            valueFrom = aws_secretsmanager_secret.secret_key.arn
+          },
+          {
+            name      = "KEYCLOAK_CLIENT_SECRET"
+            valueFrom = "${aws_secretsmanager_secret.keycloak_client_secret.arn}:client_secret::"
+          }
+        ],
+        var.storage_backend == "documentdb" ? [
+          {
+            name      = "DOCUMENTDB_USERNAME"
+            valueFrom = "${var.documentdb_credentials_secret_arn}:username::"
+          },
+          {
+            name      = "DOCUMENTDB_PASSWORD"
+            valueFrom = "${var.documentdb_credentials_secret_arn}:password::"
+          }
+        ] : []
+      )
 
       mountPoints = [
         {
@@ -491,40 +495,44 @@ module "ecs_service_registry" {
         }
       ]
 
-      secrets = [
-        {
-          name      = "SECRET_KEY"
-          valueFrom = aws_secretsmanager_secret.secret_key.arn
-        },
-        {
-          name      = "ADMIN_PASSWORD"
-          valueFrom = aws_secretsmanager_secret.admin_password.arn
-        },
-        {
-          name      = "KEYCLOAK_CLIENT_SECRET"
-          valueFrom = "${aws_secretsmanager_secret.keycloak_client_secret.arn}:client_secret::"
-        },
-        {
-          name      = "KEYCLOAK_M2M_CLIENT_SECRET"
-          valueFrom = "${aws_secretsmanager_secret.keycloak_m2m_client_secret.arn}:client_secret::"
-        },
-        {
-          name      = "KEYCLOAK_ADMIN_PASSWORD"
-          valueFrom = aws_secretsmanager_secret.keycloak_admin_password.arn
-        },
-        {
-          name      = "EMBEDDINGS_API_KEY"
-          valueFrom = aws_secretsmanager_secret.embeddings_api_key.arn
-        },
-        {
-          name      = "DOCUMENTDB_USERNAME"
-          valueFrom = "${var.documentdb_credentials_secret_arn}:username::"
-        },
-        {
-          name      = "DOCUMENTDB_PASSWORD"
-          valueFrom = "${var.documentdb_credentials_secret_arn}:password::"
-        }
-      ]
+      secrets = concat(
+        [
+          {
+            name      = "SECRET_KEY"
+            valueFrom = aws_secretsmanager_secret.secret_key.arn
+          },
+          {
+            name      = "ADMIN_PASSWORD"
+            valueFrom = aws_secretsmanager_secret.admin_password.arn
+          },
+          {
+            name      = "KEYCLOAK_CLIENT_SECRET"
+            valueFrom = "${aws_secretsmanager_secret.keycloak_client_secret.arn}:client_secret::"
+          },
+          {
+            name      = "KEYCLOAK_M2M_CLIENT_SECRET"
+            valueFrom = "${aws_secretsmanager_secret.keycloak_m2m_client_secret.arn}:client_secret::"
+          },
+          {
+            name      = "KEYCLOAK_ADMIN_PASSWORD"
+            valueFrom = aws_secretsmanager_secret.keycloak_admin_password.arn
+          },
+          {
+            name      = "EMBEDDINGS_API_KEY"
+            valueFrom = aws_secretsmanager_secret.embeddings_api_key.arn
+          }
+        ],
+        var.storage_backend == "documentdb" ? [
+          {
+            name      = "DOCUMENTDB_USERNAME"
+            valueFrom = "${var.documentdb_credentials_secret_arn}:username::"
+          },
+          {
+            name      = "DOCUMENTDB_PASSWORD"
+            valueFrom = "${var.documentdb_credentials_secret_arn}:password::"
+          }
+        ] : []
+      )
 
       mountPoints = [
         {
