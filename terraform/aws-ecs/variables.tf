@@ -245,9 +245,8 @@ variable "session_cookie_domain" {
   default     = ""
 }
 
-
 # =============================================================================
-# DOCUMENTDB ELASTIC CLUSTER CONFIGURATION
+# DOCUMENTDB CONFIGURATION (from upstream v1.0.9)
 # =============================================================================
 
 variable "documentdb_admin_username" {
@@ -344,3 +343,24 @@ variable "documentdb_use_iam" {
   default     = false
 }
 
+# =============================================================================
+# CLOUDFRONT CONFIGURATION (CloudFront HTTPS Support feature)
+# =============================================================================
+
+variable "enable_cloudfront" {
+  description = "Enable CloudFront distributions for HTTPS without custom domain. Uses default *.cloudfront.net certificates."
+  type        = bool
+  default     = false
+}
+
+variable "cloudfront_prefix_list_name" {
+  description = "Name of the managed prefix list for ALB ingress (e.g., CloudFront origin-facing IPs). Leave empty to disable prefix list rule. Default is AWS CloudFront prefix list."
+  type        = string
+  default     = ""  # Set to "com.amazonaws.global.cloudfront.origin-facing" when enable_cloudfront=true
+}
+
+variable "enable_route53_dns" {
+  description = "Enable Route53 DNS records and ACM certificates for custom domain. Set to false when using CloudFront-only deployment."
+  type        = bool
+  default     = true
+}
