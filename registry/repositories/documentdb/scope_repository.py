@@ -93,19 +93,29 @@ class DocumentDBScopeRepository(ScopeRepositoryBase):
         self,
         keycloak_group: str,
     ) -> List[str]:
-        """Get scope names mapped to a Keycloak group - queries DocumentDB directly."""
+        """Get scope names mapped to a Keycloak group - queries DocumentDB directly.
+        
+        The scopes collection stores documents where:
+        - _id = scope name (e.g., 'mcp-registry-admin', 'registry-users-lob1')
+        - group_mappings = list of Keycloak groups that map to this scope
+        
+        This function finds all scope documents where the given Keycloak group
+        is in the group_mappings array, and returns the scope names (_id values).
+        """
         logger.debug(f"DocumentDB READ: Getting group mappings for '{keycloak_group}' from DB")
         collection = await self._get_collection()
 
         try:
-            group_doc = await collection.find_one({"_id": keycloak_group})
-            if not group_doc:
-                logger.debug(f"DocumentDB READ: Group '{keycloak_group}' not found")
-                return []
-
-            mappings = group_doc.get("group_mappings", [])
-            logger.debug(f"DocumentDB READ: Found {len(mappings)} mappings for group '{keycloak_group}'")
-            return mappings
+            # Find all scope documents where this Keycloak group is in the group_mappings array
+            cursor = collection.find({"group_mappings": keycloak_group})
+            
+            # Return the _id (scope name) of each matching document
+            scope_names = []
+            async for doc in cursor:
+                scope_names.append(doc["_id"])
+            
+            logger.debug(f"DocumentDB READ: Found {len(scope_names)} scopes for Keycloak group '{keycloak_group}': {scope_names}")
+            return scope_names
         except Exception as e:
             logger.error(f"Error getting group mappings for '{keycloak_group}': {e}", exc_info=True)
             return []
