@@ -18,6 +18,7 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
 # Separate security group for CloudFront prefix list ingress
 # This avoids hitting the 60 rules per security group limit since the CloudFront
 # prefix list has ~55 reserved entries that count against the quota
+# checkov:skip=CKV2_AWS_5:Security group is attached to ALB via security_groups parameter (line 72)
 resource "aws_security_group" "alb_cloudfront" {
   count       = var.cloudfront_prefix_list_name != "" ? 1 : 0
   name        = "${local.name_prefix}-alb-cloudfront"
