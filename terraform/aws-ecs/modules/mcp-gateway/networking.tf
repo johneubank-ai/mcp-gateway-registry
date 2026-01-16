@@ -44,6 +44,7 @@ resource "aws_security_group_rule" "alb_cloudfront_ingress_http" {
   security_group_id = aws_security_group.alb_cloudfront[0].id
 }
 
+# checkov:skip=CKV_AWS_382:ALB security group requires unrestricted egress to reach ECS tasks and health checks
 resource "aws_security_group_rule" "alb_cloudfront_egress" {
   count             = var.cloudfront_prefix_list_name != "" ? 1 : 0
   description       = "Egress to all"
