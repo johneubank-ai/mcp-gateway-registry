@@ -208,24 +208,84 @@ async def _add_user_to_group_by_name(
 async def _add_service_principal_to_group(
     client: httpx.AsyncClient, token: str, sp_id: str, group_name: str
 ) -> None:
-    """Add a service principal to a group by group display name."""
+    """Add a service principal to a group by group display name.
+
+    Includes retry logic to handle Entra ID eventual consistency where
+    the service principal may not be immediately available after creation.
+    """
+    logger.debug(f"Looking up group '{group_name}' for SP assignment")
     group_id = await _find_group_id_by_name(client, token, group_name)
     if not group_id:
-        logger.warning(f"Group '{group_name}' not found, skipping assignment")
+        logger.warning(f"Group '{group_name}' not found in Entra ID, skipping assignment")
         return
+
+    logger.debug(f"Found group '{group_name}' with ID: {group_id}")
 
     payload = {"@odata.id": f"{GRAPH_BASE_URL}/directoryObjects/{sp_id}"}
 
-    response = await client.post(
-        f"{GRAPH_BASE_URL}/groups/{group_id}/members/$ref",
-        headers=_auth_headers(token),
-        json=payload,
-    )
+    # Retry logic for eventual consistency - SP may not be available immediately
+    max_retries = 5
+    retry_delay = 2.0
 
-    if response.status_code not in (204, 400):
-        logger.warning(
-            f"Failed to add service principal to group '{group_name}': HTTP {response.status_code}"
+    for attempt in range(max_retries):
+        response = await client.post(
+            f"{GRAPH_BASE_URL}/groups/{group_id}/members/$ref",
+            headers=_auth_headers(token),
+            json=payload,
         )
+
+        # 204 = success, 400 with "already exist" = also acceptable
+        if response.status_code == 204:
+            logger.info(
+                f"Successfully added service principal {sp_id} to group '{group_name}'"
+            )
+            return
+
+        if response.status_code == 400:
+            # Check if already a member (acceptable)
+            error_data = response.json()
+            error_msg = error_data.get("error", {}).get("message", "")
+            if "already exist" in error_msg.lower():
+                logger.info(
+                    f"Service principal {sp_id} is already a member of group '{group_name}'"
+                )
+                return
+            logger.warning(
+                f"Failed to add SP to group '{group_name}': {error_msg}"
+            )
+            return
+
+        if response.status_code == 404:
+            # Could be eventual consistency - SP not yet propagated
+            error_data = response.json()
+            error_msg = error_data.get("error", {}).get("message", "")
+            logger.debug(f"HTTP 404 response: {error_msg}")
+
+            if attempt < max_retries - 1:
+                logger.warning(
+                    f"Service principal not yet available for group assignment "
+                    f"(attempt {attempt + 1}/{max_retries}), retrying in {retry_delay}s..."
+                )
+                await asyncio.sleep(retry_delay)
+                retry_delay *= 1.5
+                continue
+
+        # Other error status codes
+        logger.warning(
+            f"Failed to add service principal to group '{group_name}': "
+            f"HTTP {response.status_code}"
+        )
+        try:
+            error_detail = response.json()
+            logger.debug(f"Error details: {error_detail}")
+        except Exception:
+            pass
+        return
+
+    logger.warning(
+        f"Failed to add service principal {sp_id} to group '{group_name}' "
+        f"after {max_retries} retries"
+    )
 
 
 # ==================== USER MANAGEMENT ====================

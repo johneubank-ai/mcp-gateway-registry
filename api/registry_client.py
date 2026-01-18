@@ -701,9 +701,11 @@ class UserDeleteResponse(BaseModel):
 class M2MAccountResponse(BaseModel):
     """Response model for M2M account creation."""
 
-    client_id: str = Field(..., description="Client ID")
+    client_id: str = Field(..., description="Client ID (app ID in Entra)")
     client_secret: str = Field(..., description="Client secret")
     groups: List[str] = Field(default_factory=list, description="Assigned groups")
+    client_uuid: Optional[str] = Field(None, description="Client UUID (Entra app object ID)")
+    service_principal_id: Optional[str] = Field(None, description="Service principal ID (Entra)")
 
 
 class GroupCreateRequest(BaseModel):
