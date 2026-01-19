@@ -31,7 +31,7 @@ services:
       start_period: 20s
     restart: unless-stopped
 
-  # MongoDB initialization (creates replica set, indexes, and loads scopes)
+  # MongoDB initialization (creates replica set, indexes, and loads admin scope)
   mongodb-init:
     image: python:3.11-slim
     container_name: mcp-mongodb-init
@@ -45,14 +45,13 @@ services:
       - DOCUMENTDB_USERNAME=${DOCUMENTDB_USERNAME:-admin}
       - DOCUMENTDB_PASSWORD=${DOCUMENTDB_PASSWORD:-admin}
       - DOCUMENTDB_NAMESPACE=${DOCUMENTDB_NAMESPACE:-default}
-      - SCOPES_FILE=/app/config/scopes.yml
     volumes:
-      - ./scripts/init-mongodb-ce.py:/app/init-mongodb-ce.py:ro
-      - ./auth_server/scopes.yml:/app/config/scopes.yml:ro
+      - ./scripts/init-mongodb-ce.py:/app/scripts/init-mongodb-ce.py:ro
+      - ./scripts/registry-admins.json:/app/scripts/registry-admins.json:ro
     command: >
       sh -c "
-      pip install --quiet motor pymongo pyyaml &&
-      python /app/init-mongodb-ce.py
+      pip install --quiet motor pymongo &&
+      python /app/scripts/init-mongodb-ce.py
       "
     restart: "no"
 
