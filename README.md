@@ -763,11 +763,9 @@ Our development roadmap is organized into weekly milestones with clear deliverab
 
 | Milestone | Due Date | Progress | Status | Key Issues |
 |-----------|----------|----------|--------|------------|
-| **December 2025 Week 4** | 2025-12-27 | 43% (3/7) | 🚧 In Progress | **Open:** [#317 - Optional PyTorch Dependencies](https://github.com/agentic-community/mcp-gateway-registry/issues/317), [#293 - CloudFront HTTPS Support](https://github.com/agentic-community/mcp-gateway-registry/issues/293), [#285 - Server Headers in Nginx](https://github.com/agentic-community/mcp-gateway-registry/issues/285), [#232 - A2A Curated Registry Discovery](https://github.com/agentic-community/mcp-gateway-registry/issues/232)<br/>**Closed:** [#287 - Filter Sidebar Buttons](https://github.com/agentic-community/mcp-gateway-registry/issues/287), [#284 - Statistics Count Fix](https://github.com/agentic-community/mcp-gateway-registry/issues/284), [#221 - DocumentDB Implementation](https://github.com/agentic-community/mcp-gateway-registry/issues/221) |
-| **January 2026 Week 1** | 2026-01-09 | 50% (2/4) | 🚧 In Progress | **Open:** [#297 - Unified UI Registration Flow](https://github.com/agentic-community/mcp-gateway-registry/issues/297), [#296 - Custom Metadata for Cards](https://github.com/agentic-community/mcp-gateway-registry/issues/296)<br/>**Closed:** [#329 - Update llms.txt](https://github.com/agentic-community/mcp-gateway-registry/issues/329), [#259 - Simplify JWT Token Generation](https://github.com/agentic-community/mcp-gateway-registry/issues/259) |
-| **January 2026 Week 3** | 2026-01-23 | 0% (0/2) | 📅 Planned | **Open:** [#295 - Multi-Level Rate Limiting](https://github.com/agentic-community/mcp-gateway-registry/issues/295), [#129 - Virtual MCP Server Support](https://github.com/agentic-community/mcp-gateway-registry/issues/129) |
-| **January 2026 Week 4** | 2026-01-30 | 0% (0/2) | 📅 Planned | **Open:** [#269 - AgentCore IAM Authentication](https://github.com/agentic-community/mcp-gateway-registry/issues/269), [#260 - Federation Between Registries](https://github.com/agentic-community/mcp-gateway-registry/issues/260) |
-| **Parking Lot** | — | 50% (1/2) | 🗂️ Backlog | **Open:** [#316 - Entra ID IAM APIs](https://github.com/agentic-community/mcp-gateway-registry/issues/316)<br/>**Closed:** [#315 - Distroless Docker Images](https://github.com/agentic-community/mcp-gateway-registry/issues/315) |
+| **January 2026 Week 3** | 2026-01-23 | 50% (1/2) | 🚧 In Progress | **Open:** [#295 - Multi-Level Rate Limiting](https://github.com/agentic-community/mcp-gateway-registry/issues/295)<br/>**Closed:** [#316 - Entra ID IAM APIs](https://github.com/agentic-community/mcp-gateway-registry/issues/316) |
+| **January 2026 Week 4** | 2026-01-30 | 0% (0/3) | 📅 Planned | **Open:** [#269 - AgentCore IAM Authentication](https://github.com/agentic-community/mcp-gateway-registry/issues/269), [#260 - Federation Between Registries](https://github.com/agentic-community/mcp-gateway-registry/issues/260), [#129 - Virtual MCP Server Support](https://github.com/agentic-community/mcp-gateway-registry/issues/129) |
+| **Parking Lot** | — | 100% (2/2) | 🗂️ Backlog | **Closed:** [#316 - Entra ID IAM APIs](https://github.com/agentic-community/mcp-gateway-registry/issues/316), [#315 - Distroless Docker Images](https://github.com/agentic-community/mcp-gateway-registry/issues/315) |
 
 **Status Legend:** 🚧 In Progress • 📅 Planned • 🗂️ Backlog • ✅ Complete
 
@@ -795,6 +793,9 @@ The following major features span multiple milestones and represent significant 
 ---
 
 #### Recently Completed
+
+- **[#316 - Entra ID IAM APIs](https://github.com/agentic-community/mcp-gateway-registry/issues/316)** ✅ **COMPLETED**
+  Full IAM support for Microsoft Entra ID with harmonized API for user/group management. Includes M2M service accounts, self-signed JWT tokens, and fine-grained access control through scopes. [Authentication Design](docs/design/authentication-design.md) | [Scopes Management](docs/scopes-mgmt.md)
 
 - **[#329 - Update llms.txt](https://github.com/agentic-community/mcp-gateway-registry/issues/329)** ✅ **COMPLETED** (v1.0.9)
   Updated AI assistant reference documentation with recent architecture changes.
