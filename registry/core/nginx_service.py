@@ -312,7 +312,7 @@ class NginxConfigService:
                 keycloak_port = '8080'
 
             # Generate version map for multi-version servers
-            version_map = self._generate_version_map(servers)
+            version_map = await self._generate_version_map(servers)
 
             # Replace placeholders in template
             config_content = template_content.replace("{{VERSION_MAP}}", version_map)
@@ -365,7 +365,7 @@ class NginxConfigService:
             return False
 
 
-    def _generate_version_map(
+    async def _generate_version_map(
         self,
         servers: Dict[str, Dict[str, Any]]
     ) -> str:
@@ -378,26 +378,47 @@ class NginxConfigService:
         Returns:
             Nginx map block as string, or empty string if no multi-version servers
         """
+        from ..services.server_service import server_service
+
         map_entries = []
 
         for path, server_info in servers.items():
-            versions = server_info.get("versions")
+            # Check if this server has other versions via other_version_ids
+            other_version_ids = server_info.get("other_version_ids", [])
 
-            if not versions or len(versions) <= 1:
+            if not other_version_ids:
                 # Single-version server - no map entry needed
                 continue
 
-            default_version = server_info.get("default_version")
-            default_backend = None
+            # Build versions list from active server and other versions
+            versions = []
 
-            # Find default backend URL
-            for v in versions:
-                if v.get("is_default") or v.get("version") == default_version:
-                    default_backend = v.get("proxy_pass_url")
-                    break
+            # Add the current (active) version
+            current_version = server_info.get("version", "v1.0.0")
+            current_proxy_url = server_info.get("proxy_pass_url", "")
+            if current_proxy_url:
+                versions.append({
+                    "version": current_version,
+                    "proxy_pass_url": current_proxy_url,
+                    "is_default": True,
+                })
 
-            if not default_backend and versions:
-                default_backend = versions[0].get("proxy_pass_url")
+            # Add other versions by fetching their info
+            for version_id in other_version_ids:
+                version_info = await server_service.get_server_info(version_id)
+                if version_info:
+                    versions.append({
+                        "version": version_info.get("version", "unknown"),
+                        "proxy_pass_url": version_info.get("proxy_pass_url", ""),
+                        "is_default": False,
+                    })
+
+            if len(versions) <= 1:
+                # Only one version found, skip
+                continue
+
+            # Default backend is the active version's URL
+            default_backend = current_proxy_url
 
             if not default_backend:
                 logger.warning(f"No default backend found for {path}, skipping version map")
@@ -425,6 +446,8 @@ class NginxConfigService:
                     map_entries.append(
                         f'    "~^{escaped_path}(/.*)?:{re.escape(version_str)}$"  "{backend_url}";'
                     )
+
+            logger.info(f"Generated version map entries for {path} with {len(versions)} versions")
 
         if not map_entries:
             return ""  # No multi-version servers configured

@@ -500,6 +500,8 @@ def cmd_register(args: argparse.Namespace) -> int:
             name=config.get("server_name") or config.get("name"),
             description=config.get("description"),
             proxy_pass_url=config.get("proxy_pass_url"),
+            version=config.get("version"),
+            status=config.get("status"),
             auth_provider=config.get("auth_provider"),
             auth_type=config.get("auth_type"),
             supported_transports=config.get("supported_transports"),
@@ -1152,6 +1154,138 @@ def cmd_server_search(args: argparse.Namespace) -> int:
 
     except Exception as e:
         logger.error(f"Semantic search failed: {e}")
+        return 1
+
+
+# Server Version Management Command Handlers
+
+
+def cmd_list_versions(args: argparse.Namespace) -> int:
+    """
+    List all versions for a server.
+
+    Args:
+        args: Command arguments
+
+    Returns:
+        Exit code (0 for success, 1 for failure)
+    """
+    try:
+        client = _create_client(args)
+        response = client.get_server_versions(path=args.path)
+
+        if args.json:
+            print(json.dumps(response, indent=2, default=str))
+            return 0
+
+        logger.info(f"Versions for server {response['path']}:\n")
+        logger.info(f"Default version: {response['default_version']}\n")
+
+        for v in response.get('versions', []):
+            default_marker = " (DEFAULT)" if v.get('is_default') else ""
+            status = v.get('status', 'stable')
+            print(f"  {v['version']}{default_marker}")
+            print(f"    Status: {status}")
+            print(f"    URL: {v.get('proxy_pass_url', 'N/A')}")
+            print()
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to list versions: {e}")
+        return 1
+
+
+def cmd_add_version(args: argparse.Namespace) -> int:
+    """
+    Add a new version to a server.
+
+    Args:
+        args: Command arguments
+
+    Returns:
+        Exit code (0 for success, 1 for failure)
+    """
+    try:
+        client = _create_client(args)
+        response = client.add_server_version(
+            path=args.path,
+            version=args.version,
+            proxy_pass_url=args.proxy_url,
+            status=args.status,
+            is_default=args.set_default
+        )
+
+        if args.json:
+            print(json.dumps(response, indent=2, default=str))
+            return 0
+
+        logger.info(f"Successfully added version {args.version} to {args.path}")
+        if args.set_default:
+            logger.info(f"Version {args.version} set as default")
+
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to add version: {e}")
+        return 1
+
+
+def cmd_remove_version(args: argparse.Namespace) -> int:
+    """
+    Remove a version from a server.
+
+    Args:
+        args: Command arguments
+
+    Returns:
+        Exit code (0 for success, 1 for failure)
+    """
+    try:
+        client = _create_client(args)
+        response = client.remove_server_version(
+            path=args.path,
+            version=args.version
+        )
+
+        if args.json:
+            print(json.dumps(response, indent=2, default=str))
+            return 0
+
+        logger.info(f"Successfully removed version {args.version} from {args.path}")
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to remove version: {e}")
+        return 1
+
+
+def cmd_set_default_version(args: argparse.Namespace) -> int:
+    """
+    Set the default version for a server.
+
+    Args:
+        args: Command arguments
+
+    Returns:
+        Exit code (0 for success, 1 for failure)
+    """
+    try:
+        client = _create_client(args)
+        response = client.set_default_version(
+            path=args.path,
+            version=args.version
+        )
+
+        if args.json:
+            print(json.dumps(response, indent=2, default=str))
+            return 0
+
+        logger.info(f"Successfully set default version to {args.version} for {args.path}")
+        return 0
+
+    except Exception as e:
+        logger.error(f"Failed to set default version: {e}")
         return 1
 
 
@@ -2671,6 +2805,103 @@ Examples:
         help="Output raw JSON"
     )
 
+    # Server Version Management Commands
+
+    # List versions command
+    list_versions_parser = subparsers.add_parser(
+        "list-versions",
+        help="List all versions for a server"
+    )
+    list_versions_parser.add_argument(
+        "--path",
+        required=True,
+        help="Server path (e.g., /context7)"
+    )
+    list_versions_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON"
+    )
+
+    # Add version command
+    add_version_parser = subparsers.add_parser(
+        "add-version",
+        help="Add a new version to a server"
+    )
+    add_version_parser.add_argument(
+        "--path",
+        required=True,
+        help="Server path (e.g., /context7)"
+    )
+    add_version_parser.add_argument(
+        "--version",
+        required=True,
+        help="Version identifier (e.g., v2.0.0)"
+    )
+    add_version_parser.add_argument(
+        "--proxy-url",
+        required=True,
+        help="Backend URL for this version"
+    )
+    add_version_parser.add_argument(
+        "--status",
+        default="stable",
+        choices=["stable", "beta", "deprecated"],
+        help="Version status (default: stable)"
+    )
+    add_version_parser.add_argument(
+        "--set-default",
+        action="store_true",
+        help="Set this as the default version"
+    )
+    add_version_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON"
+    )
+
+    # Remove version command
+    remove_version_parser = subparsers.add_parser(
+        "remove-version",
+        help="Remove a version from a server"
+    )
+    remove_version_parser.add_argument(
+        "--path",
+        required=True,
+        help="Server path (e.g., /context7)"
+    )
+    remove_version_parser.add_argument(
+        "--version",
+        required=True,
+        help="Version to remove"
+    )
+    remove_version_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON"
+    )
+
+    # Set default version command
+    set_default_version_parser = subparsers.add_parser(
+        "set-default-version",
+        help="Set the default version for a server"
+    )
+    set_default_version_parser.add_argument(
+        "--path",
+        required=True,
+        help="Server path (e.g., /context7)"
+    )
+    set_default_version_parser.add_argument(
+        "--version",
+        required=True,
+        help="Version to set as default"
+    )
+    set_default_version_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON"
+    )
+
     # Agent Management Commands
 
     # Agent register command
@@ -3168,6 +3399,10 @@ Examples:
         "security-scan": cmd_security_scan,
         "rescan": cmd_rescan,
         "server-search": cmd_server_search,
+        "list-versions": cmd_list_versions,
+        "add-version": cmd_add_version,
+        "remove-version": cmd_remove_version,
+        "set-default-version": cmd_set_default_version,
         "agent-register": cmd_agent_register,
         "agent-list": cmd_agent_list,
         "agent-get": cmd_agent_get,

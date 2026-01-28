@@ -27,6 +27,7 @@ interface VersionSelectorModalProps {
   versions: ServerVersion[];
   defaultVersion: string | null;
   onVersionChange?: (newDefaultVersion: string) => void;
+  onRefreshServer?: () => void;
   onShowToast?: (message: string, type: 'success' | 'error') => void;
   authToken?: string | null;
   canModify?: boolean;
@@ -45,6 +46,7 @@ const VersionSelectorModal: React.FC<VersionSelectorModalProps> = ({
   versions,
   defaultVersion,
   onVersionChange,
+  onRefreshServer,
   onShowToast,
   authToken,
   canModify = false,
@@ -75,6 +77,11 @@ const VersionSelectorModal: React.FC<VersionSelectorModalProps> = ({
 
       if (onShowToast) {
         onShowToast(`Switched to ${version}`, 'success');
+      }
+
+      // Trigger a server refresh to get updated data
+      if (onRefreshServer) {
+        onRefreshServer();
       }
 
       onClose();
