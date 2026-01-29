@@ -1919,49 +1919,6 @@ class RegistryClient:
     # Local Server Version Management Methods
 
 
-    def add_server_version(
-        self,
-        path: str,
-        version: str,
-        proxy_pass_url: str,
-        status: str = "stable",
-        is_default: bool = False
-    ) -> dict:
-        """
-        Add a new version to an existing server.
-
-        Args:
-            path: Server path (e.g., "/context7")
-            version: Version identifier (e.g., "v2.0.0")
-            proxy_pass_url: Backend URL for this version
-            status: Version status (stable, deprecated, beta)
-            is_default: Set this as the default version
-
-        Returns:
-            Response dict with status and message
-
-        Raises:
-            requests.HTTPError: If server not found or version already exists
-        """
-        logger.info(f"Adding version {version} to server {path}")
-
-        # URL-encode the path (remove leading slash for API)
-        encoded_path = quote(path.lstrip('/'), safe='')
-
-        response = self._make_request(
-            method="POST",
-            endpoint=f"/api/servers/{encoded_path}/versions",
-            data={
-                "version": version,
-                "proxy_pass_url": proxy_pass_url,
-                "status": status,
-                "is_default": is_default
-            }
-        )
-
-        return response.json()
-
-
     def remove_server_version(
         self,
         path: str,

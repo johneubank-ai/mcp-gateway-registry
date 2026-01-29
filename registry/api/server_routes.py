@@ -4143,64 +4143,9 @@ async def get_service_tools_api(
 # Server Version Management Endpoints
 # ============================================================================
 
-class ServerVersionCreate(BaseModel):
-    """Request model for adding a server version."""
-    version: str
-    proxy_pass_url: str
-    status: str = "stable"
-    is_default: bool = False
-
-
 class SetDefaultVersion(BaseModel):
     """Request model for setting default version."""
     version: str
-
-
-@router.post("/servers/{service_path:path}/versions")
-async def add_server_version(
-    service_path: str,
-    version_data: ServerVersionCreate,
-    user_context: Annotated[dict, Depends(nginx_proxied_auth)] = None,
-):
-    """
-    Add a new version to an existing server.
-
-    Args:
-        service_path: Server path (URL encoded)
-        version_data: Version configuration
-
-    Returns:
-        Success message with version info
-    """
-    # Decode path
-    decoded_path = "/" + service_path if not service_path.startswith("/") else service_path
-
-    try:
-        result = await server_service.add_server_version(
-            path=decoded_path,
-            version=version_data.version,
-            proxy_pass_url=version_data.proxy_pass_url,
-            status=version_data.status,
-            is_default=version_data.is_default
-        )
-
-        if result:
-            return {
-                "status": "success",
-                "message": f"Version {version_data.version} added to {decoded_path}",
-                "version": version_data.version
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to add version"
-            )
-
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
 
 
 @router.delete("/servers/{service_path:path}/versions/{version}")

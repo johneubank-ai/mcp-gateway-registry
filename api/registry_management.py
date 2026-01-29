@@ -1196,41 +1196,6 @@ def cmd_list_versions(args: argparse.Namespace) -> int:
         return 1
 
 
-def cmd_add_version(args: argparse.Namespace) -> int:
-    """
-    Add a new version to a server.
-
-    Args:
-        args: Command arguments
-
-    Returns:
-        Exit code (0 for success, 1 for failure)
-    """
-    try:
-        client = _create_client(args)
-        response = client.add_server_version(
-            path=args.path,
-            version=args.version,
-            proxy_pass_url=args.proxy_url,
-            status=args.status,
-            is_default=args.set_default
-        )
-
-        if args.json:
-            print(json.dumps(response, indent=2, default=str))
-            return 0
-
-        logger.info(f"Successfully added version {args.version} to {args.path}")
-        if args.set_default:
-            logger.info(f"Version {args.version} set as default")
-
-        return 0
-
-    except Exception as e:
-        logger.error(f"Failed to add version: {e}")
-        return 1
-
-
 def cmd_remove_version(args: argparse.Namespace) -> int:
     """
     Remove a version from a server.
@@ -2823,43 +2788,6 @@ Examples:
         help="Output raw JSON"
     )
 
-    # Add version command
-    add_version_parser = subparsers.add_parser(
-        "add-version",
-        help="Add a new version to a server"
-    )
-    add_version_parser.add_argument(
-        "--path",
-        required=True,
-        help="Server path (e.g., /context7)"
-    )
-    add_version_parser.add_argument(
-        "--version",
-        required=True,
-        help="Version identifier (e.g., v2.0.0)"
-    )
-    add_version_parser.add_argument(
-        "--proxy-url",
-        required=True,
-        help="Backend URL for this version"
-    )
-    add_version_parser.add_argument(
-        "--status",
-        default="stable",
-        choices=["stable", "beta", "deprecated"],
-        help="Version status (default: stable)"
-    )
-    add_version_parser.add_argument(
-        "--set-default",
-        action="store_true",
-        help="Set this as the default version"
-    )
-    add_version_parser.add_argument(
-        "--json",
-        action="store_true",
-        help="Output raw JSON"
-    )
-
     # Remove version command
     remove_version_parser = subparsers.add_parser(
         "remove-version",
@@ -3400,7 +3328,6 @@ Examples:
         "rescan": cmd_rescan,
         "server-search": cmd_server_search,
         "list-versions": cmd_list_versions,
-        "add-version": cmd_add_version,
         "remove-version": cmd_remove_version,
         "set-default-version": cmd_set_default_version,
         "agent-register": cmd_agent_register,
