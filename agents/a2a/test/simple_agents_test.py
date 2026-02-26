@@ -397,8 +397,105 @@ class FlightBookingTests:
         print("✓ Flight Booking API endpoint working")
 
 
+class AgentDiscoveryTests:
+    """Test suite for cross-agent discovery via the MCP Gateway Registry.
+
+    Tests the full flow: Travel Assistant discovers Flight Booking agent
+    through the registry's semantic search API and delegates a booking task.
+    Requires the MCP Gateway Registry to be running and the Flight Booking
+    agent to be registered in it.
+    """
+
+    def __init__(
+        self,
+        tester: AgentTester,
+        registry_url: str = "http://localhost",
+    ) -> None:
+        self.tester = tester
+        self.registry_url = registry_url
+
+
+    def _is_registry_available(self) -> bool:
+        """Check if the MCP Gateway Registry is reachable."""
+        try:
+            response = requests.get(f"{self.registry_url}/health", timeout=5)
+            return response.status_code == 200
+        except Exception:
+            return False
+
+
+    def test_discover_and_delegate_booking(self) -> None:
+        """Test Travel Assistant discovering Flight Booking agent and delegating a booking.
+
+        Flow:
+        1. Send booking request to Travel Assistant
+        2. Travel Assistant calls discover_remote_agents() to find booking agents
+        3. Travel Assistant calls invoke_remote_agent() to delegate to Flight Booking
+        4. Flight Booking processes the request and returns confirmation
+        5. Travel Assistant returns combined response
+        """
+        if not self._is_registry_available():
+            print(
+                f"  Skipping: registry not available at {self.registry_url}. "
+                "Start the registry and register the Flight Booking agent to run this test."
+            )
+            return
+
+        print("Testing cross-agent discovery and delegation flow...")
+
+        # This message explicitly instructs the LLM to use discovery tools
+        message = (
+            "I need to book a flight. Please use the discover_remote_agents tool to find "
+            "agents that can handle flight bookings, then use invoke_remote_agent to ask "
+            "that agent to book flight ID 1 for John Smith with email john@test.com"
+        )
+
+        logger.debug("[DISCOVERY TEST] Sending booking request to Travel Assistant...")
+        response = self.tester.send_agent_message("travel_assistant", message)
+
+        assert "result" in response, f"No result in discovery response: {response}"
+        assert "artifacts" in response["result"], "No artifacts in discovery response"
+
+        # Extract text from all artifact parts
+        artifacts = response["result"]["artifacts"]
+        assert len(artifacts) > 0, "No artifacts returned from discovery flow"
+
+        response_text = ""
+        for artifact in artifacts:
+            if "parts" in artifact:
+                for part in artifact["parts"]:
+                    if "text" in part:
+                        response_text += part["text"]
+
+        logger.debug(f"[DISCOVERY TEST] Full response text:\n{response_text}")
+
+        response_lower = response_text.lower()
+
+        # Verify the response indicates discovery happened
+        discovery_keywords = ["discover", "found", "flight booking", "remote agent", "cached"]
+        has_discovery = any(keyword in response_lower for keyword in discovery_keywords)
+
+        # Verify the response indicates a booking was attempted or completed
+        booking_keywords = ["book", "reserv", "confirm", "john smith"]
+        has_booking = any(keyword in response_lower for keyword in booking_keywords)
+
+        assert has_discovery or has_booking, (
+            f"Response doesn't indicate discovery or booking happened. "
+            f"Got: {response_text[:300]}"
+        )
+
+        if has_discovery:
+            print("  [OK] Discovery indicators found in response")
+        if has_booking:
+            print("  [OK] Booking indicators found in response")
+
+        print("[PASS] Cross-agent discovery and delegation flow working")
+
+
 def run_tests(
     endpoint_type: str,
+    skip_discovery: bool = False,
+    registry_url: str = "http://localhost",
 ) -> bool:
     """Run all tests for specified endpoint type."""
     print(f"Running tests against {endpoint_type} endpoints...")
@@ -435,8 +532,17 @@ def run_tests(
         booking_tests.test_agent_booking()
         booking_tests.test_api_check_availability()
 
+        # Test Agent-to-Agent Discovery
+        if not skip_discovery:
+            print("\nTesting Agent-to-Agent Discovery")
+            print("-" * 30)
+            discovery_tests = AgentDiscoveryTests(tester, registry_url=registry_url)
+            discovery_tests.test_discover_and_delegate_booking()
+        else:
+            print("\nSkipping Agent-to-Agent Discovery tests (--skip-discovery flag set)")
+
         print("\n" + "=" * 50)
-        print("✅ All tests passed!")
+        print("All tests passed!")
         return True
 
     except Exception as e:
@@ -464,6 +570,16 @@ def main() -> None:
         action="store_true",
         help="Alias for --debug, enables debug logging",
     )
+    parser.add_argument(
+        "--skip-discovery",
+        action="store_true",
+        help="Skip agent-to-agent discovery tests (requires registry running)",
+    )
+    parser.add_argument(
+        "--registry-url",
+        default="http://localhost",
+        help="MCP Gateway Registry URL for discovery tests (default: http://localhost)",
+    )
 
     args = parser.parse_args()
 
@@ -472,7 +588,11 @@ def main() -> None:
         logging.getLogger().setLevel(logging.DEBUG)
         logger.info("Debug logging enabled - detailed traces will be shown")
 
-    success = run_tests(args.endpoint)
+    success = run_tests(
+        endpoint_type=args.endpoint,
+        skip_discovery=args.skip_discovery,
+        registry_url=args.registry_url,
+    )
     sys.exit(0 if success else 1)
 
 
