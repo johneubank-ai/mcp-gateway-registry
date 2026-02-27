@@ -699,8 +699,23 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all' }) => {
     event.stopPropagation(); // Prevent collapsing the section
     setSyncingPeer(peerId);
     try {
-      await axios.post(`/api/peers/${peerId}/sync`);
-      setToast({ message: `Synced from ${peerId} successfully`, type: 'success' });
+      const response = await axios.post(`/api/peers/${peerId}/sync`);
+      const result = response.data;
+
+      // Check the success field in the response body
+      if (result.success) {
+        setToast({
+          message: `Synced ${result.servers_synced || 0} servers and ${result.agents_synced || 0} agents from ${peerId}`,
+          type: 'success'
+        });
+      } else {
+        // Sync failed - show error message from response
+        setToast({
+          message: result.error_message || `Failed to sync from ${peerId}`,
+          type: 'error'
+        });
+      }
+
       // Refresh the server list to show updated data
       await refreshData();
     } catch (error) {
