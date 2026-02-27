@@ -361,4 +361,5 @@ charts/*/charts/
 # Claude
 .claude/*
 !.claude/skills/
+.claude/skills/search-registry/
 .token?
