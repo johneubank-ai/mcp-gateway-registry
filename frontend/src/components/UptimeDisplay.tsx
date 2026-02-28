@@ -110,15 +110,18 @@ const UptimeDisplay: React.FC = () => {
 
           {/* Version & Start Time */}
           <div className="space-y-1 text-xs mb-3">
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">Version:</span>
-              <span className="text-gray-900 dark:text-gray-100 font-mono">
+            <div className="flex justify-between gap-2">
+              <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Version:</span>
+              <span
+                className="text-gray-900 dark:text-gray-100 font-mono truncate text-right"
+                title={stats.version}
+              >
                 {stats.version}
               </span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500 dark:text-gray-400">Started:</span>
-              <span className="text-gray-900 dark:text-gray-100">
+            <div className="flex justify-between gap-2">
+              <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Started:</span>
+              <span className="text-gray-900 dark:text-gray-100 truncate text-right">
                 {new Date(stats.started_at).toLocaleString()}
               </span>
             </div>
@@ -130,15 +133,15 @@ const UptimeDisplay: React.FC = () => {
               Deployment
             </h4>
             <div className="space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Type:</span>
-                <span className="text-gray-900 dark:text-gray-100">
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Type:</span>
+                <span className="text-gray-900 dark:text-gray-100 truncate text-right">
                   {stats.deployment_type}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Mode:</span>
-                <span className="text-gray-900 dark:text-gray-100">
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Mode:</span>
+                <span className="text-gray-900 dark:text-gray-100 truncate text-right">
                   {stats.deployment_mode}
                 </span>
               </div>
@@ -151,21 +154,21 @@ const UptimeDisplay: React.FC = () => {
               Registry Stats
             </h4>
             <div className="space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Servers:</span>
-                <span className="text-gray-900 dark:text-gray-100">
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Servers:</span>
+                <span className="text-gray-900 dark:text-gray-100 text-right">
                   {stats.registry_stats.servers}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Agents:</span>
-                <span className="text-gray-900 dark:text-gray-100">
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Agents:</span>
+                <span className="text-gray-900 dark:text-gray-100 text-right">
                   {stats.registry_stats.agents}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Skills:</span>
-                <span className="text-gray-900 dark:text-gray-100">
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Skills:</span>
+                <span className="text-gray-900 dark:text-gray-100 text-right">
                   {stats.registry_stats.skills}
                 </span>
               </div>
@@ -178,21 +181,24 @@ const UptimeDisplay: React.FC = () => {
               Database
             </h4>
             <div className="space-y-1 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Backend:</span>
-                <span className="text-gray-900 dark:text-gray-100">
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Backend:</span>
+                <span className="text-gray-900 dark:text-gray-100 truncate text-right">
                   {stats.database_status.backend}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Status:</span>
-                <span className={`font-medium ${dbStatusColor}`}>
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Status:</span>
+                <span className={`font-medium ${dbStatusColor} truncate text-right`}>
                   {stats.database_status.status}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Host:</span>
-                <span className="text-gray-900 dark:text-gray-100 font-mono text-xs">
+              <div className="flex justify-between gap-2">
+                <span className="text-gray-500 dark:text-gray-400 flex-shrink-0">Host:</span>
+                <span
+                  className="text-gray-900 dark:text-gray-100 font-mono text-xs truncate text-right"
+                  title={stats.database_status.host}
+                >
                   {stats.database_status.host}
                 </span>
               </div>
