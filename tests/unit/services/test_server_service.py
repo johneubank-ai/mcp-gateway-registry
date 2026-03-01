@@ -524,7 +524,7 @@ class TestGetAllServers:
         mock_server_repository.list_all.return_value = {}
 
         # Act
-        result = await server_service.get_all_servers(include_federated=False)
+        result = await server_service.get_all_servers()
 
         # Assert
         mock_server_repository.list_all.assert_called_once()
@@ -547,7 +547,7 @@ class TestGetAllServers:
         mock_server_repository.list_all.return_value = servers
 
         # Act
-        result = await server_service.get_all_servers(include_federated=False)
+        result = await server_service.get_all_servers()
 
         # Assert
         assert len(result) == 2
@@ -1420,7 +1420,7 @@ class TestServerVersionManagement:
         }
 
         # Act
-        result = await server_service.get_all_servers(include_federated=False)
+        result = await server_service.get_all_servers()
 
         # Assert - only active server should be returned
         assert len(result) == 1
@@ -1453,7 +1453,7 @@ class TestServerVersionManagement:
 
         # Act
         result = await server_service.get_all_servers(
-            include_federated=False, include_inactive=True
+            include_inactive=True
         )
 
         # Assert - both servers should be returned
@@ -1478,7 +1478,7 @@ class TestServerVersionManagement:
         }
 
         # Act
-        result = await server_service.get_all_servers(include_federated=False)
+        result = await server_service.get_all_servers()
 
         # Assert - server should be included (default is_active=True)
         assert len(result) == 1
