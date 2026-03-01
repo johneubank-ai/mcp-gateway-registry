@@ -149,7 +149,7 @@ class RetentionPolicy:
         table_name: str,
         retention_days: int,
         is_active: bool = True,
-        cleanup_query: Optional[str] = None,
+        cleanup_query: str | None = None,
         timestamp_column: str = "created_at",
     ):
         # Security: Validate table_name and timestamp_column against allowlists
@@ -289,7 +289,7 @@ class RetentionManager:
             raise
 
     async def get_cleanup_preview(
-        self, table_name: Optional[str] = None
+        self, table_name: str | None = None
     ) -> Dict[str, Dict[str, Any]]:
         """Get preview of what would be cleaned up without actually deleting.
 
