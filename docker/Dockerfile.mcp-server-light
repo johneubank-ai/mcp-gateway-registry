@@ -7,7 +7,8 @@ FROM python:3.12-slim
 # Build arg for server directory (when building from repo root)
 ARG SERVER_DIR
 
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 # Install minimal system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -56,5 +57,14 @@ fi\n\
 source .venv/bin/activate\n\
 exec python server.py --port $SERVER_PORT' > /entrypoint.sh && \
     chmod +x /entrypoint.sh
+
+# Create non-root user for security (CIS Docker Benchmark 4.1)
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Set ownership of application files and virtual environment
+RUN chown -R appuser:appuser /app /app/.venv
+
+# Switch to non-root user
+USER appuser
 
 ENTRYPOINT ["/entrypoint.sh"]
