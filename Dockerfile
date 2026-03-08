@@ -36,6 +36,10 @@ COPY docker/502.html /usr/share/nginx/html/502.html
 COPY docker/entrypoint.sh /app/docker/entrypoint.sh
 RUN chmod +x /app/docker/entrypoint.sh
 
+# Create nginx lua directories and remove default sites (needed by entrypoint script)
+RUN mkdir -p /etc/nginx/lua/virtual_mappings && \
+    rm -f /etc/nginx/sites-enabled/default /etc/nginx/sites-available/default
+
 # Expose ports for Nginx (HTTP/HTTPS on high ports for non-root) and the Registry
 EXPOSE 8080 8443 7860
 
@@ -60,8 +64,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Create non-root user for security (CIS Docker Benchmark 4.1)
 RUN groupadd -g 1000 appuser && useradd -u 1000 -g appuser appuser
 
-# Set ownership of application files and entrypoint
-RUN chown -R appuser:appuser /app /app/docker/entrypoint.sh
+# Set ownership of application files, nginx configs, and entrypoint
+RUN chown -R appuser:appuser /app /etc/nginx /app/docker/entrypoint.sh
 
 # Switch to non-root user
 USER appuser
