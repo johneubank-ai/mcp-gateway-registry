@@ -261,12 +261,17 @@ fi
 # names and FQDNs resolve to the IPv4 Service Connect VIP.
 # Gated on SERVICE_CONNECT_NAMESPACE -- only set in ECS Terraform deployments.
 if [ -n "${SERVICE_CONNECT_NAMESPACE:-}" ]; then
-    fqdn_count=0
-    grep '^127\.255\.0\.' /etc/hosts | while read -r ip name _rest; do
-        echo "$ip ${name}.${SERVICE_CONNECT_NAMESPACE}" >> /etc/hosts
-        fqdn_count=$((fqdn_count + 1))
-    done
-    echo "Added FQDN aliases for Service Connect entries (namespace: ${SERVICE_CONNECT_NAMESPACE})"
+    if [ -w /etc/hosts ]; then
+        fqdn_count=0
+        grep '^127\.255\.0\.' /etc/hosts | while read -r ip name _rest; do
+            echo "$ip ${name}.${SERVICE_CONNECT_NAMESPACE}" >> /etc/hosts
+            fqdn_count=$((fqdn_count + 1))
+        done
+        echo "Added FQDN aliases for Service Connect entries (namespace: ${SERVICE_CONNECT_NAMESPACE})"
+    else
+        echo "INFO: /etc/hosts not writable (ECS Fargate), FQDN aliases skipped"
+        echo "      Short names and IPs will still work via Service Connect"
+    fi
 fi
 
 echo "Starting Nginx..."
