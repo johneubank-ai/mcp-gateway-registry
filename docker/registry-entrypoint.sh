@@ -41,14 +41,21 @@ port = int(os.getenv('DOCUMENTDB_PORT', '27017'))
 user = os.getenv('DOCUMENTDB_USERNAME', '')
 pwd = os.getenv('DOCUMENTDB_PASSWORD', '')
 backend = os.getenv('STORAGE_BACKEND', 'mongodb-ce')
+use_tls = os.getenv('DOCUMENTDB_USE_TLS', 'true').lower() == 'true'
+ca_file = os.getenv('DOCUMENTDB_TLS_CA_FILE', '/app/certs/global-bundle.pem')
 auth = 'SCRAM-SHA-256' if backend == 'mongodb-ce' else 'SCRAM-SHA-1'
 if user and pwd:
     uri = f'mongodb://{user}:{pwd}@{host}:{port}/?authMechanism={auth}&authSource=admin'
 else:
     uri = f'mongodb://{host}:{port}/'
+# Prepare TLS options
+tls_options = {}
+if use_tls:
+    tls_options['tls'] = True
+    tls_options['tlsCAFile'] = ca_file
 while True:
     try:
-        c = pymongo.MongoClient(uri, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000)
+        c = pymongo.MongoClient(uri, serverSelectionTimeoutMS=5000, connectTimeoutMS=5000, **tls_options)
         c.admin.command('ping')
         try:
             st = c.admin.command('replSetGetStatus')
