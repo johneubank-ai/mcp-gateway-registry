@@ -16,6 +16,12 @@ resource "aws_lb" "keycloak" {
   )
   subnets = module.vpc.public_subnets
 
+  access_logs {
+    bucket  = aws_s3_bucket.alb_logs.id
+    enabled = true
+    prefix  = "keycloak-alb"
+  }
+
   tags = merge(
     local.common_tags,
     {
