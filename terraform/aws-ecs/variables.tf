@@ -624,5 +624,5 @@ variable "otel_exporter_otlp_metrics_temporality_preference" {
 variable "enable_waf" {
   description = "Enable WAFv2 Web ACLs for ALBs. Requires wafv2:* IAM permissions. Set to false if IAM permissions are not available."
   type        = bool
-  default     = true
+  default     = false
 }
