@@ -88,9 +88,8 @@ class TestOktaJWKS:
         # Should only fetch once due to caching
         assert mock_get.call_count == 1
 
-    @patch("auth_server.providers.okta.time.time")
     @patch("auth_server.providers.okta.requests.get")
-    def test_get_jwks_cache_expiration(self, mock_get, mock_time):
+    def test_get_jwks_cache_expiration(self, mock_get):
         """Test JWKS cache expires after TTL."""
         mock_jwks = {"keys": [{"kid": "key1", "kty": "RSA"}]}
         mock_response = MagicMock()
@@ -100,12 +99,13 @@ class TestOktaJWKS:
 
         provider = OktaProvider("dev-123.okta.com", "cid", "cs")
 
-        # First call at time 0
-        mock_time.return_value = 0
+        # First call — populates cache
         provider.get_jwks()
 
-        # Second call after TTL expires
-        mock_time.return_value = 3601
+        # Simulate TTL expiration by backdating the cache time
+        provider._jwks_cache_time = provider._jwks_cache_time - 3601
+
+        # Second call should re-fetch
         provider.get_jwks()
 
         assert mock_get.call_count == 2
