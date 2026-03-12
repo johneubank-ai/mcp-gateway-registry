@@ -34,6 +34,12 @@ variable "alarm_email" {
   default     = ""
 }
 
+variable "alarm_sns_topic_arn" {
+  description = "SNS topic ARN for CloudWatch alarm notifications. Leave empty to disable SNS notifications."
+  type        = string
+  default     = ""
+}
+
 #
 # Keycloak Configuration Variables
 #

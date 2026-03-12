@@ -162,6 +162,10 @@ module "mcp_gateway" {
   otel_exporter_otlp_headers                        = var.otel_exporter_otlp_headers
   otel_otlp_export_interval_ms                      = var.otel_otlp_export_interval_ms
   otel_exporter_otlp_metrics_temporality_preference = var.otel_exporter_otlp_metrics_temporality_preference
+
+  # Wait for S3 bucket policy to propagate (30s delay)
+  # This prevents "Access Denied" errors when ALB tests write permissions
+  depends_on = [time_sleep.wait_for_bucket_policy]
 }
 
 # =============================================================================

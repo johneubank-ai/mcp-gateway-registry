@@ -250,10 +250,10 @@ resource "aws_docdb_cluster_parameter_group" "registry" {
     value = "enabled"
   }
 
-  # Audit logs (optional, can be enabled for compliance)
+  # Audit logs - enabled for compliance and security monitoring
   parameter {
     name  = "audit_logs"
-    value = "disabled"
+    value = "enabled"
   }
 
   # TTL monitor (for automatic document expiration)

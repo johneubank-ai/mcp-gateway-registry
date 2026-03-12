@@ -28,6 +28,10 @@ resource "aws_lb" "keycloak" {
       Name = "keycloak-alb"
     }
   )
+
+  # Wait for S3 bucket policy to propagate (30s delay)
+  # This prevents "Access Denied" errors when ALB tests write permissions
+  depends_on = [time_sleep.wait_for_bucket_policy]
 }
 
 # Random suffix for target group name (required by AWS)

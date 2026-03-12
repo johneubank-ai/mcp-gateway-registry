@@ -37,37 +37,17 @@ resource "aws_s3_bucket_versioning" "alb_logs" {
 }
 
 
-# Server-side encryption with KMS
-resource "aws_kms_key" "alb_logs" {
-  description             = "KMS key for ALB logs S3 bucket encryption"
-  deletion_window_in_days = 10
-  enable_key_rotation     = true
-
-  tags = merge(
-    local.common_tags,
-    {
-      Purpose   = "ALB logs encryption"
-      Component = "security"
-    }
-  )
-}
-
-
-resource "aws_kms_alias" "alb_logs" {
-  name          = "alias/${var.name}-alb-logs"
-  target_key_id = aws_kms_key.alb_logs.key_id
-}
-
-
+# Server-side encryption with SSE-S3 (AES256)
+# Using SSE-S3 instead of KMS for ALB logs per AWS best practices
+# KMS encryption for ALB logs requires complex permission setup and can cause access issues
+# SSE-S3 provides strong encryption (AES-256) without the permission complexity
 resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs" {
   bucket = aws_s3_bucket.alb_logs.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.alb_logs.arn
+      sse_algorithm = "AES256"
     }
-    bucket_key_enabled = true
   }
 }
 
@@ -93,8 +73,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "alb_logs" {
 resource "aws_s3_bucket_policy" "alb_logs" {
   bucket = aws_s3_bucket.alb_logs.id
 
-  # Ensure public access block is applied first
-  depends_on = [aws_s3_bucket_public_access_block.alb_logs]
+  # Ensure all bucket configurations are applied before the policy
+  # This includes encryption, versioning, and public access blocks
+  depends_on = [
+    aws_s3_bucket_public_access_block.alb_logs,
+    aws_s3_bucket_server_side_encryption_configuration.alb_logs,
+    aws_s3_bucket_versioning.alb_logs
+  ]
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -139,6 +124,16 @@ resource "aws_s3_bucket_policy" "alb_logs" {
       }
     ]
   })
+}
+
+
+# Wait for S3 bucket policy propagation before enabling ALB logging
+# AWS S3 bucket policies can take up to 15-30 seconds to propagate
+# Without this delay, ALBs may fail to enable logging due to permission check failures
+resource "time_sleep" "wait_for_bucket_policy" {
+  depends_on = [aws_s3_bucket_policy.alb_logs]
+
+  create_duration = "30s"
 }
 
 
