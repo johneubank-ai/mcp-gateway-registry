@@ -1,9 +1,12 @@
 #
 # WAFv2 Web ACL Configuration for MCP Gateway and Keycloak ALBs
+# Set enable_waf = false in terraform.tfvars if you don't have wafv2:* IAM permissions
 #
 
 # WAFv2 Web ACL for MCP Gateway ALB
 resource "aws_wafv2_web_acl" "mcp_gateway" {
+  count = var.enable_waf ? 1 : 0
+
   name  = "${var.name}-mcp-gateway-waf"
   scope = "REGIONAL"
 
@@ -121,13 +124,17 @@ resource "aws_wafv2_web_acl" "mcp_gateway" {
 
 # Associate WAF with MCP Gateway ALB
 resource "aws_wafv2_web_acl_association" "mcp_gateway" {
+  count = var.enable_waf ? 1 : 0
+
   resource_arn = module.mcp_gateway.alb_arn
-  web_acl_arn  = aws_wafv2_web_acl.mcp_gateway.arn
+  web_acl_arn  = aws_wafv2_web_acl.mcp_gateway[0].arn
 }
 
 
 # CloudWatch Log Group for WAF logs
 resource "aws_cloudwatch_log_group" "waf_mcp_gateway" {
+  count = var.enable_waf ? 1 : 0
+
   name              = "/aws/wafv2/${var.name}-mcp-gateway"
   retention_in_days = 30
 
@@ -143,8 +150,10 @@ resource "aws_cloudwatch_log_group" "waf_mcp_gateway" {
 
 # WAF Logging Configuration
 resource "aws_wafv2_web_acl_logging_configuration" "mcp_gateway" {
-  resource_arn            = aws_wafv2_web_acl.mcp_gateway.arn
-  log_destination_configs = [aws_cloudwatch_log_group.waf_mcp_gateway.arn]
+  count = var.enable_waf ? 1 : 0
+
+  resource_arn            = aws_wafv2_web_acl.mcp_gateway[0].arn
+  log_destination_configs = [aws_cloudwatch_log_group.waf_mcp_gateway[0].arn]
 
   # Redact sensitive headers from logs
   redacted_fields {
@@ -157,6 +166,8 @@ resource "aws_wafv2_web_acl_logging_configuration" "mcp_gateway" {
 
 # WAFv2 Web ACL for Keycloak ALB
 resource "aws_wafv2_web_acl" "keycloak" {
+  count = var.enable_waf ? 1 : 0
+
   name  = "${var.name}-keycloak-waf"
   scope = "REGIONAL"
 
@@ -274,13 +285,17 @@ resource "aws_wafv2_web_acl" "keycloak" {
 
 # Associate WAF with Keycloak ALB
 resource "aws_wafv2_web_acl_association" "keycloak" {
+  count = var.enable_waf ? 1 : 0
+
   resource_arn = aws_lb.keycloak.arn
-  web_acl_arn  = aws_wafv2_web_acl.keycloak.arn
+  web_acl_arn  = aws_wafv2_web_acl.keycloak[0].arn
 }
 
 
 # CloudWatch Log Group for Keycloak WAF logs
 resource "aws_cloudwatch_log_group" "waf_keycloak" {
+  count = var.enable_waf ? 1 : 0
+
   name              = "/aws/wafv2/${var.name}-keycloak"
   retention_in_days = 30
 
@@ -296,8 +311,10 @@ resource "aws_cloudwatch_log_group" "waf_keycloak" {
 
 # WAF Logging Configuration for Keycloak
 resource "aws_wafv2_web_acl_logging_configuration" "keycloak" {
-  resource_arn            = aws_wafv2_web_acl.keycloak.arn
-  log_destination_configs = [aws_cloudwatch_log_group.waf_keycloak.arn]
+  count = var.enable_waf ? 1 : 0
+
+  resource_arn            = aws_wafv2_web_acl.keycloak[0].arn
+  log_destination_configs = [aws_cloudwatch_log_group.waf_keycloak[0].arn]
 
   # Redact sensitive headers from logs
   redacted_fields {
@@ -311,11 +328,11 @@ resource "aws_wafv2_web_acl_logging_configuration" "keycloak" {
 # Outputs
 output "mcp_gateway_waf_arn" {
   description = "ARN of WAF Web ACL for MCP Gateway"
-  value       = aws_wafv2_web_acl.mcp_gateway.arn
+  value       = var.enable_waf ? aws_wafv2_web_acl.mcp_gateway[0].arn : ""
 }
 
 
 output "keycloak_waf_arn" {
   description = "ARN of WAF Web ACL for Keycloak"
-  value       = aws_wafv2_web_acl.keycloak.arn
+  value       = var.enable_waf ? aws_wafv2_web_acl.keycloak[0].arn : ""
 }

@@ -616,3 +616,13 @@ variable "otel_exporter_otlp_metrics_temporality_preference" {
   type        = string
   default     = "cumulative"
 }
+
+# =============================================================================
+# WAF CONFIGURATION (Issue #603 Security Hardening)
+# =============================================================================
+
+variable "enable_waf" {
+  description = "Enable WAFv2 Web ACLs for ALBs. Requires wafv2:* IAM permissions. Set to false if IAM permissions are not available."
+  type        = bool
+  default     = true
+}
