@@ -2,5 +2,6 @@
 
 from .base import AuthProvider
 from .factory import get_auth_provider
+from .okta import OktaProvider
 
-__all__ = ["AuthProvider", "get_auth_provider"]
+__all__ = ["AuthProvider", "OktaProvider", "get_auth_provider"]
