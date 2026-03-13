@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: setup-keycloak
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: job
+          image: public.ecr.aws/docker/library/python:3.13-slim
+          command: ["/bin/bash", "/app/script.sh"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          envFrom:
+            - secretRef:
+                name: keycloak-configure-secret
+          env:
+            - valueFrom:
+                secretKeyRef:
+                  key: admin-password
+                  name: {{ .Release.Name}}-keycloak
+              name: KEYCLOAK_ADMIN_PASSWORD
+          volumeMounts:
+            - mountPath: /app/script.sh
+              name: script
+              subPath: script.sh
+      restartPolicy: Never
+      volumes:
+        - name: script
+          configMap:
+            name: setup-keycloak
+      serviceAccountName: keycloak-configure-sa
+  backoffLimit: 4
