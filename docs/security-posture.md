@@ -980,30 +980,6 @@ curl -X POST /api/servers/{path}/rescan -H "Authorization: Bearer $TOKEN"
 
 ---
 
-## Continuous Improvement
-
-Security is an ongoing process. We continuously evaluate and enhance our security posture.
-
-**Regular Activities:**
-- Quarterly security reviews
-- Dependency vulnerability scanning
-- Security patch management
-- Compliance framework updates
-- Penetration testing (annual)
-- Security training for contributors
-
-**Upcoming Initiatives:**
-- Third-party security audit (planned Q2 2026)
-- Zero-trust architecture enhancements
-- Supply chain attestation (SLSA framework)
-- Enhanced threat intelligence integration
-- Security metrics dashboard
-
-**Last Security Review:** March 12, 2026
-**Next Review Scheduled:** June 12, 2026
-
----
-
 ## Summary
 
 The MCP Gateway & Registry implements enterprise-grade security across all layers:
