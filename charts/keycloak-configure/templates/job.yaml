@@ -6,20 +6,10 @@ metadata:
 spec:
   template:
     spec:
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        runAsGroup: 1000
-        fsGroup: 1000
       containers:
         - name: job
           image: public.ecr.aws/docker/library/python:3.13-slim
           command: ["/bin/bash", "/app/script.sh"]
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
           envFrom:
             - secretRef:
                 name: keycloak-configure-secret
