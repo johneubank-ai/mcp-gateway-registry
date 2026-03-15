@@ -107,7 +107,7 @@ module "ecs_service_auth" {
         },
         {
           name  = "AUTH_PROVIDER"
-          value = var.entra_enabled ? "entra" : (var.keycloak_domain != "" ? "keycloak" : "default")
+          value = var.okta_enabled ? "okta" : (var.entra_enabled ? "entra" : (var.keycloak_domain != "" ? "keycloak" : "default"))
         },
         {
           name  = "KEYCLOAK_URL"
@@ -506,7 +506,7 @@ module "ecs_service_registry" {
         },
         {
           name  = "AUTH_PROVIDER"
-          value = var.entra_enabled ? "entra" : (var.keycloak_domain != "" ? "keycloak" : "default")
+          value = var.okta_enabled ? "okta" : (var.entra_enabled ? "entra" : (var.keycloak_domain != "" ? "keycloak" : "default"))
         },
         {
           name  = "ENTRA_ENABLED"
