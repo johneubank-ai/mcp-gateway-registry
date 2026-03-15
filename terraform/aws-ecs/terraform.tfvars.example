@@ -323,10 +323,23 @@ registry_api_token = "m3zT65wREARMVDToKosg_DgNkKqS_434hNxy3sslGPY"
 # ============================================================================
 # AUTHENTICATION PROVIDER CONFIGURATION
 # ============================================================================
+#
+# IMPORTANT: Only ONE authentication provider should be enabled at a time!
+#
+# Three authentication provider options:
+#   1. Keycloak (default) - Leave both okta_enabled and entra_enabled as false/unset
+#   2. Microsoft Entra ID - Set entra_enabled = true
+#   3. Okta - Set okta_enabled = true
+#
+# If multiple providers are enabled simultaneously, priority order is:
+#   okta_enabled > entra_enabled > keycloak (default)
+#
+# ============================================================================
 
 # Microsoft Entra ID Configuration (Alternative to Keycloak)
 # Set entra_enabled = true to use Microsoft Entra ID instead of Keycloak
 # When enabled, AUTH_PROVIDER is automatically set to "entra"
+# IMPORTANT: Set okta_enabled = false (or omit) when using Entra
 
 # Enable Microsoft Entra ID authentication (default: false, uses Keycloak)
 # entra_enabled = true
@@ -354,6 +367,7 @@ registry_api_token = "m3zT65wREARMVDToKosg_DgNkKqS_434hNxy3sslGPY"
 
 # Set okta_enabled = true to use Okta instead of Keycloak
 # When enabled, AUTH_PROVIDER is automatically set to "okta"
+# IMPORTANT: Set entra_enabled = false (or omit) when using Okta
 
 # Enable Okta authentication (default: false, uses Keycloak)
 # okta_enabled = true
