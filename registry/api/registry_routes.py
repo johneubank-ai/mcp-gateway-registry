@@ -35,7 +35,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix="",
+    prefix=f"/{REGISTRY_CONSTANTS.ANTHROPIC_API_VERSION}",
     tags=["Anthropic Registry API"],
 )
 
@@ -421,21 +421,6 @@ async def _auto_initialize_registry_card():
         card = await repo.save(card)
         logger.info(f"Auto-initialized registry card: {card.id}")
 
-    return card
-
-
-@router.get("/.well-known/registry-card", response_model=RegistryCard)
-async def get_well_known_registry_card():
-    """
-    Get the Registry Card via .well-known discovery endpoint.
-
-    This is the standard discovery endpoint for registry federation.
-    Returns the same data as /card but follows the .well-known convention.
-
-    Auto-initializes from config if not found.
-    Public endpoint - no authentication required.
-    """
-    card = await _auto_initialize_registry_card()
     return card
 
 
