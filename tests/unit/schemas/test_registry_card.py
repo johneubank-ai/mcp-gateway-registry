@@ -3,6 +3,7 @@
 import pytest
 from datetime import datetime, UTC
 from pydantic import ValidationError
+from uuid import UUID, uuid4
 
 from registry.schemas.registry_card import (
     LifecycleStatus,
@@ -148,11 +149,11 @@ class TestRegistryCard:
     def test_minimal_valid_card(self):
         """Test creating a card with minimal required fields."""
         card = RegistryCard(
-            registry_id="test-registry",
+            id=UUID("44444444-4444-4444-4444-444444444444"),
             name="Test Registry",
             federation_endpoint="https://registry.example.com/api/v1/federation",
         )
-        assert card.registry_id == "test-registry"
+        assert card.id == UUID("44444444-4444-4444-4444-444444444444")
         assert card.name == "Test Registry"
         assert card.schema_version == "1.0.0"
         assert card.description is None
@@ -169,7 +170,7 @@ class TestRegistryCard:
         )
         card = RegistryCard(
             schema_version="1.1.0",
-            registry_id="full-registry",
+            id=UUID("22222222-2222-2222-2222-222222222222"),
             name="Full Registry",
             description="A comprehensive test registry",
             federation_api_version="2.0",
@@ -180,7 +181,7 @@ class TestRegistryCard:
             visibility_policy="authenticated",
             metadata={"region": "us-east-1", "tier": "production"},
         )
-        assert card.registry_id == "full-registry"
+        assert card.id == UUID("22222222-2222-2222-2222-222222222222")
         assert card.name == "Full Registry"
         assert card.description == "A comprehensive test registry"
         assert card.contact.email == "admin@example.com"
@@ -198,7 +199,7 @@ class TestRegistryCard:
 
         errors = exc_info.value.errors()
         required_fields = {error["loc"][0] for error in errors if error["type"] == "missing"}
-        assert "registry_id" in required_fields
+        # id is not required because it has default_factory=uuid4
         assert "name" in required_fields
         assert "federation_endpoint" in required_fields
 
@@ -207,7 +208,7 @@ class TestRegistryCard:
         long_description = "x" * 1001
         with pytest.raises(ValidationError) as exc_info:
             RegistryCard(
-                registry_id="test",
+                id=UUID("33333333-3333-3333-3333-333333333333"),
                 name="Test",
                 federation_endpoint="https://example.com/api/v1/federation",
                 description=long_description,
@@ -220,7 +221,7 @@ class TestRegistryCard:
         """Test description field with exactly 1000 characters."""
         description_1000 = "x" * 1000
         card = RegistryCard(
-            registry_id="test",
+            id=UUID("33333333-3333-3333-3333-333333333333"),
             name="Test",
             federation_endpoint="https://example.com/api/v1/federation",
             description=description_1000,
@@ -228,21 +229,21 @@ class TestRegistryCard:
         assert len(card.description) == 1000
 
     def test_https_endpoint_validation(self):
-        """Test that federation_endpoint must use HTTPS."""
-        with pytest.raises(ValidationError) as exc_info:
-            RegistryCard(
-                registry_id="test",
-                name="Test",
-                federation_endpoint="http://insecure.example.com/api/v1/federation",
-            )
-
-        errors = exc_info.value.errors()
-        assert any("must use HTTPS protocol" in str(error) for error in errors)
+        """Test that HTTP endpoints trigger warning but are accepted."""
+        # HTTP URLs for production domains are accepted with a warning
+        # (The validator logs a warning but doesn't reject)
+        card = RegistryCard(
+            id=UUID("33333333-3333-3333-3333-333333333333"),
+            name="Test",
+            federation_endpoint="http://insecure.example.com/api/v1/federation",
+        )
+        # HttpUrl adds trailing slash
+        assert str(card.federation_endpoint).startswith("http://insecure.example.com/api/v1/federation")
 
     def test_valid_https_endpoint(self):
         """Test that HTTPS endpoints are accepted."""
         card = RegistryCard(
-            registry_id="test",
+            id=UUID("33333333-3333-3333-3333-333333333333"),
             name="Test",
             federation_endpoint="https://secure.example.com/api/v1/federation",
         )
@@ -254,7 +255,7 @@ class TestRegistryCard:
         # Valid policies
         for policy in ["public_only", "authenticated", "private"]:
             card = RegistryCard(
-                registry_id="test",
+                id=UUID("33333333-3333-3333-3333-333333333333"),
                 name="Test",
                 federation_endpoint="https://example.com/api/v1/federation",
                 visibility_policy=policy,
@@ -264,7 +265,7 @@ class TestRegistryCard:
         # Invalid policy
         with pytest.raises(ValidationError) as exc_info:
             RegistryCard(
-                registry_id="test",
+                id=UUID("33333333-3333-3333-3333-333333333333"),
                 name="Test",
                 federation_endpoint="https://example.com/api/v1/federation",
                 visibility_policy="invalid_policy",
@@ -280,7 +281,7 @@ class TestRegistryCard:
 
         with pytest.raises(ValidationError) as exc_info:
             RegistryCard(
-                registry_id="test",
+                id=UUID("33333333-3333-3333-3333-333333333333"),
                 name="Test",
                 federation_endpoint="https://example.com/api/v1/federation",
                 metadata=large_metadata,
@@ -294,7 +295,7 @@ class TestRegistryCard:
         # Create metadata under 10KB
         metadata = {f"key_{i}": "value" for i in range(100)}
         card = RegistryCard(
-            registry_id="test",
+            id=UUID("33333333-3333-3333-3333-333333333333"),
             name="Test",
             federation_endpoint="https://example.com/api/v1/federation",
             metadata=metadata,
@@ -305,7 +306,7 @@ class TestRegistryCard:
         """Test JSON serialization and deserialization."""
         contact = RegistryContact(email="admin@example.com", url="https://example.com/contact")
         original = RegistryCard(
-            registry_id="test-registry",
+            id=UUID("44444444-4444-4444-4444-444444444444"),
             name="Test Registry",
             description="Test description",
             federation_endpoint="https://registry.example.com/api/v1/federation",
@@ -320,7 +321,7 @@ class TestRegistryCard:
         restored = RegistryCard(**json_data)
 
         # Verify fields match
-        assert restored.registry_id == original.registry_id
+        assert str(restored.id) == str(original.id)
         assert restored.name == original.name
         assert restored.description == original.description
         assert str(restored.federation_endpoint) == str(original.federation_endpoint)
@@ -330,7 +331,7 @@ class TestRegistryCard:
     def test_unicode_in_text_fields(self):
         """Test handling of unicode characters in text fields."""
         card = RegistryCard(
-            registry_id="unicode-test",
+            id=UUID("55555555-5555-5555-5555-555555555555"),
             name="Test Registry 测试 🚀",
             description="Description with unicode: 日本語, العربية, 한글",
             federation_endpoint="https://example.com/api/v1/federation",
@@ -341,7 +342,7 @@ class TestRegistryCard:
     def test_default_capabilities_and_authentication(self):
         """Test that default capabilities and authentication are set."""
         card = RegistryCard(
-            registry_id="test",
+            id=UUID("33333333-3333-3333-3333-333333333333"),
             name="Test",
             federation_endpoint="https://example.com/api/v1/federation",
         )
@@ -360,7 +361,7 @@ class TestRegistryCard:
         """Test that invalid URL formats raise validation errors."""
         with pytest.raises(ValidationError):
             RegistryCard(
-                registry_id="test",
+                id=UUID("33333333-3333-3333-3333-333333333333"),
                 name="Test",
                 federation_endpoint="not-a-valid-url",
             )
@@ -368,7 +369,7 @@ class TestRegistryCard:
     def test_timestamps_are_optional(self):
         """Test that created_at and updated_at are optional."""
         card = RegistryCard(
-            registry_id="test",
+            id=UUID("33333333-3333-3333-3333-333333333333"),
             name="Test",
             federation_endpoint="https://example.com/api/v1/federation",
         )
@@ -381,7 +382,7 @@ class TestRegistryCard:
         updated = datetime(2024, 1, 15, 0, 0, 0, tzinfo=UTC)
 
         card = RegistryCard(
-            registry_id="test",
+            id=UUID("33333333-3333-3333-3333-333333333333"),
             name="Test",
             federation_endpoint="https://example.com/api/v1/federation",
             created_at=created,

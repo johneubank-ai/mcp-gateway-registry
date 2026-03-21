@@ -3,6 +3,7 @@
 import pytest
 from datetime import datetime, UTC
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import UUID, uuid4
 
 from registry.repositories.documentdb.registry_card_repository import (
     DocumentDBRegistryCardRepository,
@@ -28,7 +29,7 @@ def mock_collection():
 def sample_registry_card():
     """Fixture for sample RegistryCard."""
     return RegistryCard(
-        registry_id="test-registry",
+        id=UUID("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
         name="Test Registry",
         description="A test registry",
         federation_endpoint="https://registry.example.com/api/v1/federation",
@@ -70,7 +71,7 @@ class TestDocumentDBRegistryCardRepository:
 
         assert result is not None
         assert isinstance(result, RegistryCard)
-        assert result.registry_id == sample_registry_card.registry_id
+        assert str(result.id) == str(sample_registry_card.id)
         assert result.name == sample_registry_card.name
         assert result.description == sample_registry_card.description
         mock_collection.find_one.assert_called_once_with({"_id": "default"})
@@ -96,7 +97,7 @@ class TestDocumentDBRegistryCardRepository:
 
         assert filter_dict == {"_id": "default"}
         assert document["_id"] == "default"
-        assert document["registry_id"] == sample_registry_card.registry_id
+        assert document["id"] == str(sample_registry_card.id)
         assert document["name"] == sample_registry_card.name
         assert "created_at" in document
         assert "updated_at" in document
@@ -113,7 +114,7 @@ class TestDocumentDBRegistryCardRepository:
 
         # Create updated card
         updated_card = RegistryCard(
-            registry_id=sample_registry_card.registry_id,
+            id=sample_registry_card.id,
             name="Updated Name",
             description="Updated description",
             federation_endpoint=sample_registry_card.federation_endpoint,
@@ -142,7 +143,7 @@ class TestDocumentDBRegistryCardRepository:
         contact = RegistryContact(email="admin@full.example.com", url="https://full.example.com/contact")
         card = RegistryCard(
             schema_version="1.1.0",
-            registry_id="full-test",
+            id=UUID("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
             name="Full Test Registry",
             description="Complete test",
             federation_api_version="2.0.0",
@@ -165,7 +166,7 @@ class TestDocumentDBRegistryCardRepository:
         document = call_args[0][1]
 
         assert document["schema_version"] == "1.1.0"
-        assert document["registry_id"] == "full-test"
+        assert document["id"] == "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
         assert document["name"] == "Full Test Registry"
         assert document["description"] == "Complete test"
         assert document["federation_api_version"] == "2.0.0"
@@ -219,7 +220,7 @@ class TestDocumentDBRegistryCardRepository:
         # Minimal document with only required fields
         minimal_doc = {
             "_id": "default",
-            "registry_id": "minimal",
+            "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
             "name": "Minimal Registry",
             "federation_endpoint": "https://minimal.example.com/api/v1/federation",
             "federation_api_version": "1.0",
@@ -235,7 +236,7 @@ class TestDocumentDBRegistryCardRepository:
         result = await repo.get()
 
         assert result is not None
-        assert result.registry_id == "minimal"
+        assert str(result.id) == "cccccccc-cccc-cccc-cccc-cccccccccccc"
         assert result.name == "Minimal Registry"
         assert result.description is None
         assert result.contact is None
@@ -269,7 +270,7 @@ class TestDocumentDBRegistryCardRepository:
     async def test_save_handles_none_optional_fields(self, mock_collection):
         """Test save() correctly handles None values in optional fields."""
         card = RegistryCard(
-            registry_id="test",
+            id=UUID("dddddddd-dddd-dddd-dddd-dddddddddddd"),
             name="Test",
             federation_endpoint="https://example.com/api/v1/federation",
             description=None,
@@ -294,7 +295,7 @@ class TestDocumentDBRegistryCardRepository:
         """Test get() returns card with default capabilities if not specified."""
         doc = {
             "_id": "default",
-            "registry_id": "test",
+            "id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
             "name": "Test",
             "federation_endpoint": "https://example.com/api/v1/federation",
             "federation_api_version": "1.0",
