@@ -2125,7 +2125,7 @@ def cmd_skill_list(args: argparse.Namespace) -> int:
             tag=args.tag if hasattr(args, "tag") else None,
         )
 
-        if args.debug:
+        if hasattr(args, "json") and args.json:
             print(json.dumps([s.model_dump() for s in response.skills], indent=2, default=str))
             return 0
 
@@ -4442,6 +4442,7 @@ Examples:
         "--include-disabled", action="store_true", help="Include disabled skills"
     )
     skill_list_parser.add_argument("--tag", help="Filter by tag")
+    skill_list_parser.add_argument("--json", action="store_true", help="Output raw JSON response")
 
     # Skill get command
     skill_get_parser = subparsers.add_parser("skill-get", help="Get skill details")
