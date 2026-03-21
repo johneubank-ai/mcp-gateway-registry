@@ -239,6 +239,7 @@ class SkillInfo(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
+    id: UUID = Field(..., description="Unique identifier (UUID) for this skill")
     path: str = Field(..., description="Unique skill path")
     name: str
     description: str
