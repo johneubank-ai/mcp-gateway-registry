@@ -17,6 +17,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 from urllib.parse import quote
+from uuid import UUID
 
 import requests
 from pydantic import BaseModel, ConfigDict, Field
@@ -1242,6 +1243,7 @@ class SkillRegistrationRequest(BaseModel):
 class SkillCard(BaseModel):
     """Response model for a skill."""
 
+    id: UUID = Field(..., description="Unique identifier (UUID) for this skill")
     name: str = Field(..., description="Skill name")
     path: str = Field(..., description="Skill path (e.g., /skills/pdf-processing)")
     description: str | None = Field(None, description="Skill description")
