@@ -246,13 +246,6 @@ async def _auto_initialize_registry_card():
 
         logger.info("Registry card not found, auto-initializing from config")
 
-        # Generate UUID for registry_id if not configured
-        if settings.registry_id:
-            registry_id = settings.registry_id
-        else:
-            registry_id = str(uuid4())
-            logger.info(f"Generated UUID for registry_id: {registry_id}")
-
         # Generate random Docker-style registry name if using default
         if settings.registry_name != "AI Registry":
             registry_name = settings.registry_name
@@ -320,8 +313,9 @@ async def _auto_initialize_registry_card():
             oauth2_token_endpoint=oauth2_token_endpoint,
         )
 
+        # Don't pass id - let RegistryCard auto-generate UUID via default_factory
+        # registry_id was for the old implementation, now we use auto-generated UUIDs
         card = RegistryCard(
-            id=registry_id,
             name=registry_name,
             description=settings.registry_description,
             registry_url=settings.registry_url,
