@@ -202,6 +202,35 @@ async def lifespan(app: FastAPI):
     # Initialize Prometheus metrics
     _initialize_deployment_metrics()
 
+    # Validate required configuration settings
+    logger.info("🔍 Validating configuration...")
+    errors = []
+
+    if not settings.registry_url:
+        errors.append("REGISTRY_URL is required")
+
+    if not settings.registry_name:
+        errors.append("REGISTRY_NAME is required")
+
+    if not settings.registry_organization_name:
+        errors.append("REGISTRY_ORGANIZATION_NAME is required")
+
+    if errors:
+        logger.error(
+            "Configuration validation failed",
+            extra={"errors": errors},
+        )
+        raise RuntimeError(f"Configuration errors: {', '.join(errors)}")
+
+    logger.info(
+        "Configuration validated successfully",
+        extra={
+            "registry_name": settings.registry_name,
+            "registry_url": settings.registry_url,
+            "organization": settings.registry_organization_name,
+        },
+    )
+
     # Initialize audit logger reference (middleware added at module level)
     audit_logger = getattr(app.state, "audit_logger", None)
     if audit_logger:
@@ -566,7 +595,7 @@ app.include_router(peer_management_router)
 app.include_router(audit_router, prefix="/api", tags=["Audit Logs"])
 
 # Register Anthropic MCP Registry API (public API for MCP servers only)
-app.include_router(registry_router, tags=["Anthropic Registry API"])
+app.include_router(registry_router, prefix="/api/registry", tags=["Registry Card"])
 
 # Register well-known discovery router
 app.include_router(wellknown_router, prefix="/.well-known", tags=["Discovery"])
