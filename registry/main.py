@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -337,9 +338,16 @@ async def lifespan(app: FastAPI):
                                     if not server_path:
                                         continue
 
+                                    # Ensure UUID id field exists for federation sync
+                                    if "id" not in server_data or not server_data["id"]:
+                                        server_data["id"] = str(uuid4())
+
                                     # Register or update server
                                     success = await server_service.register_server(server_data)
                                     if not success:
+                                        # Ensure UUID exists before updating (for servers registered before UUID feature)
+                                        if "id" not in server_data or not server_data["id"]:
+                                            server_data["id"] = str(uuid4())
                                         success = await server_service.update_server(
                                             server_path, server_data
                                         )
