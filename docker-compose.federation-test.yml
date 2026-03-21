@@ -88,6 +88,13 @@ services:
       - ENTRA_ENABLED=false
       # Metrics (optional - can be disabled)
       - METRICS_SERVICE_URL=
+      # Registry Card Configuration
+      - REGISTRY_URL=${REGISTRY_URL_A:-http://localhost:7860}
+      - REGISTRY_NAME=${REGISTRY_NAME_A:-Registry A}
+      - REGISTRY_ORGANIZATION_NAME=${REGISTRY_ORGANIZATION_NAME_A:-Test Org A}
+      - REGISTRY_DESCRIPTION=${REGISTRY_DESCRIPTION_A:-}
+      - REGISTRY_CONTACT_EMAIL=${REGISTRY_CONTACT_EMAIL_A:-}
+      - REGISTRY_CONTACT_URL=${REGISTRY_CONTACT_URL_A:-}
       # Registry ID for federation
       - REGISTRY_ID=registry-a
     ports:
@@ -167,6 +174,13 @@ services:
       - ENTRA_ENABLED=false
       # Metrics (optional - can be disabled)
       - METRICS_SERVICE_URL=
+      # Registry Card Configuration
+      - REGISTRY_URL=${REGISTRY_URL_B:-http://localhost:7861}
+      - REGISTRY_NAME=${REGISTRY_NAME_B:-Registry B}
+      - REGISTRY_ORGANIZATION_NAME=${REGISTRY_ORGANIZATION_NAME_B:-Test Org B}
+      - REGISTRY_DESCRIPTION=${REGISTRY_DESCRIPTION_B:-}
+      - REGISTRY_CONTACT_EMAIL=${REGISTRY_CONTACT_EMAIL_B:-}
+      - REGISTRY_CONTACT_URL=${REGISTRY_CONTACT_URL_B:-}
       # Registry ID for federation
       - REGISTRY_ID=registry-b
       # Static token for peer federation (testing only)
