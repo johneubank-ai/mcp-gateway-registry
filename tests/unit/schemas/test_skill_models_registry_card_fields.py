@@ -3,6 +3,7 @@
 import pytest
 from datetime import datetime, UTC
 from pydantic import HttpUrl
+from uuid import uuid4
 
 from registry.schemas.skill_models import (
     SkillCard,
@@ -185,6 +186,7 @@ class TestSkillInfoRegistryCardFields:
     def test_default_lifecycle_status(self):
         """Test that default lifecycle status is ACTIVE."""
         skill = SkillInfo(
+            id=uuid4(),
             path="/skills/test-skill",
             name="test-skill",
             description="Test skill",
@@ -195,6 +197,7 @@ class TestSkillInfoRegistryCardFields:
     def test_custom_lifecycle_status(self):
         """Test setting custom lifecycle status."""
         skill = SkillInfo(
+            id=uuid4(),
             path="/skills/test-skill",
             name="test-skill",
             description="Test skill",
@@ -206,6 +209,7 @@ class TestSkillInfoRegistryCardFields:
     def test_source_timestamps_default_none(self):
         """Test that source timestamps default to None."""
         skill = SkillInfo(
+            id=uuid4(),
             path="/skills/test-skill",
             name="test-skill",
             description="Test skill",
@@ -221,6 +225,7 @@ class TestSkillInfoRegistryCardFields:
         updated = datetime(2024, 2, 15, 0, 0, 0, tzinfo=UTC)
 
         skill = SkillInfo(
+            id=uuid4(),
             path="/skills/test-skill",
             name="test-skill",
             description="Test skill",
@@ -235,6 +240,7 @@ class TestSkillInfoRegistryCardFields:
     def test_external_tags_default_empty(self):
         """Test that external_tags defaults to empty list."""
         skill = SkillInfo(
+            id=uuid4(),
             path="/skills/test-skill",
             name="test-skill",
             description="Test skill",
@@ -246,6 +252,7 @@ class TestSkillInfoRegistryCardFields:
     def test_external_tags_with_values(self):
         """Test setting external tags."""
         skill = SkillInfo(
+            id=uuid4(),
             path="/skills/test-skill",
             name="test-skill",
             description="Test skill",
@@ -261,6 +268,7 @@ class TestSkillInfoRegistryCardFields:
         updated = datetime(2024, 2, 15, 0, 0, 0, tzinfo=UTC)
 
         skill = SkillInfo(
+            id=uuid4(),
             path="/skills/test-skill",
             name="test-skill",
             description="Test skill",
@@ -279,6 +287,7 @@ class TestSkillInfoRegistryCardFields:
     def test_backwards_compatibility_without_new_fields(self):
         """Test that old data without new fields loads successfully."""
         old_data = {
+            "id": str(uuid4()),
             "path": "/skills/old-skill",
             "name": "old-skill",
             "description": "Old skill without registry card fields",
