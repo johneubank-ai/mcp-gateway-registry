@@ -45,10 +45,10 @@ interface RegistryCardSettingsProps {
  * RegistryCardSettings component for viewing and editing the Registry Card.
  *
  * Features:
- * - Fetches registry card from /api/v1/registry/card
+ * - Fetches registry card from /api/registry/v0.1/card
  * - Displays current configuration
  * - Allows editing contact information
- * - Updates via PATCH /api/v1/registry/card
+ * - Updates via PATCH /api/registry/v0.1/card
  * - Loading and error states
  */
 const RegistryCardSettings: React.FC<RegistryCardSettingsProps> = ({ onShowToast }) => {
@@ -70,7 +70,7 @@ const RegistryCardSettings: React.FC<RegistryCardSettingsProps> = ({ onShowToast
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get('/api/registry/card');
+      const response = await axios.get('/api/registry/v0.1/card');
       const cardData = response.data;
       setCard(cardData);
       setFormData({
@@ -96,7 +96,7 @@ const RegistryCardSettings: React.FC<RegistryCardSettingsProps> = ({ onShowToast
 
     setSaving(true);
     try {
-      await axios.patch('/api/registry/card', {
+      await axios.patch('/api/registry/v0.1/card', {
         description: formData.description || null,
         contact_email: formData.contact_email || null,
         contact_url: formData.contact_url || null,
