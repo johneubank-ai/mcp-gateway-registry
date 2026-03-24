@@ -277,7 +277,7 @@ class NginxConfigService:
         # Proxy to FastAPI service
         proxy_pass http://127.0.0.1:7860/api/;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
+        proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -306,7 +306,7 @@ class NginxConfigService:
         # Proxy to FastAPI service
         proxy_pass http://127.0.0.1:7860/api/;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
+        proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -366,7 +366,7 @@ class NginxConfigService:
 #        # Proxy to MCP server
 #        proxy_pass {proxy_pass_url};
 #        proxy_http_version 1.1;
-#        proxy_set_header Host $host;
+#        proxy_set_header Host $http_host;
 #        proxy_set_header X-Real-IP $remote_addr;
 #        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 #        proxy_set_header X-Forwarded-Proto $scheme;
@@ -1103,7 +1103,7 @@ map "$uri:$http_x_mcp_server_version" $versioned_backend {{
         proxy_set_header X-Forwarded-Proto $scheme;
 
         # Add original URL for auth server scope validation
-        proxy_set_header X-Original-URL $scheme://$host$request_uri;
+        proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
 
         # Pass through the original authentication headers
         proxy_set_header Authorization $http_authorization;
