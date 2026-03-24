@@ -324,17 +324,20 @@ This is more "Linear agent/app" than "plain MCP tool access". It is not required
 
 ### Phase 1: make Codex OAuth actually work against the gateway
 
-- [ ] Fix nginx host forwarding so the auth server and well-known routes see the external host including port.
-- [ ] Audit all places that derive external URLs from request headers.
-- [ ] Ensure these endpoints all emit `http://localhost:8080` in local Podman mode:
-  - `WWW-Authenticate resource_metadata`
-  - `/.well-known/oauth-protected-resource/...`
-  - `/.well-known/oauth-authorization-server`
-  - `/.well-known/openid-configuration`
-  - `authorization_endpoint`
-  - `token_endpoint`
-  - `registration_endpoint`
-  - `jwks_uri`
+- [x] Fix nginx host forwarding so the auth server and well-known routes see the external host including port.
+  - Root cause: nginx `$host` strips the port. Fixed by switching to `$http_host` in all three files: `docker/nginx_rev_proxy_http_only.conf`, `docker/nginx_rev_proxy_http_and_https.conf`, `registry/core/nginx_service.py`.
+  - Also fixed pre-existing bug: `$auth_www_authenticate` was undefined when no dynamic MCP location blocks were active. Added default `set` directive in server block.
+- [x] Audit all places that derive external URLs from request headers.
+  - Python code (`auth_server/server.py`, `registry/api/wellknown_routes.py`) already reads `Host` header correctly. The only fix needed was in nginx forwarding.
+- [x] Ensure these endpoints all emit `http://localhost:8080` in local Podman mode:
+  - `/.well-known/oauth-protected-resource/...` -- verified
+  - `/.well-known/oauth-authorization-server` -- verified
+  - `/.well-known/openid-configuration` -- verified
+  - `authorization_endpoint` -- verified
+  - `token_endpoint` -- verified
+  - `registration_endpoint` -- verified
+  - `jwks_uri` -- verified
+  - `/.well-known/mcp-servers` -- verified (server URLs, auth URLs, metadata URLs)
 - [ ] Re-test:
   - `codex mcp add context7 --url http://localhost:8080/context7/mcp`
   - `codex mcp login context7`
