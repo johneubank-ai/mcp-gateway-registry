@@ -336,7 +336,7 @@ const AgentCard: React.FC<AgentCardProps> = React.memo(({
 
   return (
     <>
-      <div className="group rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 border-2 border-cyan-200 dark:border-cyan-700 hover:border-cyan-300 dark:hover:border-cyan-600">
+      <div className="group rounded-2xl shadow-xs hover:shadow-xl transition-all duration-300 h-full flex flex-col bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 border-2 border-cyan-200 dark:border-cyan-700 hover:border-cyan-300 dark:hover:border-cyan-600">
         {showDeleteConfirm ? (
           /* Delete Confirmation - replaces card content when active */
           <div className="p-5 h-full flex flex-col justify-center">

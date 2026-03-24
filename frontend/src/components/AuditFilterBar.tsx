@@ -256,7 +256,7 @@ const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 mb-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-200 dark:border-gray-700 p-4 mb-4">
       <div className="flex items-center gap-2 mb-4">
         <FunnelIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">

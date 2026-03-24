@@ -371,7 +371,7 @@ const ServerCard: React.FC<ServerCardProps> = React.memo(({ server, onToggle, on
 
   return (
     <>
-      <div className={`group rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col ${
+      <div className={`group rounded-2xl shadow-xs hover:shadow-xl transition-all duration-300 h-full flex flex-col ${
         isAnthropicServer 
           ? 'bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-2 border-purple-200 dark:border-purple-700 hover:border-purple-300 dark:hover:border-purple-600'
           : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'

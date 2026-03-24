@@ -1200,7 +1200,7 @@ const RegisterPage: React.FC = () => {
       </div>
 
       {/* Form Content */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xs border border-gray-200 dark:border-gray-700 p-6">
         {registrationMode === 'form' ? (
           registrationType === 'server' ? renderServerForm() : renderAgentForm()
         ) : (

@@ -154,7 +154,7 @@ const fetchAdminTokens = async () => {
           <div className="space-y-2 mb-6">
             <Link
               to="/"
-              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-purple-500 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
               onClick={() => window.innerWidth < 768 && setSidebarOpen(false)} // Only close on mobile
               tabIndex={0}
             >
@@ -164,7 +164,7 @@ const fetchAdminTokens = async () => {
             
             <Link
               to="/generate-token"
-              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300"
+              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-purple-500 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300"
               tabIndex={0}
             >
               <KeyIcon className="h-4 w-4" />
@@ -338,7 +338,7 @@ const fetchAdminTokens = async () => {
                 <button
                   key={filter.key}
                   onClick={() => setActiveFilter(filter.key)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
                     activeFilter === filter.key
                       ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
@@ -383,7 +383,7 @@ const fetchAdminTokens = async () => {
                       {tag}
                       <button
                         onClick={() => onTagSelect(tag)}
-                        className="hover:text-purple-900 dark:hover:text-purple-100 focus:outline-none"
+                        className="hover:text-purple-900 dark:hover:text-purple-100 focus:outline-hidden"
                         aria-label={`Remove tag ${tag}`}
                       >
                         <XMarkIcon className="h-3 w-3" />
@@ -435,7 +435,7 @@ const fetchAdminTokens = async () => {
                           setTagDropdownOpen(false);
                         }
                       }}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                     {tagDropdownOpen && (
                       <div className="absolute z-50 mt-1 w-full max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">

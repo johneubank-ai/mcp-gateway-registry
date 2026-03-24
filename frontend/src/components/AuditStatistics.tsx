@@ -420,7 +420,7 @@ const AuditStatistics: React.FC<AuditStatisticsProps> = ({ stream, days = 7, use
   const isMcpStream = stream === 'mcp_access';
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-200 dark:border-gray-700 mb-6">
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 cursor-pointer select-none"

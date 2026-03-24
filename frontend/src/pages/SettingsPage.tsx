@@ -305,7 +305,7 @@ const SettingsPage: React.FC = () => {
       <div className="flex flex-1 gap-6 min-h-0">
         {/* Sidebar */}
         <div className="w-64 flex-shrink-0">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-200 dark:border-gray-700 p-4">
             <nav className="space-y-1">
               {visibleCategories.map((category) => (
                 <div key={category.id}>
@@ -360,7 +360,7 @@ const SettingsPage: React.FC = () => {
 
         {/* Content area */}
         <div className="flex-1 min-w-0">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 h-full overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-200 dark:border-gray-700 p-6 h-full overflow-y-auto">
             {renderContent()}
           </div>
         </div>

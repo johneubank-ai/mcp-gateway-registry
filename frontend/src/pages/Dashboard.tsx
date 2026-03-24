@@ -1344,7 +1344,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
           {shouldShowCta && (
             <button
               onClick={handleRegisterServer}
-              className="mt-6 inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              className="mt-6 inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
               <PlusIcon className="h-5 w-5 mr-2" />
               Register Server

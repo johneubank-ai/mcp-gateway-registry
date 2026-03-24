@@ -141,7 +141,7 @@ const PeerActionMenu: React.FC<PeerActionMenuProps> = ({
                 >
                   <Menu.Items
                     static
-                    className="fixed z-[9999] w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    className="fixed z-[9999] w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-hidden"
                     style={{
                       top: menuPosition.top,
                       left: menuPosition.left,

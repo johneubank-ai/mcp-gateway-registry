@@ -1,15 +1,16 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import axios from 'axios';
 import ConfigPanel from '../ConfigPanel';
 
 // Mock axios
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+vi.mock('axios');
+const mockedAxios = axios as vi.Mocked<typeof axios>;
 
 // Mock clipboard API
 Object.assign(navigator, {
-  clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+  clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
 });
 
 /** Sample API response used across tests. */
@@ -48,7 +49,7 @@ const mockConfigResponse = {
 
 describe('ConfigPanel', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('renders groups from API response', async () => {

@@ -667,7 +667,7 @@ const VirtualServerResultCard: React.FC<VirtualServerResultCardProps> = ({
   const hasMoreTools = tools.length > 3;
 
   return (
-    <div className="rounded-2xl border-2 border-indigo-200 dark:border-indigo-700 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-5 shadow-sm hover:shadow-md transition-shadow">
+    <div className="rounded-2xl border-2 border-indigo-200 dark:border-indigo-700 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 p-5 shadow-xs hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -897,7 +897,7 @@ const SemanticSearchResults: React.FC<SemanticSearchResultsProps> = ({
               return (
               <div
                 key={server.path}
-                className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-sm hover:shadow-md transition-shadow"
+                className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-xs hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -1082,7 +1082,7 @@ const SemanticSearchResults: React.FC<SemanticSearchResultsProps> = ({
               return (
               <div
                 key={agent.path}
-                className="rounded-2xl border border-cyan-200 dark:border-cyan-900/40 bg-white dark:bg-gray-800 p-5 shadow-sm hover:shadow-md transition-shadow"
+                className="rounded-2xl border border-cyan-200 dark:border-cyan-900/40 bg-white dark:bg-gray-800 p-5 shadow-xs hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -1178,7 +1178,7 @@ const SemanticSearchResults: React.FC<SemanticSearchResultsProps> = ({
             {skills.map((skill) => (
               <div
                 key={skill.path}
-                className="rounded-2xl border-2 border-amber-200 dark:border-amber-700 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-5 shadow-sm hover:shadow-md transition-shadow"
+                className="rounded-2xl border-2 border-amber-200 dark:border-amber-700 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-5 shadow-xs hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>

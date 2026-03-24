@@ -284,7 +284,7 @@ const StarRatingWidget: React.FC<StarRatingWidgetProps> = ({
                     onClick={() => handleStarClick(star)}
                     onMouseEnter={() => setHoverRating(star)}
                     onMouseLeave={() => setHoverRating(null)}
-                    className="p-1 hover:scale-110 transition-transform duration-150 focus:outline-none focus:ring-2 focus:ring-yellow-400 rounded"
+                    className="p-1 hover:scale-110 transition-transform duration-150 focus:outline-hidden focus:ring-2 focus:ring-yellow-400 rounded"
                     role="radio"
                     aria-checked={selectedRating === star}
                     aria-label={`${star} star${star !== 1 ? 's' : ''}`}

@@ -1,23 +1,24 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import SettingsPage from '../../pages/SettingsPage';
 
 // Mock auth context
-jest.mock('../../contexts/AuthContext', () => ({
-  useAuth: jest.fn(),
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: vi.fn(),
 }));
 import { useAuth } from '../../contexts/AuthContext';
 
 // Mock child components to avoid deep rendering
-jest.mock('../../pages/AuditLogsPage', () => () => <div>AuditLogsPage</div>);
-jest.mock('../FederationPeers', () => () => <div>FederationPeers</div>);
-jest.mock('../FederationPeerForm', () => () => <div>FederationPeerForm</div>);
-jest.mock('../ConfigPanel', () => () => <div data-testid="config-panel-mock">ConfigPanel</div>);
+vi.mock('../../pages/AuditLogsPage', () => ({ default: () => <div>AuditLogsPage</div> }));
+vi.mock('../FederationPeers', () => ({ default: () => <div>FederationPeers</div> }));
+vi.mock('../FederationPeerForm', () => ({ default: () => <div>FederationPeerForm</div> }));
+vi.mock('../ConfigPanel', () => ({ default: () => <div data-testid="config-panel-mock">ConfigPanel</div> }));
 
 describe('SettingsPage - System Config category', () => {
   test('shows System Config category for admin users', () => {
-    (useAuth as jest.Mock).mockReturnValue({
+    (useAuth as vi.Mock).mockReturnValue({
       user: { username: 'admin', is_admin: true },
       loading: false,
     });
@@ -32,7 +33,7 @@ describe('SettingsPage - System Config category', () => {
   });
 
   test('hides System Config category for non-admin users', () => {
-    (useAuth as jest.Mock).mockReturnValue({
+    (useAuth as vi.Mock).mockReturnValue({
       user: { username: 'viewer', is_admin: false },
       loading: false,
     });

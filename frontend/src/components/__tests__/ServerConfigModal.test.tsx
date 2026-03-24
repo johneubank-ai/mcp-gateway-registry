@@ -1,17 +1,28 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import ServerConfigModal from '../ServerConfigModal';
 import type { Server } from '../ServerCard';
 
-// Mock the useRegistryConfig hook
-const mockUseRegistryConfig = jest.fn();
-jest.mock('../../hooks/useRegistryConfig', () => ({
+// Mock axios (component fetches JWT tokens)
+vi.mock('axios');
+
+// Mock the useRegistryConfig hook (vi.hoisted ensures availability during vi.mock hoisting)
+const { mockUseRegistryConfig } = vi.hoisted(() => ({
+  mockUseRegistryConfig: vi.fn(),
+}));
+vi.mock('../../hooks/useRegistryConfig', () => ({
   useRegistryConfig: () => mockUseRegistryConfig(),
+}));
+
+// Mock useEscapeKey hook
+vi.mock('../../hooks/useEscapeKey', () => ({
+  default: vi.fn(),
 }));
 
 // Mock clipboard API
 Object.assign(navigator, {
-  clipboard: { writeText: jest.fn().mockResolvedValue(undefined) },
+  clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
 });
 
 const baseServer: Server = {
@@ -27,8 +38,8 @@ function renderModal(serverOverrides: Partial<Server> = {}, configOverride?: Ret
     <ServerConfigModal
       server={server}
       isOpen={true}
-      onClose={jest.fn()}
-      onShowToast={jest.fn()}
+      onClose={vi.fn()}
+      onShowToast={vi.fn()}
     />
   );
 }
@@ -41,7 +52,7 @@ function getDisplayedConfig(): any {
 
 describe('ServerConfigModal URL generation', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Default: jsdom sets window.location.origin to http://localhost
   });
 
@@ -60,12 +71,12 @@ describe('ServerConfigModal URL generation', () => {
     renderModal();
     const config = getDisplayedConfig();
 
-    // VS Code is the default IDE — config uses "servers" key
-    const serverConfig = config.servers['test-server'];
+    // Cursor is the default IDE — config uses "mcpServers" key
+    const serverConfig = config.mcpServers['test-server'];
     expect(serverConfig.url).toBe('http://localhost/test-server/mcp');
     // Gateway mode includes auth headers
     expect(serverConfig.headers).toBeDefined();
-    expect(serverConfig.headers.Authorization).toContain('Bearer');
+    expect(serverConfig.headers['X-Authorization']).toContain('Bearer');
   });
 
   test('should use proxy_pass_url in registry-only mode', () => {
@@ -83,7 +94,7 @@ describe('ServerConfigModal URL generation', () => {
     renderModal({ proxy_pass_url: 'http://internal-host:8080/mcp' });
     const config = getDisplayedConfig();
 
-    const serverConfig = config.servers['test-server'];
+    const serverConfig = config.mcpServers['test-server'];
     expect(serverConfig.url).toBe('http://internal-host:8080/mcp');
     // Registry-only mode should NOT include auth headers
     expect(serverConfig.headers).toBeUndefined();
@@ -107,7 +118,7 @@ describe('ServerConfigModal URL generation', () => {
       proxy_pass_url: 'http://internal-host:8080/mcp',
     });
     let config = getDisplayedConfig();
-    let serverConfig = config.servers['test-server'];
+    let serverConfig = config.mcpServers['test-server'];
     expect(serverConfig.url).toBe('https://custom-endpoint.example.com/mcp');
 
     unmount();
@@ -129,7 +140,7 @@ describe('ServerConfigModal URL generation', () => {
       proxy_pass_url: 'http://internal-host:8080/mcp',
     });
     config = getDisplayedConfig();
-    serverConfig = config.servers['test-server'];
+    serverConfig = config.mcpServers['test-server'];
     expect(serverConfig.url).toBe('https://custom-endpoint.example.com/mcp');
   });
 });
