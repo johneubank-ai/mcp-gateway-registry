@@ -1,5 +1,10 @@
 import React from 'react';
-import useEscapeKey from '../hooks/useEscapeKey';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface DetailsModalProps {
   title: string;
@@ -12,21 +17,20 @@ interface DetailsModalProps {
 }
 
 const MAX_WIDTH_CLASSES = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
-  '2xl': 'max-w-2xl',
-  '3xl': 'max-w-3xl',
-  '4xl': 'max-w-4xl',
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-md',
+  lg: 'sm:max-w-lg',
+  xl: 'sm:max-w-xl',
+  '2xl': 'sm:max-w-2xl',
+  '3xl': 'sm:max-w-3xl',
+  '4xl': 'sm:max-w-4xl',
 };
 
 /**
  * Shared DetailsModal component with loading and error states.
  *
  * Features:
- * - Backdrop with blur effect
- * - Escape key handler
+ * - Uses shadcn Dialog (Radix UI) for portal, overlay, and escape key handling
  * - Configurable max width
  * - Built-in loading spinner
  * - Built-in error display
@@ -55,37 +59,23 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
   children,
   maxWidth = '4xl',
 }) => {
-  useEscapeKey(onClose, isOpen);
-
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div
-        className={`bg-white dark:bg-gray-800 rounded-xl p-6 ${MAX_WIDTH_CLASSES[maxWidth]} w-full mx-4 max-h-[80vh] overflow-auto`}
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent
+        className={`${MAX_WIDTH_CLASSES[maxWidth]} max-h-[80vh] overflow-auto bg-card p-6`}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-foreground">
             {title}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-            aria-label="Close"
-          >
-            ✕
-          </button>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
         {/* Loading State */}
         {loading && (
           <div className="flex items-center justify-center py-12">
             <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 dark:border-blue-400"></div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+              <p className="text-sm text-muted-foreground">
                 Loading details...
               </p>
             </div>
@@ -94,18 +84,18 @@ const DetailsModal: React.FC<DetailsModalProps> = ({
 
         {/* Error State */}
         {!loading && error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
-            <h4 className="font-medium text-red-900 dark:text-red-100 mb-1">
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-4">
+            <h4 className="font-medium text-destructive mb-1">
               Error Loading Details
             </h4>
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
 
         {/* Content */}
         {!loading && !error && children}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

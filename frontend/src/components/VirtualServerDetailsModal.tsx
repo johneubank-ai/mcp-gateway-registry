@@ -1,8 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { XMarkIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { VirtualServerInfo, VirtualServerConfig, ToolMapping } from '../types/virtualServer';
 import axios from 'axios';
-import useEscapeKey from '../hooks/useEscapeKey';
 
 
 interface VirtualServerDetailsModalProps {
@@ -20,8 +26,6 @@ const VirtualServerDetailsModal: React.FC<VirtualServerDetailsModalProps> = ({
   const [fullConfig, setFullConfig] = useState<VirtualServerConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedBackends, setExpandedBackends] = useState<Record<string, boolean>>({});
-
-  useEscapeKey(onClose, isOpen);
 
   // Fetch full config when modal opens
   useEffect(() => {
@@ -75,40 +79,30 @@ const VirtualServerDetailsModal: React.FC<VirtualServerDetailsModalProps> = ({
     }));
   };
 
-  if (!isOpen) return null;
-
   const backendPaths = virtualServer.backend_paths || [];
   const hasToolDetails = Object.keys(toolsByBackend).length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {virtualServer.server_name}
-              </h3>
-              <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-200 border border-teal-200 dark:border-teal-600">
-                VIRTUAL
-              </span>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{virtualServer.path}</p>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col bg-card p-0">
+        <DialogHeader className="p-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-lg font-semibold text-foreground">
+              {virtualServer.server_name}
+            </DialogTitle>
+            <Badge className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-semibold">
+              VIRTUAL
+            </Badge>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg transition-colors"
-          >
-            <XMarkIcon className="h-5 w-5" />
-          </button>
-        </div>
+          <p className="text-sm text-muted-foreground">{virtualServer.path}</p>
+        </DialogHeader>
         <div className="p-4 overflow-auto flex-1 space-y-4">
           {/* Description */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Description
             </p>
-            <p className="text-sm text-gray-700 dark:text-gray-200">
+            <p className="text-sm text-foreground">
               {virtualServer.description || 'No description available.'}
             </p>
           </div>
@@ -116,14 +110,14 @@ const VirtualServerDetailsModal: React.FC<VirtualServerDetailsModalProps> = ({
           {/* Tags */}
           {virtualServer.tags && virtualServer.tags.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 Tags
               </p>
               <div className="flex flex-wrap gap-2">
                 {virtualServer.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-2.5 py-1 text-xs rounded-full bg-teal-50 text-teal-700 dark:bg-teal-900/40 dark:text-teal-200"
+                    className="px-2.5 py-1 text-xs rounded-full bg-primary/10 text-primary"
                   >
                     {tag}
                   </span>
@@ -135,13 +129,13 @@ const VirtualServerDetailsModal: React.FC<VirtualServerDetailsModalProps> = ({
           {/* Backend Servers with Tools */}
           {backendPaths.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 Backend Servers ({backendPaths.length}) - Tools ({virtualServer.tool_count})
               </p>
               {loading ? (
                 <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-teal-600"></div>
-                  <span className="ml-2 text-sm text-gray-500">Loading tool details...</span>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+                  <span className="ml-2 text-sm text-muted-foreground">Loading tool details...</span>
                 </div>
               ) : (
                 <ul className="space-y-2">
@@ -151,27 +145,27 @@ const VirtualServerDetailsModal: React.FC<VirtualServerDetailsModalProps> = ({
                     const toolCount = backendTools.length;
 
                     return (
-                      <li key={path} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                      <li key={path} className="border border-border rounded-lg overflow-hidden">
                         <button
                           onClick={() => toggleBackend(path)}
-                          className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                          className="w-full flex items-center justify-between px-3 py-2 bg-muted hover:bg-accent transition-colors text-left"
                         >
                           <div className="flex items-center gap-2">
                             {hasToolDetails ? (
                               isExpanded ? (
-                                <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
                               ) : (
-                                <ChevronRightIcon className="h-4 w-4 text-gray-500" />
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
                               )
                             ) : (
                               <div className="w-4" />
                             )}
-                            <span className="text-sm font-mono text-gray-700 dark:text-gray-200">
+                            <span className="text-sm font-mono text-foreground">
                               {path}
                             </span>
                           </div>
                           {hasToolDetails && (
-                            <span className="px-2 py-0.5 text-xs bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded-full">
+                            <span className="px-2 py-0.5 text-xs bg-primary/10 text-primary rounded-full">
                               {toolCount} tool{toolCount !== 1 ? 's' : ''}
                             </span>
                           )}
@@ -179,31 +173,31 @@ const VirtualServerDetailsModal: React.FC<VirtualServerDetailsModalProps> = ({
 
                         {/* Expanded tools list */}
                         {isExpanded && backendTools.length > 0 && (
-                          <ul className="border-t border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-800">
+                          <ul className="border-t border-border divide-y divide-border">
                             {backendTools.map((tool) => (
                               <li
                                 key={tool.alias || tool.tool_name}
-                                className="px-4 py-3 bg-white dark:bg-gray-800"
+                                className="px-4 py-3 bg-card"
                               >
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex-1 min-w-0">
-                                    <span className="font-medium text-sm text-gray-900 dark:text-white">
+                                    <span className="font-medium text-sm text-foreground">
                                       {tool.alias || tool.tool_name}
                                     </span>
                                     {tool.alias && tool.alias !== tool.tool_name && (
-                                      <span className="ml-2 text-xs text-gray-400 dark:text-gray-500">
+                                      <span className="ml-2 text-xs text-muted-foreground">
                                         (original: {tool.tool_name})
                                       </span>
                                     )}
                                   </div>
                                   {tool.backend_version && (
-                                    <span className="px-1.5 py-0.5 text-[10px] bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded font-mono">
+                                    <span className="px-1.5 py-0.5 text-[10px] bg-muted text-muted-foreground rounded font-mono">
                                       v{tool.backend_version}
                                     </span>
                                   )}
                                 </div>
                                 {tool.description_override && (
-                                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
                                     {tool.description_override}
                                   </p>
                                 )}
@@ -221,16 +215,16 @@ const VirtualServerDetailsModal: React.FC<VirtualServerDetailsModalProps> = ({
 
           {/* Status */}
           <div>
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Status
             </p>
             <div className="flex items-center gap-2">
               <div className={`w-3 h-3 rounded-full ${
                 virtualServer.is_enabled
                   ? 'bg-green-400 shadow-lg shadow-green-400/30'
-                  : 'bg-gray-300 dark:bg-gray-600'
+                  : 'bg-muted-foreground/40'
               }`} />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
+              <span className="text-sm text-foreground">
                 {virtualServer.is_enabled ? 'Enabled' : 'Disabled'}
               </span>
             </div>
@@ -239,14 +233,14 @@ const VirtualServerDetailsModal: React.FC<VirtualServerDetailsModalProps> = ({
           {/* Required Scopes */}
           {virtualServer.required_scopes && virtualServer.required_scopes.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 Required Scopes
               </p>
               <div className="flex flex-wrap gap-2">
                 {virtualServer.required_scopes.map((scope) => (
                   <span
                     key={scope}
-                    className="px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200 font-mono"
+                    className="px-2.5 py-1 text-xs rounded-full bg-muted text-foreground font-mono"
                   >
                     {scope}
                   </span>
@@ -258,14 +252,14 @@ const VirtualServerDetailsModal: React.FC<VirtualServerDetailsModalProps> = ({
           {/* Supported Transports */}
           {virtualServer.supported_transports && virtualServer.supported_transports.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 Supported Transports
               </p>
               <div className="flex flex-wrap gap-2">
                 {virtualServer.supported_transports.map((transport) => (
                   <span
                     key={transport}
-                    className="px-2.5 py-1 text-xs rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200"
+                    className="px-2.5 py-1 text-xs rounded-full bg-primary/10 text-primary"
                   >
                     {transport}
                   </span>
@@ -274,8 +268,8 @@ const VirtualServerDetailsModal: React.FC<VirtualServerDetailsModalProps> = ({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

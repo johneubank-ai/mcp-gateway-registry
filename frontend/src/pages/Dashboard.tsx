@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MagnifyingGlassIcon, PlusIcon, XMarkIcon, ArrowPathIcon, CheckCircleIcon, ExclamationCircleIcon, ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { Search, Plus, X, RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { useServerStats } from '../hooks/useServerStats';
 import { useSkills, Skill } from '../hooks/useSkills';
 import { useAuth } from '../contexts/AuthContext';
@@ -70,44 +72,6 @@ interface Agent {
   registered_by?: string | null;
 }
 
-// Toast notification component
-interface ToastProps {
-  message: string;
-  type: 'success' | 'error';
-  onClose: () => void;
-}
-
-const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose();
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  return (
-    <div className="fixed top-4 right-4 z-50 animate-slide-in-top">
-      <div className={`flex items-center p-4 rounded-lg shadow-lg border ${
-        type === 'success'
-          ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/50 dark:border-green-700 dark:text-green-200'
-          : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/50 dark:border-red-700 dark:text-red-200'
-      }`}>
-        {type === 'success' ? (
-          <CheckCircleIcon className="h-5 w-5 mr-3 flex-shrink-0" />
-        ) : (
-          <ExclamationCircleIcon className="h-5 w-5 mr-3 flex-shrink-0" />
-        )}
-        <p className="text-sm font-medium">{message}</p>
-        <button
-          onClick={onClose}
-          className="ml-3 flex-shrink-0 text-current opacity-70 hover:opacity-100"
-        >
-          <XMarkIcon className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  );
-};
 
 const normalizeAgentStatus = (status?: string | null): Agent['status'] => {
   if (status === 'healthy' || status === 'healthy-auth-expired') {
@@ -176,7 +140,6 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
     auth_header_name: 'X-API-Key',
   });
   const [editLoading, setEditLoading] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Agent state management - using agents from useServerStats hook instead of separate fetch
   // Agents loading state is now handled by the useServerStats hook's 'loading' state
@@ -811,16 +774,10 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
 
       // Check the success field in the response body
       if (result.success) {
-        setToast({
-          message: `Synced ${result.servers_synced || 0} servers and ${result.agents_synced || 0} agents from ${peerId}`,
-          type: 'success'
-        });
+        toast.success(`Synced ${result.servers_synced || 0} servers and ${result.agents_synced || 0} agents from ${peerId}`);
       } else {
         // Sync failed - show error message from response
-        setToast({
-          message: result.error_message || `Failed to sync from ${peerId}`,
-          type: 'error'
-        });
+        toast.error(result.error_message || `Failed to sync from ${peerId}`);
       }
 
       // Refresh the server list to show updated data
@@ -828,7 +785,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
       notifyDataChanged();
     } catch (error) {
       console.error('Failed to sync peer:', error);
-      setToast({ message: `Failed to sync from ${peerId}`, type: 'error' });
+      toast.error(`Failed to sync from ${peerId}`);
     } finally {
       setSyncingPeer(null);
     }
@@ -897,11 +854,9 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
   };
 
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info') => {
-    setToast({ message, type: type === 'info' ? 'success' : type });
-  }, []);
-
-  const hideToast = useCallback(() => {
-    setToast(null);
+    if (type === 'error') toast.error(message);
+    else if (type === 'info') toast.info(message);
+    else toast.success(message);
   }, []);
 
   const handleSaveEdit = async () => {
@@ -1339,16 +1294,16 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
 
       return (
         <div className="text-center py-16">
-          <div className="text-gray-400 text-xl mb-4">{title}</div>
-          <p className="text-gray-500 dark:text-gray-300 text-base max-w-md mx-auto">{subtitle}</p>
+          <div className="text-muted-foreground text-xl mb-4">{title}</div>
+          <p className="text-muted-foreground text-base max-w-md mx-auto">{subtitle}</p>
           {shouldShowCta && (
-            <button
+            <Button
               onClick={handleRegisterServer}
-              className="mt-6 inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              className="mt-6"
             >
-              <PlusIcon className="h-5 w-5 mr-2" />
+              <Plus className="h-5 w-5 mr-2" />
               Register Server
-            </button>
+            </Button>
           )}
         </div>
       );
@@ -1388,14 +1343,14 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
         (viewFilter === 'all' || viewFilter === 'servers') && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-bold text-foreground">
                 MCP Servers
               </h2>
 
               {/* Registry Quick Navigation - Only show if there are multiple registries */}
               {registryIds.length > 1 && filteredServers.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Jump to:</span>
+                  <span className="text-xs text-muted-foreground mr-1">Jump to:</span>
                   {registryIds.map(registryId => {
                     const count = (serversByRegistry[registryId] || []).length;
                     if (count === 0) return null;
@@ -1427,8 +1382,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                         }}
                         className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all hover:scale-105 ${
                           isLocal
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-700'
-                            : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:hover:bg-cyan-900/50 border border-cyan-200 dark:border-cyan-700'
+                            ? 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
+                            : 'bg-secondary text-secondary-foreground hover:bg-accent border border-border'
                         }`}
                       >
                         {displayName}
@@ -1439,7 +1394,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                     );
                   })}
                   {/* Expand All / Collapse All */}
-                  <div className="border-l border-gray-300 dark:border-gray-600 pl-2 ml-1">
+                  <div className="border-l border-border pl-2 ml-1">
                     <button
                       onClick={() => {
                         const allExpanded = registryIds.every(id => expandedRegistries[id] !== false);
@@ -1449,7 +1404,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                         });
                         setExpandedRegistries(prev => ({ ...prev, ...newExpanded }));
                       }}
-                      className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                      className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
                       title={registryIds.every(id => expandedRegistries[id] !== false) ? 'Collapse all' : 'Expand all'}
                     >
                       {registryIds.every(id => expandedRegistries[id] !== false) ? 'Collapse All' : 'Expand All'}
@@ -1460,9 +1415,9 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
             </div>
 
             {filteredServers.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-gray-400 text-lg mb-2">No servers found</div>
-                <p className="text-gray-500 dark:text-gray-300 text-sm">
+              <div className="text-center py-12 bg-muted rounded-lg">
+                <div className="text-muted-foreground text-lg mb-2">No servers found</div>
+                <p className="text-muted-foreground text-sm">
                   {selectedTags.length > 0
                     ? `No servers match the selected tag${selectedTags.length > 1 ? 's' : ''}`
                     : searchTerm || activeFilter !== 'all'
@@ -1470,13 +1425,13 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                       : 'No servers are registered yet'}
                 </p>
                 {!searchTerm && activeFilter === 'all' && selectedTags.length === 0 && (
-                  <button
+                  <Button
                     onClick={handleRegisterServer}
-                    className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                    className="mt-4"
                   >
-                    <PlusIcon className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-2" />
                     Register Server
-                  </button>
+                  </Button>
                 )}
               </div>
             ) : (
@@ -1565,34 +1520,34 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                   }
 
                   return (
-                    <div key={registryId} id={`server-registry-${registryId}`} className="border border-gray-200 dark:border-gray-700 rounded-xl scroll-mt-4">
+                    <div key={registryId} id={`server-registry-${registryId}`} className="border border-border rounded-xl scroll-mt-4">
                       {/* Collapsible Header */}
                       <button
                         onClick={() => toggleRegistryGroup(registryId)}
                         className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
                           registryId === 'local'
-                            ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30'
-                            : 'bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 hover:from-cyan-100 hover:to-blue-100 dark:hover:from-cyan-900/30 dark:hover:to-blue-900/30'
+                            ? 'bg-primary/5 hover:bg-primary/10'
+                            : 'bg-muted hover:bg-accent'
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           {isExpanded ? (
-                            <ChevronDownIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
                           ) : (
-                            <ChevronRightIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
                           )}
                           <span className={`font-semibold ${
                             registryId === 'local'
-                              ? 'text-green-700 dark:text-green-300'
-                              : 'text-cyan-700 dark:text-cyan-300'
+                              ? 'text-primary'
+                              : 'text-foreground'
                           }`}>
                             {displayName}
                           </span>
                           {/* Registry URL */}
-                          <span className="text-xs text-gray-400 dark:text-gray-500 font-mono truncate max-w-[200px] lg:max-w-[300px]" title={registryId === 'local' ? localRegistryUrl : peerRegistryEndpoints[registryId]}>
+                          <span className="text-xs text-muted-foreground font-mono truncate max-w-[200px] lg:max-w-[300px]" title={registryId === 'local' ? localRegistryUrl : peerRegistryEndpoints[registryId]}>
                             | {registryId === 'local' ? localRegistryUrl : (peerRegistryEndpoints[registryId] || 'Loading...')}
                           </span>
-                          <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
+                          <span className="px-2 py-0.5 text-xs font-medium bg-secondary text-muted-foreground rounded-full">
                             {registryId === 'local'
                               ? `${filteredRegistryServers.length + filteredVirtualServers.length} server${(filteredRegistryServers.length + filteredVirtualServers.length) !== 1 ? 's' : ''}`
                               : `${filteredRegistryServers.length} server${filteredRegistryServers.length !== 1 ? 's' : ''}`
@@ -1603,10 +1558,10 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                             <button
                               onClick={(e) => handleSyncPeer(registryId, e)}
                               disabled={syncingPeer === registryId}
-                              className="ml-2 p-1 text-cyan-600 dark:text-cyan-400 hover:text-cyan-800 dark:hover:text-cyan-200 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded-lg transition-colors disabled:opacity-50"
+                              className="ml-2 p-1 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-50"
                               title={`Resync from ${peerRegistryEndpoints[registryId] || registryId}`}
                             >
-                              <ArrowPathIcon className={`h-4 w-4 ${syncingPeer === registryId ? 'animate-spin' : ''}`} />
+                              <RefreshCw className={`h-4 w-4 ${syncingPeer === registryId ? 'animate-spin' : ''}`} />
                             </button>
                           )}
                         </div>
@@ -1614,7 +1569,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
 
                       {/* Collapsible Content */}
                       {isExpanded && (
-                        <div className="p-4 bg-white dark:bg-gray-800 overflow-visible">
+                        <div className="p-4 bg-card overflow-visible">
                           <div
                             className="grid overflow-visible"
                             style={{
@@ -1668,14 +1623,14 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
         (viewFilter === 'all' || viewFilter === 'agents') && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-bold text-foreground">
                 A2A Agents
               </h2>
 
               {/* Registry Quick Navigation for Agents - Only show if there are multiple registries */}
               {agentRegistryIds.length > 1 && filteredAgents.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">Jump to:</span>
+                  <span className="text-xs text-muted-foreground mr-1">Jump to:</span>
                   {agentRegistryIds.map(registryId => {
                     const count = (agentsByRegistry[registryId] || []).length;
                     if (count === 0) return null;
@@ -1707,8 +1662,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                         }}
                         className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all hover:scale-105 ${
                           isLocal
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-700'
-                            : 'bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:hover:bg-violet-900/50 border border-violet-200 dark:border-violet-700'
+                            ? 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
+                            : 'bg-secondary text-secondary-foreground hover:bg-accent border border-border'
                         }`}
                       >
                         {displayName}
@@ -1723,18 +1678,18 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
             </div>
 
             {agentsError ? (
-              <div className="text-center py-12 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                <div className="text-red-500 text-lg mb-2">Failed to load agents</div>
-                <p className="text-red-600 dark:text-red-400 text-sm">{agentsError}</p>
+              <div className="text-center py-12 bg-destructive/10 rounded-lg border border-destructive/20">
+                <div className="text-destructive text-lg mb-2">Failed to load agents</div>
+                <p className="text-destructive text-sm">{agentsError}</p>
               </div>
             ) : loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : filteredAgents.length === 0 ? (
-              <div className="text-center py-12 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800">
-                <div className="text-gray-400 text-lg mb-2">No agents found</div>
-                <p className="text-gray-500 dark:text-gray-300 text-sm">
+              <div className="text-center py-12 bg-muted rounded-lg border border-border">
+                <div className="text-muted-foreground text-lg mb-2">No agents found</div>
+                <p className="text-muted-foreground text-sm">
                   {searchTerm || activeFilter !== 'all'
                     ? 'Press Enter in the search bar to search semantically'
                     : 'No agents are registered yet'}
@@ -1818,34 +1773,34 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                   }
 
                   return (
-                    <div key={registryId} id={`agent-registry-${registryId}`} className="border border-cyan-200 dark:border-cyan-700 rounded-xl overflow-hidden scroll-mt-4">
+                    <div key={registryId} id={`agent-registry-${registryId}`} className="border border-border rounded-xl overflow-hidden scroll-mt-4">
                       {/* Collapsible Header */}
                       <button
                         onClick={() => toggleRegistryGroup(`agents-${registryId}`)}
                         className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
                           registryId === 'local'
-                            ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30'
-                            : 'bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 hover:from-violet-100 hover:to-purple-100 dark:hover:from-violet-900/30 dark:hover:to-purple-900/30'
+                            ? 'bg-primary/5 hover:bg-primary/10'
+                            : 'bg-muted hover:bg-accent'
                         }`}
                       >
                         <div className="flex items-center gap-3">
                           {isExpanded ? (
-                            <ChevronDownIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                            <ChevronDown className="h-5 w-5 text-muted-foreground" />
                           ) : (
-                            <ChevronRightIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
                           )}
                           <span className={`font-semibold ${
                             registryId === 'local'
-                              ? 'text-green-700 dark:text-green-300'
-                              : 'text-violet-700 dark:text-violet-300'
+                              ? 'text-primary'
+                              : 'text-foreground'
                           }`}>
                             {displayName}
                           </span>
                           {/* Registry URL */}
-                          <span className="text-xs text-gray-400 dark:text-gray-500 font-mono truncate max-w-[200px] lg:max-w-[300px]" title={registryId === 'local' ? localRegistryUrl : peerRegistryEndpoints[registryId]}>
+                          <span className="text-xs text-muted-foreground font-mono truncate max-w-[200px] lg:max-w-[300px]" title={registryId === 'local' ? localRegistryUrl : peerRegistryEndpoints[registryId]}>
                             | {registryId === 'local' ? localRegistryUrl : (peerRegistryEndpoints[registryId] || 'Loading...')}
                           </span>
-                          <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
+                          <span className="px-2 py-0.5 text-xs font-medium bg-secondary text-muted-foreground rounded-full">
                             {filteredRegistryAgents.length} agent{filteredRegistryAgents.length !== 1 ? 's' : ''}
                           </span>
                           {/* Resync button for federated registries */}
@@ -1853,10 +1808,10 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                             <button
                               onClick={(e) => handleSyncPeer(registryId, e)}
                               disabled={syncingPeer === registryId}
-                              className="ml-2 p-1 text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 hover:bg-violet-100 dark:hover:bg-violet-900/30 rounded-lg transition-colors disabled:opacity-50"
+                              className="ml-2 p-1 text-primary hover:text-primary/80 hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-50"
                               title={`Resync from ${peerRegistryEndpoints[registryId] || registryId}`}
                             >
-                              <ArrowPathIcon className={`h-4 w-4 ${syncingPeer === registryId ? 'animate-spin' : ''}`} />
+                              <RefreshCw className={`h-4 w-4 ${syncingPeer === registryId ? 'animate-spin' : ''}`} />
                             </button>
                           )}
                         </div>
@@ -1864,7 +1819,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
 
                       {/* Collapsible Content */}
                       {isExpanded && (
-                        <div className="p-4 bg-white dark:bg-gray-800 overflow-visible">
+                        <div className="p-4 bg-card overflow-visible">
                           <div
                             className="grid overflow-visible"
                             style={{
@@ -1910,45 +1865,45 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
         (viewFilter === 'all' || viewFilter === 'skills') && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-bold text-foreground">
                 Agent Skills
               </h2>
               {user?.can_modify_servers && (
-                <button
+                <Button
                   onClick={() => handleOpenSkillModal()}
-                  className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+                  className="bg-primary hover:bg-primary/80"
                 >
-                  <PlusIcon className="h-4 w-4 mr-1" />
+                  <Plus className="h-4 w-4 mr-1" />
                   Add Skill
-                </button>
+                </Button>
               )}
             </div>
 
             {skillsError ? (
-              <div className="text-center py-12 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                <div className="text-red-500 text-lg mb-2">Failed to load skills</div>
-                <p className="text-red-600 dark:text-red-400 text-sm">{skillsError}</p>
+              <div className="text-center py-12 bg-destructive/10 rounded-lg border border-destructive/20">
+                <div className="text-destructive text-lg mb-2">Failed to load skills</div>
+                <p className="text-destructive text-sm">{skillsError}</p>
               </div>
             ) : skillsLoading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : filteredSkills.length === 0 ? (
-              <div className="text-center py-12 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                <div className="text-gray-400 text-lg mb-2">No skills found</div>
-                <p className="text-gray-500 dark:text-gray-300 text-sm">
+              <div className="text-center py-12 bg-muted rounded-lg border border-border">
+                <div className="text-muted-foreground text-lg mb-2">No skills found</div>
+                <p className="text-muted-foreground text-sm">
                   {searchTerm || activeFilter !== 'all'
                     ? 'Press Enter in the search bar to search semantically'
                     : 'No skills are registered yet'}
                 </p>
                 {!searchTerm && activeFilter === 'all' && user?.can_modify_servers && (
-                  <button
+                  <Button
                     onClick={() => handleOpenSkillModal()}
-                    className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-amber-600 hover:bg-amber-700 transition-colors"
+                    className="mt-4 bg-primary hover:bg-primary/80"
                   >
-                    <PlusIcon className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-2" />
                     Register Skill
-                  </button>
+                  </Button>
                 )}
               </div>
             ) : (
@@ -1984,33 +1939,33 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
         (filteredVirtualServers.length > 0 || viewFilter === 'virtual') && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-xl font-bold text-foreground">
                 Virtual MCP Servers
               </h2>
               {(user?.can_modify_servers || user?.is_admin) && (
-                <button
+                <Button
                   onClick={() => navigate('/settings/virtual-mcp/servers')}
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition-colors"
+                  className="bg-primary hover:bg-primary/80"
                 >
-                  <PlusIcon className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Add Virtual Server
-                </button>
+                </Button>
               )}
             </div>
 
             {virtualServersError ? (
-              <div className="text-center py-12 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                <div className="text-red-500 text-lg mb-2">Failed to load virtual servers</div>
-                <p className="text-red-600 dark:text-red-400 text-sm">{virtualServersError}</p>
+              <div className="text-center py-12 bg-destructive/10 rounded-lg border border-destructive/20">
+                <div className="text-destructive text-lg mb-2">Failed to load virtual servers</div>
+                <p className="text-destructive text-sm">{virtualServersError}</p>
               </div>
             ) : virtualServersLoading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : filteredVirtualServers.length === 0 ? (
-              <div className="text-center py-12 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
-                <div className="text-gray-400 text-lg mb-2">No virtual servers found</div>
-                <p className="text-gray-500 dark:text-gray-300 text-sm">
+              <div className="text-center py-12 bg-muted rounded-lg border border-border">
+                <div className="text-muted-foreground text-lg mb-2">No virtual servers found</div>
+                <p className="text-muted-foreground text-sm">
                   {searchTerm || activeFilter !== 'all'
                     ? 'Try adjusting your search or filter'
                     : 'No virtual servers are configured yet'}
@@ -2044,16 +1999,16 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
       {/* External Registries Section */}
       {registryConfig?.features.federation !== false && viewFilter === 'external' && (
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-xl font-bold text-foreground mb-4">
             External Registries
           </h2>
 
           {filteredExternalServers.length === 0 && filteredExternalAgents.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-600">
-              <div className="text-gray-400 text-lg mb-2">
+            <div className="text-center py-12 bg-muted rounded-lg border border-dashed border-border">
+              <div className="text-muted-foreground text-lg mb-2">
                 {externalServers.length === 0 && externalAgents.length === 0 ? 'No External Registries Available' : 'No Results Found'}
               </div>
-              <p className="text-gray-500 dark:text-gray-300 text-sm max-w-md mx-auto">
+              <p className="text-muted-foreground text-sm max-w-md mx-auto">
                 {externalServers.length === 0 && externalAgents.length === 0
                   ? 'External registry integrations (Anthropic, ASOR, and more) will be available soon'
                   : 'Press Enter in the search bar to search semantically'}
@@ -2064,7 +2019,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               {/* External Servers */}
               {filteredExternalServers.length > 0 && (
                 <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                  <h3 className="text-lg font-semibold text-foreground mb-3">
                     Servers
                   </h3>
                   <div
@@ -2096,7 +2051,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               {/* External Agents */}
               {filteredExternalAgents.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                  <h3 className="text-lg font-semibold text-foreground mb-3">
                     Agents
                   </h3>
                   <div
@@ -2143,8 +2098,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
         (viewFilter === 'virtual' && filteredVirtualServers.length === 0)) &&
         (searchTerm || activeFilter !== 'all' || selectedTags.length > 0) && (
           <div className="text-center py-16">
-            <div className="text-gray-400 text-xl mb-4">No items found</div>
-            <p className="text-gray-500 dark:text-gray-300 text-base max-w-md mx-auto">
+            <div className="text-muted-foreground text-xl mb-4">No items found</div>
+            <p className="text-muted-foreground text-base max-w-md mx-auto">
               {selectedTags.length > 0
                 ? `No items match the selected tag${selectedTags.length > 1 ? 's' : ''}: ${selectedTags.join(', ')}`
                 : 'Press Enter in the search bar to search semantically'}
@@ -2158,15 +2113,12 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
   if (error && agentsError) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <div className="text-red-500 text-lg">Failed to load servers and agents</div>
-        <p className="text-gray-500 text-center">{error}</p>
-        <p className="text-gray-500 text-center">{agentsError}</p>
-        <button
-          onClick={handleRefreshHealth}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-        >
+        <div className="text-destructive text-lg">Failed to load servers and agents</div>
+        <p className="text-muted-foreground text-center">{error}</p>
+        <p className="text-muted-foreground text-center">{agentsError}</p>
+        <Button onClick={handleRefreshHealth}>
           Try Again
-        </button>
+        </Button>
       </div>
     );
   }
@@ -2175,28 +2127,19 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
     <>
-      {/* Toast Notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={hideToast}
-        />
-      )}
-
       <div className="flex flex-col h-full">
         {/* Fixed Header Section */}
         <div className="flex-shrink-0 space-y-4 pb-4">
           {/* View Filter Tabs - conditionally show based on registry mode */}
           {/* Calculate if multiple features are enabled to determine if "All" tab is needed */}
-          <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+          <div className="flex gap-2 border-b border-border overflow-x-auto">
 {/* Only show "All" tab if more than one feature is enabled */}
             {[
               registryConfig?.features.mcp_servers !== false,
@@ -2208,8 +2151,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 onClick={() => handleChangeViewFilter('all')}
                 className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
                   viewFilter === 'all'
-                    ? 'border-purple-500 text-purple-600 dark:text-purple-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 All
@@ -2220,8 +2163,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 onClick={() => handleChangeViewFilter('servers')}
                 className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
                   viewFilter === 'servers'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 MCP Servers
@@ -2231,8 +2174,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               onClick={() => handleChangeViewFilter('virtual')}
               className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
                 viewFilter === 'virtual'
-                  ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               Virtual MCP Servers
@@ -2242,8 +2185,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 onClick={() => handleChangeViewFilter('agents')}
                 className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
                   viewFilter === 'agents'
-                    ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 A2A Agents
@@ -2254,8 +2197,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 onClick={() => handleChangeViewFilter('skills')}
                 className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
                   viewFilter === 'skills'
-                    ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Agent Skills
@@ -2266,8 +2209,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 onClick={() => handleChangeViewFilter('external')}
                 className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
                   viewFilter === 'external'
-                    ? 'border-green-500 text-green-600 dark:text-green-400'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
                 External Registries
@@ -2279,12 +2222,12 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
           <div className="flex gap-4 items-center">
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                <Search className="h-5 w-5 text-muted-foreground" />
               </div>
               <input
                 type="text"
                 placeholder="Search servers, agents, descriptions, or tags… (Press Enter to run semantic search; typing filters locally.)"
-                className="input pl-10 w-full"
+                className="h-9 w-full rounded-md border border-input bg-input/20 pl-10 pr-10 text-sm transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-input/30"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={(e) => {
@@ -2298,34 +2241,35 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 <button
                   type="button"
                   onClick={handleClearSearch}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
                 >
-                  <XMarkIcon className="h-4 w-4" />
+                  <X className="h-4 w-4" />
                 </button>
               )}
             </div>
 
-            <button
+            <Button
               onClick={handleRegisterServer}
-              className="btn-primary flex items-center space-x-2 flex-shrink-0"
+              className="flex items-center space-x-2 flex-shrink-0"
             >
-              <PlusIcon className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               <span>Register Server</span>
-            </button>
+            </Button>
 
-            <button
+            <Button
+              variant="secondary"
               onClick={handleRefreshHealth}
               disabled={refreshing}
-              className="btn-secondary flex items-center space-x-2 flex-shrink-0"
+              className="flex items-center space-x-2 flex-shrink-0"
             >
-              <ArrowPathIcon className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               <span>Refresh Health</span>
-            </button>
+            </Button>
           </div>
 
           {/* Results count */}
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500 dark:text-gray-300">
+            <p className="text-sm text-muted-foreground">
               {semanticSectionVisible ? (
                 <>
                   Showing {semanticServers.length} servers, {semanticAgents.length} agents
@@ -2348,12 +2292,12 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 </>
               )}
               {activeFilter !== 'all' && (
-                <span className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300 rounded-full">
+                <span className="ml-2 px-2 py-1 text-xs bg-primary/10 text-primary rounded-full">
                   {activeFilter} filter active
                 </span>
               )}
             </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Press Enter to run semantic search; typing filters locally.
             </p>
           </div>
@@ -2375,13 +2319,13 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               />
 
               {shouldShowFallbackGrid && (
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <div className="border-t border-border pt-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-base font-semibold text-gray-900 dark:text-gray-200">
+                    <h4 className="text-base font-semibold text-foreground">
                       Keyword search fallback
                     </h4>
                     {semanticError && (
-                      <span className="text-xs font-medium text-red-500">
+                      <span className="text-xs font-medium text-destructive">
                         Showing local matches because semantic search is unavailable
                       </span>
                     )}
@@ -2402,30 +2346,30 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
       {/* Register Server Modal */}
       {showRegisterModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-card rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <form onSubmit={handleRegisterSubmit} className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h3 className="text-lg font-semibold text-foreground">
                   Register New Server
                 </h3>
                 <button
                   type="button"
                   onClick={() => setShowRegisterModal(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="text-muted-foreground hover:text-foreground"
                 >
-                  <XMarkIcon className="h-6 w-6" />
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Server Name *
                   </label>
                   <input
                     type="text"
                     required
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                    className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                     value={registerForm.name}
                     onChange={(e) => setRegisterForm(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="e.g., My Custom Server"
@@ -2433,13 +2377,13 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Path *
                   </label>
                   <input
                     type="text"
                     required
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                    className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                     value={registerForm.path}
                     onChange={(e) => setRegisterForm(prev => ({ ...prev, path: e.target.value }))}
                     placeholder="/my-server"
@@ -2447,13 +2391,13 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Proxy URL *
                   </label>
                   <input
                     type="url"
                     required
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                    className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                     value={registerForm.proxyPass}
                     onChange={(e) => setRegisterForm(prev => ({ ...prev, proxyPass: e.target.value }))}
                     placeholder="http://localhost:8080"
@@ -2461,11 +2405,11 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Description
                   </label>
                   <textarea
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                    className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                     rows={3}
                     value={registerForm.description}
                     onChange={(e) => setRegisterForm(prev => ({ ...prev, description: e.target.value }))}
@@ -2474,14 +2418,14 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Tags
                   </label>
                   <input
                     type="text"
                     value={registerForm.tags.join(',')}
                     onChange={(e) => setRegisterForm(prev => ({ ...prev, tags: e.target.value.split(',').map(t => t.trim()).filter(t => t) }))}
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                    className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                     placeholder="tag1,tag2,tag3"
                   />
                 </div>
@@ -2491,14 +2435,14 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 <button
                   type="button"
                   onClick={() => setShowRegisterModal(false)}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-foreground bg-secondary hover:bg-accent rounded-md transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={registerLoading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-md transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/80 disabled:opacity-50 rounded-md transition-colors"
                 >
                   {registerLoading ? 'Registering...' : 'Register Server'}
                 </button>
@@ -2511,8 +2455,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
       {/* Edit Server Modal */}
       {editingServer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="bg-card rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
               Edit Server: {editingServer.name}
             </h3>
 
@@ -2524,121 +2468,121 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               className="space-y-4"
             >
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Server Name *
                 </label>
                 <input
                   type="text"
                   value={editForm.name}
                   onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Proxy Pass URL *
                 </label>
                 <input
                   type="url"
                   value={editForm.proxyPass}
                   onChange={(e) => setEditForm(prev => ({ ...prev, proxyPass: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="http://localhost:8080"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Description
                 </label>
                 <textarea
                   value={editForm.description}
                   onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   rows={3}
                   placeholder="Brief description of the server"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Tags
                 </label>
                 <input
                   type="text"
                   value={editForm.tags.join(',')}
                   onChange={(e) => setEditForm(prev => ({ ...prev, tags: e.target.value.split(',').map(t => t.trim()).filter(t => t) }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="tag1,tag2,tag3"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Number of Tools
                   </label>
                   <input
                     type="number"
                     value={editForm.num_tools}
                     onChange={(e) => setEditForm(prev => ({ ...prev, num_tools: parseInt(e.target.value) || 0 }))}
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                    className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                     min="0"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   License
                 </label>
                 <input
                   type="text"
                   value={editForm.license}
                   onChange={(e) => setEditForm(prev => ({ ...prev, license: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="MIT, Apache-2.0, etc."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   MCP Endpoint (optional)
                 </label>
                 <input
                   type="url"
                   value={editForm.mcp_endpoint}
                   onChange={(e) => setEditForm(prev => ({ ...prev, mcp_endpoint: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="Custom MCP endpoint URL (overrides default)"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Custom Metadata (JSON, optional)
                 </label>
                 <textarea
                   value={editForm.metadata}
                   onChange={(e) => setEditForm(prev => ({ ...prev, metadata: e.target.value }))}
                   rows={4}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500 font-mono text-sm"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring font-mono text-sm"
                   placeholder='{"team": "platform", "owner": "alice@example.com"}'
                 />
               </div>
 
               {/* Backend Authentication */}
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              <div className="border-t border-border pt-4 mt-4">
+                <h4 className="text-sm font-semibold text-foreground mb-3">
                   Backend Authentication
                 </h4>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                    <label className="block text-sm font-medium text-foreground mb-1">
                       Authentication Scheme
                     </label>
                     <select
@@ -2652,7 +2596,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                           auth_header_name: newScheme === 'api_key' ? prev.auth_header_name : 'X-API-Key',
                         }));
                       }}
-                      className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                      className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                     >
                       <option value="none">None</option>
                       <option value="bearer">Bearer Token</option>
@@ -2662,17 +2606,17 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
 
                   {editForm.auth_scheme !== 'none' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                      <label className="block text-sm font-medium text-foreground mb-1">
                         {editForm.auth_scheme === 'bearer' ? 'Bearer Token' : 'API Key'}
                       </label>
                       <input
                         type="password"
                         value={editForm.auth_credential}
                         onChange={(e) => setEditForm(prev => ({ ...prev, auth_credential: e.target.value }))}
-                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                        className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                         placeholder="Leave blank to keep current credential"
                       />
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         Leave blank to keep the existing credential unchanged.
                       </p>
                     </div>
@@ -2680,14 +2624,14 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
 
                   {editForm.auth_scheme === 'api_key' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                      <label className="block text-sm font-medium text-foreground mb-1">
                         Header Name
                       </label>
                       <input
                         type="text"
                         value={editForm.auth_header_name}
                         onChange={(e) => setEditForm(prev => ({ ...prev, auth_header_name: e.target.value }))}
-                        className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500"
+                        className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                         placeholder="X-API-Key"
                       />
                     </div>
@@ -2696,13 +2640,13 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Path (read-only)
                 </label>
                 <input
                   type="text"
                   value={editForm.path}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-muted text-muted-foreground"
                   disabled
                 />
               </div>
@@ -2711,14 +2655,14 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 <button
                   type="submit"
                   disabled={editLoading}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-md transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/80 disabled:opacity-50 rounded-md transition-colors"
                 >
                   {editLoading ? 'Saving...' : 'Save Changes'}
                 </button>
                 <button
                   type="button"
                   onClick={handleCloseEdit}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-foreground bg-secondary hover:bg-accent rounded-md transition-colors"
                 >
                   Cancel
                 </button>
@@ -2731,8 +2675,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
       {/* Edit Agent Modal */}
       {editingAgent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="bg-card rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
               Edit Agent: {editingAgent.name}
             </h3>
 
@@ -2744,52 +2688,52 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               className="space-y-4"
             >
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Agent Name *
                 </label>
                 <input
                   type="text"
                   value={editAgentForm.name}
                   onChange={(e) => setEditAgentForm(prev => ({ ...prev, name: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-cyan-500 focus:border-cyan-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Description
                 </label>
                 <textarea
                   value={editAgentForm.description}
                   onChange={(e) => setEditAgentForm(prev => ({ ...prev, description: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-cyan-500 focus:border-cyan-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   rows={3}
                   placeholder="Brief description of the agent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Version
                 </label>
                 <input
                   type="text"
                   value={editAgentForm.version}
                   onChange={(e) => setEditAgentForm(prev => ({ ...prev, version: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-cyan-500 focus:border-cyan-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="1.0.0"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Visibility
                 </label>
                 <select
                   value={editAgentForm.visibility}
                   onChange={(e) => setEditAgentForm(prev => ({ ...prev, visibility: e.target.value as 'public' | 'private' | 'group-restricted' }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-cyan-500 focus:border-cyan-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                 >
                   <option value="private">Private</option>
                   <option value="public">Public</option>
@@ -2798,13 +2742,13 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Trust Level
                 </label>
                 <select
                   value={editAgentForm.trust_level}
                   onChange={(e) => setEditAgentForm(prev => ({ ...prev, trust_level: e.target.value as 'community' | 'verified' | 'trusted' | 'unverified' }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-cyan-500 focus:border-cyan-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                 >
                   <option value="unverified">Unverified</option>
                   <option value="community">Community</option>
@@ -2814,26 +2758,26 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Tags
                 </label>
                 <input
                   type="text"
                   value={editAgentForm.tags.join(',')}
                   onChange={(e) => setEditAgentForm(prev => ({ ...prev, tags: e.target.value.split(',').map(t => t.trim()).filter(t => t) }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-cyan-500 focus:border-cyan-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="tag1,tag2,tag3"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Path (read-only)
                 </label>
                 <input
                   type="text"
                   value={editAgentForm.path}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-muted text-muted-foreground"
                   disabled
                 />
               </div>
@@ -2842,14 +2786,14 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 <button
                   type="submit"
                   disabled={editAgentLoading}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 rounded-md transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-primary-foreground bg-primary hover:bg-primary/80 disabled:opacity-50 rounded-md transition-colors"
                 >
                   {editAgentLoading ? 'Saving...' : 'Save Changes'}
                 </button>
                 <button
                   type="button"
                   onClick={handleCloseEdit}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-foreground bg-secondary hover:bg-accent rounded-md transition-colors"
                 >
                   Cancel
                 </button>
@@ -2862,8 +2806,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
       {/* Register/Edit Skill Modal */}
       {showSkillModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="bg-card rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
               {editingSkill ? `Edit Skill: ${editingSkill.name}` : 'Register New Skill'}
             </h3>
 
@@ -2873,12 +2817,12 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
             >
               {/* Auto-fill toggle - only for new skills */}
               {!editingSkill && (
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <div>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    <span className="text-sm font-medium text-foreground">
                       Auto-fill from SKILL.md
                     </span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-muted-foreground">
                       Parse name and description from the SKILL.md file
                     </p>
                   </div>
@@ -2886,7 +2830,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                     type="button"
                     onClick={() => setSkillAutoFill(!skillAutoFill)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      skillAutoFill ? 'bg-amber-600' : 'bg-gray-300 dark:bg-gray-600'
+                      skillAutoFill ? 'bg-primary' : 'bg-muted-foreground/30'
                     }`}
                   >
                     <span
@@ -2900,7 +2844,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
 
               {/* SKILL.md URL with Parse button */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   SKILL.md URL *
                 </label>
                 <div className="flex space-x-2">
@@ -2908,7 +2852,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                     type="url"
                     value={skillForm.skill_md_url}
                     onChange={(e) => setSkillForm(prev => ({ ...prev, skill_md_url: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-amber-500 focus:border-amber-500"
+                    className="flex-1 px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                     placeholder="https://raw.githubusercontent.com/org/repo/main/SKILL.md"
                     required
                   />
@@ -2917,20 +2861,20 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                       type="button"
                       onClick={handleParseSkillMd}
                       disabled={!skillForm.skill_md_url || skillParseLoading}
-                      className="px-3 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors whitespace-nowrap"
+                      className="px-3 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors whitespace-nowrap"
                     >
                       {skillParseLoading ? 'Parsing...' : 'Parse'}
                     </button>
                   )}
                 </div>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Use raw content URL (e.g., raw.githubusercontent.com)
                 </p>
               </div>
 
               {/* Name field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Skill Name *
                 </label>
                 <input
@@ -2944,27 +2888,27 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                       .replace(/^-|-$/g, '');
                     setSkillForm(prev => ({ ...prev, name: formatted }));
                   }}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-amber-500 focus:border-amber-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="my-skill-name"
                   pattern="^[a-z0-9]+(-[a-z0-9]+)*$"
                   title="Lowercase alphanumeric with hyphens (e.g., my-skill-name)"
                   required
                   disabled={!!editingSkill}
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Lowercase letters, numbers, and hyphens only
                 </p>
               </div>
 
               {/* Description field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Description *
                 </label>
                 <textarea
                   value={skillForm.description}
                   onChange={(e) => setSkillForm(prev => ({ ...prev, description: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-amber-500 focus:border-amber-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   rows={3}
                   placeholder="Describe what this skill does and when to use it"
                   required
@@ -2973,40 +2917,40 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
 
               {/* Repository URL */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Repository URL (optional)
                 </label>
                 <input
                   type="url"
                   value={skillForm.repository_url}
                   onChange={(e) => setSkillForm(prev => ({ ...prev, repository_url: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-amber-500 focus:border-amber-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="https://github.com/org/repo"
                 />
               </div>
 
               {/* Version field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Version (optional)
                 </label>
                 <input
                   type="text"
                   value={skillForm.version}
                   onChange={(e) => setSkillForm(prev => ({ ...prev, version: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-amber-500 focus:border-amber-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="1.0.0"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Visibility
                 </label>
                 <select
                   value={skillForm.visibility}
                   onChange={(e) => setSkillForm(prev => ({ ...prev, visibility: e.target.value as 'public' | 'private' | 'group' }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-amber-500 focus:border-amber-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                 >
                   <option value="public">Public</option>
                   <option value="private">Private</option>
@@ -3015,46 +2959,46 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Tags
                 </label>
                 <input
                   type="text"
                   value={skillForm.tags}
                   onChange={(e) => setSkillForm(prev => ({ ...prev, tags: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-amber-500 focus:border-amber-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="automation, productivity, code-review"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Comma-separated tags for categorization
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Target Agents
                 </label>
                 <input
                   type="text"
                   value={skillForm.target_agents}
                   onChange={(e) => setSkillForm(prev => ({ ...prev, target_agents: e.target.value }))}
-                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-amber-500 focus:border-amber-500"
+                  className="block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring"
                   placeholder="claude-code, cursor, windsurf"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Comma-separated list of compatible coding assistants
                 </p>
               </div>
 
               {editingSkill && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Path (read-only)
                   </label>
                   <input
                     type="text"
                     value={editingSkill.path}
-                    className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300"
+                    className="block w-full px-3 py-2 border border-border rounded-md bg-muted text-muted-foreground"
                     disabled
                   />
                 </div>
@@ -3064,7 +3008,7 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 <button
                   type="submit"
                   disabled={skillFormLoading}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 rounded-md transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary/80 disabled:opacity-50 rounded-md transition-colors"
                 >
                   {skillFormLoading
                     ? (editingSkill ? 'Saving...' : 'Registering & Scanning...')
@@ -3073,13 +3017,13 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
                 <button
                   type="button"
                   onClick={handleCloseSkillModal}
-                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
+                  className="flex-1 px-4 py-2 text-sm font-medium text-foreground bg-secondary hover:bg-accent rounded-md transition-colors"
                 >
                   Cancel
                 </button>
               </div>
               {!editingSkill && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                <p className="text-xs text-muted-foreground mt-2 text-center">
                   Registration includes a security scan and may take a few seconds
                 </p>
               )}
@@ -3091,26 +3035,28 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
       {/* Delete Skill Confirmation Modal */}
       {showDeleteSkillConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <div className="bg-card rounded-lg p-6 w-full max-w-sm">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Delete Skill
             </h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-4">
+            <p className="text-muted-foreground mb-4">
               Are you sure you want to delete this skill? This action cannot be undone.
             </p>
             <div className="flex space-x-3">
-              <button
+              <Button
+                variant="destructive"
+                className="flex-1"
                 onClick={() => handleDeleteSkill(showDeleteSkillConfirm)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
               >
                 Delete
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
+                className="flex-1"
                 onClick={() => setShowDeleteSkillConfirm(null)}
-                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -3124,15 +3070,15 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
           aria-modal="true"
           aria-label="Delete virtual server confirmation"
         >
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <div className="bg-card rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-2">
               Delete Virtual Server
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-sm text-muted-foreground mb-4">
               This action is irreversible. The virtual server and all its tool
               mappings will be permanently removed.
             </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
               Type <strong>{deleteVirtualServerTarget.server_name}</strong> to confirm:
             </p>
             <input
@@ -3141,8 +3087,8 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               onChange={(e) => setDeleteVirtualServerTypedName(e.target.value)}
               placeholder={deleteVirtualServerTarget.server_name}
               disabled={deletingVirtualServer}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                         bg-white dark:bg-gray-900 text-gray-900 dark:text-white mb-4"
+              className="w-full px-3 py-2 border border-border rounded-lg
+                         bg-background text-foreground mb-4"
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {
                   setDeleteVirtualServerTarget(null);
@@ -3152,28 +3098,26 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               autoFocus
             />
             <div className="flex justify-end space-x-3">
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => {
                   setDeleteVirtualServerTarget(null);
                   setDeleteVirtualServerTypedName('');
                 }}
                 disabled={deletingVirtualServer}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200
-                           rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="destructive"
                 onClick={confirmDeleteVirtualServer}
                 disabled={deleteVirtualServerTypedName !== deleteVirtualServerTarget.server_name || deletingVirtualServer}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700
-                           disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
                 {deletingVirtualServer && (
-                  <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                 )}
                 Delete
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -3187,11 +3131,11 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
           aria-modal="true"
           aria-label="Edit virtual server"
         >
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-auto">
+          <div className="bg-card rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-auto">
             {editingVirtualServerLoading ? (
               <div className="flex items-center justify-center py-16">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-                <span className="ml-3 text-gray-500 dark:text-gray-400">Loading virtual server...</span>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <span className="ml-3 text-muted-foreground">Loading virtual server...</span>
               </div>
             ) : editingVirtualServer ? (
               <VirtualServerForm
@@ -3201,13 +3145,14 @@ const Dashboard: React.FC<DashboardProps> = ({ activeFilter = 'all', selectedTag
               />
             ) : (
               <div className="p-6 text-center">
-                <p className="text-gray-500 dark:text-gray-400">Failed to load virtual server</p>
-                <button
+                <p className="text-muted-foreground">Failed to load virtual server</p>
+                <Button
+                  variant="secondary"
                   onClick={handleCancelVirtualServerEdit}
-                  className="mt-4 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                  className="mt-4"
                 >
                   Close
-                </button>
+                </Button>
               </div>
             )}
           </div>

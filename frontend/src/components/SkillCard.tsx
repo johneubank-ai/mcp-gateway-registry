@@ -3,24 +3,29 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
-  SparklesIcon,
-  PencilIcon,
-  TrashIcon,
-  GlobeAltIcon,
-  LockClosedIcon,
-  UserGroupIcon,
-  InformationCircleIcon,
-  ArrowTopRightOnSquareIcon,
-  WrenchScrewdriverIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ArrowPathIcon,
-  ClockIcon,
-  ClipboardIcon,
-  ArrowDownTrayIcon,
-  ShieldCheckIcon,
-  ShieldExclamationIcon,
-} from '@heroicons/react/24/outline';
+  Sparkles,
+  Pencil,
+  Trash2,
+  Globe,
+  Lock,
+  Users,
+  Info,
+  ExternalLink,
+  Wrench,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Clock,
+  Clipboard,
+  Download,
+  ShieldCheck,
+  ShieldAlert,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
 import { Skill } from '../types/skill';
 import StarRatingWidget from './StarRatingWidget';
 import SecurityScanModal from './SecurityScanModal';
@@ -181,22 +186,22 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
   const getVisibilityIcon = () => {
     switch (skill.visibility) {
       case 'public':
-        return <GlobeAltIcon className="h-3 w-3" />;
+        return <Globe className="h-3 w-3" />;
       case 'group':
-        return <UserGroupIcon className="h-3 w-3" />;
+        return <Users className="h-3 w-3" />;
       default:
-        return <LockClosedIcon className="h-3 w-3" />;
+        return <Lock className="h-3 w-3" />;
     }
   };
 
   const getVisibilityColor = () => {
     switch (skill.visibility) {
       case 'public':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-700';
+        return 'bg-primary/10 text-primary border border-primary/20';
       case 'group':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-700';
+        return 'bg-primary/10 text-primary dark:bg-primary/10 dark:text-primary border border-primary/20';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600';
+        return 'bg-muted text-foreground border border-border';
     }
   };
 
@@ -215,12 +220,7 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
       setSkillMdContent(response.data.content);
     } catch (error: any) {
       console.error('Failed to fetch SKILL.md content:', error);
-      if (onShowToast) {
-        onShowToast(
-          error.response?.data?.detail || 'Failed to load SKILL.md content',
-          'error'
-        );
-      }
+      toast.error(error.response?.data?.detail || 'Failed to load SKILL.md content');
     } finally {
       setLoadingDetails(false);
     }
@@ -237,19 +237,15 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
         headers ? { headers } : undefined
       );
       setToolCheckResult(response.data);
-      if (onShowToast) {
-        const result = response.data;
-        if (result.all_available) {
-          onShowToast('All required tools are available', 'success');
-        } else {
-          onShowToast(`Missing tools: ${result.missing_tools?.join(', ') || 'Unknown'}`, 'error');
-        }
+      const result = response.data;
+      if (result.all_available) {
+        toast.success('All required tools are available');
+      } else {
+        toast.error(`Missing tools: ${result.missing_tools?.join(', ') || 'Unknown'}`);
       }
     } catch (error: any) {
       console.error('Failed to check tool availability:', error);
-      if (onShowToast) {
-        onShowToast('Failed to check tool availability', 'error');
-      }
+      toast.error('Failed to check tool availability');
     } finally {
       setLoadingToolCheck(false);
     }
@@ -278,20 +274,15 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
         } as any);
       }
 
-      if (onShowToast) {
-        onShowToast(
-          response.data.healthy
-            ? 'SKILL.md is accessible'
-            : `SKILL.md check failed: ${response.data.error || 'Unknown error'}`,
-          response.data.healthy ? 'success' : 'error'
-        );
+      if (response.data.healthy) {
+        toast.success('SKILL.md is accessible');
+      } else {
+        toast.error(`SKILL.md check failed: ${response.data.error || 'Unknown error'}`);
       }
     } catch (error: any) {
       console.error('Failed to check skill health:', error);
       setHealthStatus('unhealthy');
-      if (onShowToast) {
-        onShowToast('Failed to check skill health', 'error');
-      }
+      toast.error('Failed to check skill health');
     } finally {
       setLoadingHealthCheck(false);
     }
@@ -311,15 +302,13 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
       setSecurityScanResult(response.data);
     } catch (error: any) {
       if (error.response?.status !== 404) {
-        if (onShowToast) {
-          onShowToast('Failed to load security scan results', 'error');
-        }
+        toast.error('Failed to load security scan results');
       }
       setSecurityScanResult(null);
     } finally {
       setLoadingSecurityScan(false);
     }
-  }, [skillApiPath, authToken, loadingSecurityScan, onShowToast]);
+  }, [skillApiPath, authToken, loadingSecurityScan]);
 
   const handleRescan = useCallback(async () => {
     const headers = authToken ? { Authorization: `Bearer ${authToken}` } : undefined;
@@ -333,51 +322,51 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
 
   const getSecurityIconState = () => {
     if (!securityScanResult) {
-      return { Icon: ShieldCheckIcon, color: 'text-gray-400 dark:text-gray-500', title: 'View security scan results' };
+      return { Icon: ShieldCheck, color: 'text-muted-foreground', title: 'View security scan results' };
     }
     if (securityScanResult.scan_failed) {
-      return { Icon: ShieldExclamationIcon, color: 'text-red-500 dark:text-red-400', title: 'Security scan failed' };
+      return { Icon: ShieldAlert, color: 'text-red-500 dark:text-red-400', title: 'Security scan failed' };
     }
     const hasVulnerabilities = securityScanResult.critical_issues > 0 ||
       securityScanResult.high_severity > 0 ||
       securityScanResult.medium_severity > 0 ||
       securityScanResult.low_severity > 0;
     if (hasVulnerabilities) {
-      return { Icon: ShieldExclamationIcon, color: 'text-red-500 dark:text-red-400', title: 'Security issues found' };
+      return { Icon: ShieldAlert, color: 'text-red-500 dark:text-red-400', title: 'Security issues found' };
     }
-    return { Icon: ShieldCheckIcon, color: 'text-green-500 dark:text-green-400', title: 'Security scan passed' };
+    return { Icon: ShieldCheck, color: 'text-green-500 dark:text-green-400', title: 'Security scan passed' };
   };
 
   return (
     <>
-      <div className="group rounded-2xl shadow-xs hover:shadow-xl transition-all duration-300 h-full flex flex-col bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-2 border-amber-200 dark:border-amber-700 hover:border-amber-300 dark:hover:border-amber-600">
+      <Card className="group rounded-2xl shadow-xs hover:shadow-xl transition-all duration-300 h-full flex flex-col bg-muted border-2 border-border hover:border-border">
         {/* Header */}
         <div className="p-5 pb-4">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-3 flex-wrap">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">
+                <h3 className="text-lg font-bold text-foreground truncate">
                   {skill.name}
                 </h3>
-                <span className="px-2 py-0.5 text-xs font-semibold bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 dark:from-amber-900/30 dark:to-orange-900/30 dark:text-amber-300 rounded-full flex-shrink-0 border border-amber-200 dark:border-amber-600">
+                <Badge variant="outline" className="bg-muted text-muted-foreground flex-shrink-0 border-border">
                   SKILL
-                </span>
-                <span className={`px-2 py-0.5 text-xs font-semibold rounded-full flex-shrink-0 flex items-center gap-1 ${getVisibilityColor()}`}>
+                </Badge>
+                <Badge variant="outline" className={`flex-shrink-0 flex items-center gap-1 ${getVisibilityColor()}`}>
                   {getVisibilityIcon()}
                   {skill.visibility.toUpperCase()}
-                </span>
+                </Badge>
               </div>
 
-              <code className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded font-mono">
+              <code className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded font-mono">
                 {skill.path}
               </code>
               {skill.version && (
-                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                <span className="ml-2 text-xs text-muted-foreground">
                   v{skill.version}
                 </span>
               )}
               {skill.author && (
-                <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                <span className="ml-2 text-xs text-muted-foreground">
                   by {skill.author}
                 </span>
               )}
@@ -386,64 +375,74 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
             <div className="flex items-center gap-1">
               {canModify && (
                 <>
-                  <button
-                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-all duration-200 flex-shrink-0"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-foreground flex-shrink-0"
                     onClick={() => onEdit?.(skill)}
                     title="Edit skill"
                   >
-                    <PencilIcon className="h-4 w-4" />
-                  </button>
-                  <button
-                    className="p-2 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-all duration-200 flex-shrink-0"
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-destructive flex-shrink-0"
                     onClick={() => onDelete?.(skillApiPath)}
                     title="Delete skill"
                   >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </>
               )}
 
               {/* Tool Check Button */}
               {skill.allowed_tools && skill.allowed_tools.length > 0 && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={handleCheckTools}
                   disabled={loadingToolCheck}
-                  className={`p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-all duration-200 flex-shrink-0 ${
+                  className={`flex-shrink-0 ${
                     toolCheckResult?.all_available === true
                       ? 'text-green-500 dark:text-green-400'
                       : toolCheckResult?.all_available === false
                       ? 'text-red-500 dark:text-red-400'
-                      : 'text-gray-400 dark:text-gray-500'
+                      : 'text-muted-foreground'
                   }`}
                   title="Check tool availability"
                 >
-                  <WrenchScrewdriverIcon className={`h-4 w-4 ${loadingToolCheck ? 'animate-spin' : ''}`} />
-                </button>
+                  <Wrench className={`h-4 w-4 ${loadingToolCheck ? 'animate-spin' : ''}`} />
+                </Button>
               )}
 
               {/* Security Scan Button */}
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleViewSecurityScan}
-                className={`p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-all duration-200 flex-shrink-0 ${getSecurityIconState().color}`}
+                className={`flex-shrink-0 ${getSecurityIconState().color}`}
                 title={getSecurityIconState().title}
                 aria-label={getSecurityIconState().title}
               >
                 {React.createElement(getSecurityIconState().Icon, { className: `h-4 w-4 ${loadingSecurityScan ? 'animate-pulse' : ''}` })}
-              </button>
+              </Button>
 
               {/* Details Button */}
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleViewDetails}
-                className="p-2 text-gray-400 hover:text-amber-600 dark:hover:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-700/50 rounded-lg transition-all duration-200 flex-shrink-0"
+                className="text-muted-foreground hover:text-primary flex-shrink-0"
                 title="View SKILL.md content"
               >
-                <InformationCircleIcon className="h-4 w-4" />
-              </button>
+                <Info className="h-4 w-4" />
+              </Button>
             </div>
           </div>
 
           {/* Description */}
-          <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed line-clamp-2 mb-4">
+          <p className="text-muted-foreground text-sm leading-relaxed line-clamp-2 mb-4">
             {skill.description || 'No description available'}
           </p>
 
@@ -456,14 +455,14 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
                   className={`px-2 py-1 text-xs font-medium rounded ${
                     tag === 'security-pending'
                       ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-700'
-                      : 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                      : 'bg-muted text-muted-foreground'
                   }`}
                 >
                   #{tag}
                 </span>
               ))}
               {skill.tags.length > 3 && (
-                <span className="px-2 py-1 text-xs font-medium bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded">
+                <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded">
                   +{skill.tags.length - 3}
                 </span>
               )}
@@ -473,8 +472,8 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
           {/* Target Agents */}
           {skill.target_agents && skill.target_agents.length > 0 && (
             <div className="mb-4">
-              <span className="text-xs text-gray-500 dark:text-gray-400">Target agents: </span>
-              <span className="text-xs text-amber-700 dark:text-amber-300">
+              <span className="text-xs text-muted-foreground">Target agents: </span>
+              <span className="text-xs text-muted-foreground">
                 {skill.target_agents.join(', ')}
               </span>
             </div>
@@ -483,15 +482,15 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
           {/* Tools Count */}
           {skill.allowed_tools && skill.allowed_tools.length > 0 && (
             <div className="flex items-center gap-2 mb-4">
-              <WrenchScrewdriverIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <span className="text-xs text-gray-600 dark:text-gray-300">
+              <Wrench className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">
                 {skill.allowed_tools.length} tool{skill.allowed_tools.length !== 1 ? 's' : ''} required
               </span>
               {toolCheckResult && (
                 toolCheckResult.all_available ? (
-                  <CheckCircleIcon className="h-4 w-4 text-green-500" title="All tools available" />
+                  <span title="All tools available"><CheckCircle className="h-4 w-4 text-green-500" /></span>
                 ) : (
-                  <XCircleIcon className="h-4 w-4 text-red-500" title="Some tools missing" />
+                  <span title="Some tools missing"><XCircle className="h-4 w-4 text-red-500" /></span>
                 )
               )}
             </div>
@@ -502,12 +501,12 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
         <div className="px-5 pb-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-amber-50 dark:bg-amber-900/30 rounded">
-                <SparklesIcon className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              <div className="p-1.5 bg-muted rounded">
+                <Sparkles className="h-4 w-4 text-muted-foreground" />
               </div>
               <div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Registry</div>
-                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                <div className="text-xs text-muted-foreground">Registry</div>
+                <div className="text-sm font-semibold text-foreground">
                   {skill.registry_name || 'local'}
                 </div>
               </div>
@@ -528,9 +527,9 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
                 href={skill.skill_md_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300 hover:underline"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:underline"
               >
-                <ArrowTopRightOnSquareIcon className="h-3 w-3" />
+                <ExternalLink className="h-3 w-3" />
                 SKILL.md
               </a>
             )}
@@ -538,7 +537,7 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
         </div>
 
         {/* Footer */}
-        <div className="mt-auto px-5 py-4 border-t border-amber-100 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/30 rounded-b-2xl">
+        <div className="mt-auto px-5 py-4 border-t border-border bg-muted rounded-b-2xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {/* Status Indicator */}
@@ -546,14 +545,14 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
                 <div className={`w-3 h-3 rounded-full ${
                   skill.is_enabled
                     ? 'bg-green-400 shadow-lg shadow-green-400/30'
-                    : 'bg-gray-300 dark:bg-gray-600'
+                    : 'bg-muted-foreground'
                 }`} />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-foreground">
                   {skill.is_enabled ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
 
-              <div className="w-px h-4 bg-amber-200 dark:bg-amber-600" />
+              <div className="w-px h-4 bg-border" />
 
               {/* Health Status */}
               <div className="flex items-center gap-2">
@@ -564,7 +563,7 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
                     ? 'bg-red-400 shadow-lg shadow-red-400/30'
                     : 'bg-amber-400 shadow-lg shadow-amber-400/30'
                 }`} />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-sm font-medium text-foreground">
                   {healthStatus === 'healthy' ? 'Healthy' :
                    healthStatus === 'unhealthy' ? 'Unhealthy' : 'Unknown'}
                 </span>
@@ -577,8 +576,8 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
               {(() => {
                 const timeText = formatTimeSince(lastCheckedTime);
                 return lastCheckedTime && timeText ? (
-                  <div className="text-xs text-gray-500 dark:text-gray-300 flex items-center gap-1.5">
-                    <ClockIcon className="h-3.5 w-3.5" />
+                  <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" />
                     <span>{timeText}</span>
                   </div>
                 ) : null;
@@ -586,56 +585,44 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
 
               {/* Refresh Health Button */}
               {canHealthCheck && (
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={handleRefreshHealth}
                   disabled={loadingHealthCheck}
-                  className="p-2.5 text-gray-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all duration-200 disabled:opacity-50"
+                  className="text-muted-foreground hover:text-primary"
                   title="Check SKILL.md accessibility"
                   aria-label={`Check health for ${skill.name}`}
                 >
-                  <ArrowPathIcon className={`h-4 w-4 ${loadingHealthCheck ? 'animate-spin' : ''}`} />
-                </button>
+                  <RefreshCw className={`h-4 w-4 ${loadingHealthCheck ? 'animate-spin' : ''}`} />
+                </Button>
               )}
 
               {/* Toggle Switch */}
               {canToggle && (
-                <label className="relative inline-flex items-center cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
+                <div onClick={(e) => e.stopPropagation()}>
+                  <Switch
                     checked={skill.is_enabled}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      onToggle(skill.path, e.target.checked);
-                    }}
-                    className="sr-only peer"
+                    onCheckedChange={(checked) => onToggle(skill.path, checked)}
                   />
-                  <div className={`relative w-12 h-6 rounded-full transition-colors duration-200 ease-in-out ${
-                    skill.is_enabled
-                      ? 'bg-amber-600'
-                      : 'bg-gray-300 dark:bg-gray-600'
-                  }`}>
-                    <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200 ease-in-out ${
-                      skill.is_enabled ? 'translate-x-6' : 'translate-x-0'
-                    }`} />
-                  </div>
-                </label>
+                </div>
               )}
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Skill Details Modal */}
       {showDetails && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-card rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-foreground">
                 {skill.name}
               </h3>
               <button
                 onClick={() => setShowDetails(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                className="text-muted-foreground hover:text-foreground"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -644,15 +631,15 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
             </div>
 
             {/* Action buttons */}
-            <div className="flex items-center gap-4 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-4 mb-4 pb-4 border-b border-border">
               {skill.skill_md_url && (
                 <a
                   href={skill.skill_md_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-sm text-amber-700 dark:text-amber-300 hover:underline"
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:underline"
                 >
-                  <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                  <ExternalLink className="h-4 w-4" />
                   View on GitHub
                 </a>
               )}
@@ -661,14 +648,12 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(skillMdContent);
-                      if (onShowToast) {
-                        onShowToast('SKILL.md copied to clipboard', 'success');
-                      }
+                      toast.success('SKILL.md copied to clipboard');
                     }}
-                    className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
                     title="Copy to clipboard"
                   >
-                    <ClipboardIcon className="h-4 w-4" />
+                    <Clipboard className="h-4 w-4" />
                     Copy
                   </button>
                   <button
@@ -683,10 +668,10 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
                       document.body.removeChild(a);
                       URL.revokeObjectURL(url);
                     }}
-                    className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+                    className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
                     title="Download SKILL.md"
                   >
-                    <ArrowDownTrayIcon className="h-4 w-4" />
+                    <Download className="h-4 w-4" />
                     Download
                   </button>
                 </>
@@ -695,7 +680,7 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
 
             {loadingDetails ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-border"></div>
               </div>
             ) : skillMdContent ? (
               (() => {
@@ -704,15 +689,15 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
                   <>
                     {/* YAML Frontmatter Table */}
                     {frontmatter && (
-                      <div className="mb-6 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                      <div className="mb-6 rounded-lg border border-border overflow-hidden">
                         <table className="w-full text-sm">
                           <tbody>
                             {Object.entries(frontmatter).map(([key, value]) => (
-                              <tr key={key} className="border-b border-gray-200 dark:border-gray-700 last:border-b-0">
-                                <td className="px-4 py-2 bg-gray-50 dark:bg-gray-900/50 font-medium text-gray-700 dark:text-gray-300 w-1/4">
+                              <tr key={key} className="border-b border-border last:border-b-0">
+                                <td className="px-4 py-2 bg-muted font-medium text-foreground w-1/4">
                                   {key}
                                 </td>
-                                <td className="px-4 py-2 text-gray-900 dark:text-white">
+                                <td className="px-4 py-2 text-foreground">
                                   {value}
                                 </td>
                               </tr>
@@ -722,14 +707,14 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
                       </div>
                     )}
                     {/* Markdown Body */}
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-amber-800 dark:prose-headings:text-amber-200 prose-a:text-amber-600 dark:prose-a:text-amber-400 prose-code:bg-gray-100 dark:prose-code:bg-gray-900 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-100 dark:prose-pre:bg-gray-900">
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-a:text-primary prose-code:bg-gray-100 dark:prose-code:bg-gray-900 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-gray-100 dark:prose-pre:bg-gray-900">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
                     </div>
                   </>
                 );
               })()
             ) : (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-muted-foreground">
                 <p>Could not load SKILL.md content.</p>
                 <p className="mt-2 text-sm">
                   Try visiting the{' '}
@@ -737,7 +722,7 @@ const SkillCard: React.FC<SkillCardProps> = React.memo(({
                     href={skill.skill_md_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-amber-600 hover:underline"
+                    className="text-muted-foreground hover:underline"
                   >
                     source URL
                   </a>{' '}

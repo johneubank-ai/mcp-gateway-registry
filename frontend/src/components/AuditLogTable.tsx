@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronDoubleLeftIcon,
-  ChevronDoubleRightIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ExclamationTriangleIcon,
-} from '@heroicons/react/24/outline';
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronDown,
+  ChevronUp,
+  AlertTriangle,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AuditFilters } from './AuditFilterBar';
 
 export interface AuditEvent {
@@ -90,46 +94,46 @@ interface PaginationState {
 
 const getStatusColor = (statusCode: number): string => {
   if (statusCode >= 200 && statusCode < 300) {
-    return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+    return 'bg-primary/10 text-primary';
   }
   if (statusCode >= 300 && statusCode < 400) {
-    return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+    return 'bg-primary/10 text-primary';
   }
   if (statusCode >= 400 && statusCode < 500) {
-    return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+    return 'bg-muted text-muted-foreground';
   }
   if (statusCode >= 500) {
-    return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+    return 'bg-destructive/10 text-destructive';
   }
-  return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+  return 'bg-muted text-foreground';
 };
 
 const getMethodColor = (method: string): string => {
   switch (method.toUpperCase()) {
     case 'GET':
-      return 'text-blue-600 dark:text-blue-400';
+      return 'text-primary';
     case 'POST':
-      return 'text-green-600 dark:text-green-400';
+      return 'text-primary';
     case 'PUT':
     case 'PATCH':
-      return 'text-yellow-600 dark:text-yellow-400';
+      return 'text-muted-foreground';
     case 'DELETE':
-      return 'text-red-600 dark:text-red-400';
+      return 'text-destructive';
     default:
-      return 'text-gray-600 dark:text-gray-400';
+      return 'text-muted-foreground';
   }
 };
 
 const getMcpStatusColor = (status: string): string => {
   switch (status.toLowerCase()) {
     case 'success':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      return 'bg-primary/10 text-primary';
     case 'error':
-      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
+      return 'bg-destructive/10 text-destructive';
     case 'timeout':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      return 'bg-muted text-muted-foreground';
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+      return 'bg-muted text-foreground';
   }
 };
 
@@ -245,9 +249,9 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-        <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-          <ExclamationTriangleIcon className="h-5 w-5" />
+      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
+        <div className="flex items-center gap-2 text-destructive">
+          <AlertTriangle className="h-5 w-5" />
           <span>{error}</span>
         </div>
       </div>
@@ -255,91 +259,91 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <Card className="overflow-hidden">
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted border-b border-border">
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 <button
                   onClick={handleSortToggle}
-                  className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                  className="flex items-center gap-1 hover:text-foreground transition-colors"
                   title={sortOrder === -1 ? "Sorted newest first - click for oldest first" : "Sorted oldest first - click for newest first"}
                 >
                   Timestamp
                   {sortOrder === -1 ? (
-                    <ChevronDownIcon className="h-3 w-3" />
+                    <ChevronDown className="h-3 w-3" />
                   ) : (
-                    <ChevronUpIcon className="h-3 w-3" />
+                    <ChevronUp className="h-3 w-3" />
                   )}
                 </button>
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 User
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {isMcpStream ? 'MCP Method' : 'Method'}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {isMcpStream ? 'Tool/Resource' : 'Operation'}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {isMcpStream ? 'MCP Server' : 'Resource'}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Status
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Duration
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-border">
             {loading ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center">
-                  <div className="flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
-                    <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+              <TableRow>
+                <TableCell colSpan={7} className="px-4 py-8 text-center">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                    <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
                     <span>Loading events...</span>
                   </div>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : events.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+              <TableRow>
+                <TableCell colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
                   No audit events found matching the current filters.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : (
               events.map((event) => (
-                <tr
+                <TableRow
                   key={event.request_id}
                   onClick={() => onEventSelect?.(event)}
                   className={`cursor-pointer transition-colors ${
                     selectedEventId === event.request_id
-                      ? 'bg-blue-50 dark:bg-blue-900/20'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      ? 'bg-primary/10'
+                      : 'hover:bg-accent'
                   }`}
                 >
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                  <TableCell className="px-4 py-3 text-sm text-foreground whitespace-nowrap">
                     {formatTimestamp(event.timestamp)}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm">
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-900 dark:text-gray-100">
+                      <span className="text-foreground">
                         {event.identity.username}
                       </span>
                       {event.identity.is_admin && (
-                        <span className="px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 rounded">
+                        <Badge className="bg-primary/10 text-primary">
                           Admin
-                        </span>
+                        </Badge>
                       )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm">
                     {isMcpStream ? (
-                      <span className="font-mono text-gray-700 dark:text-gray-300">
+                      <span className="font-mono text-foreground">
                         {event.mcp_request?.method || '-'}
                       </span>
                     ) : (
@@ -347,59 +351,59 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
                         {event.request?.method || '-'}
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-foreground">
                     {isMcpStream ? (
                       event.mcp_request?.tool_name || event.mcp_request?.resource_uri || '-'
                     ) : (
                       event.action?.operation || '-'
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-foreground">
                     {isMcpStream ? (
                       event.mcp_server?.name || '-'
                     ) : event.action ? (
                       <span>
                         {event.action.resource_type}
                         {event.action.resource_id && (
-                          <span className="text-gray-500 dark:text-gray-400">
+                          <span className="text-muted-foreground">
                             /{event.action.resource_id}
                           </span>
                         )}
                       </span>
                     ) : (
-                      <span className="text-gray-400 dark:text-gray-500">-</span>
+                      <span className="text-muted-foreground">-</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm">
                     {isMcpStream ? (
-                      <span className={`px-2 py-1 text-xs font-medium rounded ${getMcpStatusColor(event.mcp_response?.status || '')}`}>
+                      <Badge className={`${getMcpStatusColor(event.mcp_response?.status || '')}`}>
                         {event.mcp_response?.status || '-'}
-                      </span>
+                      </Badge>
                     ) : (
-                      <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(event.response?.status_code || 0)}`}>
+                      <Badge className={`${getStatusColor(event.response?.status_code || 0)}`}>
                         {event.response?.status_code || '-'}
-                      </span>
+                      </Badge>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-foreground whitespace-nowrap">
                     {isMcpStream
                       ? `${(event.mcp_response?.duration_ms || 0).toFixed(1)} ms`
                       : `${(event.response?.duration_ms || 0).toFixed(1)} ms`
                     }
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
       {/* Pagination */}
       {!loading && events.length > 0 && (
-        <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+        <div className="px-4 py-3 border-t border-border bg-muted">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-700 dark:text-gray-300">
+            <div className="text-sm text-foreground">
               Showing{' '}
               <span className="font-medium">{pagination.offset + 1}</span>
               {' '}-{' '}
@@ -411,46 +415,50 @@ const AuditLogTable: React.FC<AuditLogTableProps> = ({
               {' '}events
             </div>
             <div className="flex items-center gap-1">
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 onClick={handleFirstPage}
                 disabled={currentPage === 1}
-                className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 title="First page"
               >
-                <ChevronDoubleLeftIcon className="h-4 w-4" />
-              </button>
-              <button
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 onClick={handlePrevPage}
                 disabled={currentPage === 1}
-                className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Previous page"
               >
-                <ChevronLeftIcon className="h-4 w-4" />
-              </button>
-              <span className="px-3 py-1 text-sm text-gray-700 dark:text-gray-300">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="px-3 py-1 text-sm text-foreground">
                 Page {currentPage} of {totalPages}
               </span>
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-                className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Next page"
               >
-                <ChevronRightIcon className="h-4 w-4" />
-              </button>
-              <button
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 onClick={handleLastPage}
                 disabled={currentPage === totalPages}
-                className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Last page"
               >
-                <ChevronDoubleRightIcon className="h-4 w-4" />
-              </button>
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 };
 

@@ -6,7 +6,9 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Search, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 
 export interface SelectOption {
@@ -116,8 +118,8 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     <div ref={containerRef} className="relative">
       {/* Input field */}
       <div className="relative">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
           ref={inputRef}
           type="text"
           value={isOpen ? searchQuery : (selectedOption?.label || value || '')}
@@ -126,28 +128,27 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full pl-9 pr-8 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-900 text-gray-900 dark:text-white
-                     focus:ring-2 ${focusColor || 'focus:ring-purple-500'} focus:border-transparent
-                     disabled:opacity-50 disabled:cursor-not-allowed`}
+          className={`w-full pl-9 pr-8 py-1.5 text-sm ${focusColor || 'focus:ring-ring'}`}
         />
         {value && !disabled && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon-xs"
             onClick={handleClear}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
-            <XMarkIcon className="h-4 w-4" />
-          </button>
+            <X className="h-4 w-4" />
+          </Button>
         )}
       </div>
 
       {/* Dropdown */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700
+        <div className="absolute z-50 w-full mt-1 bg-card border border-border
                         rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {isLoading ? (
-            <div className="px-3 py-2 text-sm text-gray-400">Loading...</div>
+            <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>
           ) : (
             <>
               {/* Special options (e.g., "* All servers") */}
@@ -156,23 +157,23 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                   key={option.value}
                   type="button"
                   onClick={() => handleSelect(option.value)}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700
-                             ${value === option.value ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-accent
+                             ${value === option.value ? 'bg-primary/10' : ''}`}
                 >
-                  <span className="font-medium text-purple-600 dark:text-purple-400">{option.label}</span>
+                  <span className="font-medium text-primary">{option.label}</span>
                   {option.description && (
-                    <span className="ml-2 text-gray-400 text-xs">{option.description}</span>
+                    <span className="ml-2 text-muted-foreground text-xs">{option.description}</span>
                   )}
                 </button>
               ))}
 
               {specialOptions.length > 0 && filteredOptions.length > 0 && (
-                <div className="border-t border-gray-200 dark:border-gray-700" />
+                <div className="border-t border-border" />
               )}
 
               {/* Filtered options */}
               {filteredOptions.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-gray-400">
+                <div className="px-3 py-2 text-sm text-muted-foreground">
                   {searchQuery ? 'No matches found' : 'No options available'}
                 </div>
               ) : (
@@ -181,14 +182,14 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                     key={option.value}
                     type="button"
                     onClick={() => handleSelect(option.value)}
-                    className={`w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700
-                               ${value === option.value ? 'bg-purple-50 dark:bg-purple-900/20' : ''}`}
+                    className={`w-full text-left px-3 py-2 hover:bg-accent
+                               ${value === option.value ? 'bg-primary/10' : ''}`}
                   >
-                    <div className="text-sm text-gray-900 dark:text-white truncate">
+                    <div className="text-sm text-foreground truncate">
                       {option.label}
                     </div>
                     {option.description && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      <div className="text-xs text-muted-foreground truncate">
                         {_truncateWords(option.description, maxDescriptionWords)}
                       </div>
                     )}
@@ -197,7 +198,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
               )}
 
               {filteredOptions.length > 50 && (
-                <div className="px-3 py-2 text-xs text-gray-400 text-center border-t border-gray-200 dark:border-gray-700">
+                <div className="px-3 py-2 text-xs text-muted-foreground text-center border-t border-border">
                   Showing first 50 results. Type to filter.
                 </div>
               )}

@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import {
-  MagnifyingGlassIcon,
-  PlusIcon,
-  XMarkIcon,
-  PencilIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-} from '@heroicons/react/24/outline';
+  Search,
+  Plus,
+  X,
+  Pencil,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ToolMapping, ToolCatalogEntry } from '../types/virtualServer';
 import { useToolCatalog } from '../hooks/useVirtualServers';
 
@@ -171,41 +174,39 @@ const ToolSelector: React.FC<ToolSelectorProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Left Panel: Available Tools */}
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-        <div className="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <div className="border border-border rounded-lg overflow-hidden">
+        <div className="bg-muted px-4 py-3 border-b border-border">
+          <h4 className="text-sm font-medium text-foreground mb-2">
             Available Tools
           </h4>
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tools..."
               aria-label="Search available tools"
-              className="w-full pl-9 pr-4 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded
-                         bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              className="pl-9"
             />
           </div>
         </div>
 
         <div className="max-h-80 overflow-y-auto" role="listbox" aria-label="Available tools">
           {loading && (
-            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            <div className="p-4 text-center text-sm text-muted-foreground">
               Loading tool catalog...
             </div>
           )}
 
           {error && (
-            <div className="p-4 text-center text-sm text-red-500 dark:text-red-400">
+            <div className="p-4 text-center text-sm text-destructive">
               {error}
             </div>
           )}
 
           {!loading && !error && filteredGroups.length === 0 && (
-            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            <div className="p-4 text-center text-sm text-muted-foreground">
               {searchQuery ? 'No matching tools found' : 'No tools available'}
             </div>
           )}
@@ -214,17 +215,17 @@ const ToolSelector: React.FC<ToolSelectorProps> = ({
             <div key={group.serverPath}>
               <button
                 onClick={() => toggleServerGroup(group.serverPath)}
-                className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors"
               >
                 <div className="flex items-center gap-2">
                   {expandedServers.has(group.serverPath) ? (
-                    <ChevronDownIcon className="h-4 w-4" />
+                    <ChevronDown className="h-4 w-4" />
                   ) : (
-                    <ChevronRightIcon className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4" />
                   )}
                   <span>{group.serverName}</span>
                 </div>
-                <span className="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full">
+                <span className="text-xs bg-muted px-2 py-0.5 rounded-full">
                   {group.tools.length}
                 </span>
               </button>
@@ -234,7 +235,7 @@ const ToolSelector: React.FC<ToolSelectorProps> = ({
                   {!areAllGroupToolsSelected(group) && (
                     <button
                       onClick={() => handleSelectAllFromGroup(group)}
-                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 rounded transition-colors mb-1"
+                      className="w-full text-left px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/10 dark:hover:bg-primary/10 rounded transition-colors mb-1"
                     >
                       Select All ({group.tools.length} tools)
                     </button>
@@ -250,21 +251,21 @@ const ToolSelector: React.FC<ToolSelectorProps> = ({
                         aria-selected={selected}
                         className={`w-full text-left px-3 py-2 text-sm rounded transition-colors mb-1 ${
                           selected
-                            ? 'bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 cursor-default'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                            ? 'bg-primary/10 dark:bg-primary/10 text-primary cursor-default'
+                            : 'hover:bg-accent text-foreground'
                         }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-xs">{tool.tool_name}</span>
                           {!selected && (
-                            <PlusIcon className="h-4 w-4 text-gray-400" />
+                            <Plus className="h-4 w-4 text-muted-foreground" />
                           )}
                           {selected && (
-                            <span className="text-xs text-teal-500">Added</span>
+                            <span className="text-xs text-primary">Added</span>
                           )}
                         </div>
                         {tool.description && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                             {tool.description}
                           </p>
                         )}
@@ -279,16 +280,16 @@ const ToolSelector: React.FC<ToolSelectorProps> = ({
       </div>
 
       {/* Right Panel: Selected Tools */}
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-        <div className="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+      <div className="border border-border rounded-lg overflow-hidden">
+        <div className="bg-muted px-4 py-3 border-b border-border">
+          <h4 className="text-sm font-medium text-foreground">
             Selected Tools ({selectedTools.length})
           </h4>
         </div>
 
         <div className="max-h-80 overflow-y-auto" role="listbox" aria-label="Selected tools">
           {selectedTools.length === 0 && (
-            <div className="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            <div className="p-4 text-center text-sm text-muted-foreground">
               No tools selected. Click on tools from the left panel to add them.
             </div>
           )}
@@ -301,54 +302,55 @@ const ToolSelector: React.FC<ToolSelectorProps> = ({
             return (
               <div
                 key={`${mapping.backend_server_path}-${mapping.tool_name}-${index}`}
-                className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                className="px-4 py-3 border-b border-border last:border-b-0"
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex-1 min-w-0">
-                    <span className="font-mono text-sm text-gray-900 dark:text-white">
+                    <span className="font-mono text-sm text-foreground">
                       {mapping.alias || mapping.tool_name}
                     </span>
                     {mapping.alias && (
-                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                      <span className="text-xs text-muted-foreground ml-2">
                         (from {mapping.tool_name})
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
                       onClick={() =>
                         setEditingAlias(editingAlias === index ? null : index)
                       }
-                      className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors"
                       title="Set alias"
                     >
-                      <PencilIcon className="h-3.5 w-3.5" />
-                    </button>
-                    <button
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
                       onClick={() => handleRemoveTool(index)}
-                      className="p-1 text-gray-400 hover:text-red-500 rounded transition-colors"
+                      className="text-muted-foreground hover:text-destructive"
                       title="Remove tool"
                     >
-                      <XMarkIcon className="h-3.5 w-3.5" />
-                    </button>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
 
-                <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div className="text-xs text-muted-foreground">
                   {mapping.backend_server_path}
                 </div>
 
                 {/* Alias input */}
                 {editingAlias === index && (
                   <div className="mt-2">
-                    <input
+                    <Input
                       type="text"
                       value={mapping.alias || ''}
                       onChange={(e) => handleAliasChange(index, e.target.value)}
                       placeholder="Tool alias (optional)"
-                      className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded
-                                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                                 focus:ring-1 focus:ring-teal-500 focus:border-transparent"
+                      className="text-xs"
                     />
                   </div>
                 )}
@@ -359,9 +361,9 @@ const ToolSelector: React.FC<ToolSelectorProps> = ({
                     <select
                       value={mapping.backend_version || ''}
                       onChange={(e) => handleVersionChange(index, e.target.value)}
-                      className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded
-                                 bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                                 focus:ring-1 focus:ring-teal-500 focus:border-transparent"
+                      className="w-full px-2 py-1 text-xs border border-border rounded
+                                 bg-card text-foreground
+                                 focus:ring-1 focus:ring-ring focus:border-transparent"
                     >
                       <option value="">Default version</option>
                       {catalogEntry.available_versions.map((v) => (

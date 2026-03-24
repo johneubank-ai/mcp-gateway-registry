@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import {
-  MagnifyingGlassIcon,
-  ArrowPathIcon,
-  ClipboardIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  ArrowDownTrayIcon,
-  XMarkIcon,
-  CheckIcon,
-  ExclamationCircleIcon,
-} from '@heroicons/react/24/outline';
+  Search,
+  RefreshCw,
+  Clipboard,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  X,
+  Check,
+  AlertCircle,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -68,7 +71,7 @@ function highlightMatch(text: string, term: string): React.ReactNode {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="bg-yellow-200 dark:bg-yellow-700 rounded px-0.5">{text.slice(idx, idx + term.length)}</mark>
+      <mark className="bg-muted dark:bg-muted rounded px-0.5">{text.slice(idx, idx + term.length)}</mark>
       {text.slice(idx + term.length)}
     </>
   );
@@ -98,44 +101,44 @@ const ConfigGroupPanel: React.FC<ConfigGroupPanelProps> = ({
   const panelId = `config-group-${group.id}`;
 
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-hidden">
       {/* Group header */}
       <button
         onClick={onToggle}
         aria-expanded={expanded}
         aria-controls={panelId}
         className="w-full flex items-center justify-between px-4 py-3
-                   bg-gray-50 dark:bg-gray-900/50 hover:bg-gray-100 dark:hover:bg-gray-700/50
+                   bg-muted hover:bg-accent
                    transition-colors text-left"
       >
         <div className="flex items-center space-x-2">
           {expanded ? (
-            <ChevronDownIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
           ) : (
-            <ChevronRightIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           )}
-          <span className="text-sm font-medium text-gray-900 dark:text-white">
+          <span className="text-sm font-medium text-foreground">
             {highlightMatch(group.title, searchTerm)}
           </span>
         </div>
-        <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+        <Badge variant="secondary" className="bg-muted px-2 py-0.5 rounded-full">
           {group.fields.length} {group.fields.length === 1 ? 'field' : 'fields'}
-        </span>
+        </Badge>
       </button>
 
       {/* Group fields */}
       {expanded && (
-        <div id={panelId} role="region" className="divide-y divide-gray-100 dark:divide-gray-700/50">
+        <div id={panelId} role="region" className="divide-y divide-border">
           {group.fields.map((field) => (
             <div
               key={field.key}
-              className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+              className="flex items-center justify-between px-4 py-2.5 hover:bg-accent"
             >
               <div className="flex-1 min-w-0 mr-4">
-                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate">
+                <div className="text-xs text-muted-foreground font-mono truncate">
                   {highlightMatch(field.key, searchTerm)}
                 </div>
-                <div className="text-sm text-gray-900 dark:text-white">
+                <div className="text-sm text-foreground">
                   {highlightMatch(field.label, searchTerm)}
                 </div>
               </div>
@@ -143,30 +146,31 @@ const ConfigGroupPanel: React.FC<ConfigGroupPanelProps> = ({
                 <span
                   className={`text-sm font-mono ${
                     field.is_masked
-                      ? 'text-gray-400 dark:text-gray-500 italic'
-                      : 'text-gray-700 dark:text-gray-300'
+                      ? 'text-muted-foreground italic'
+                      : 'text-foreground'
                   }`}
                 >
                   {highlightMatch(field.value, searchTerm)}
                   {field.unit && !field.is_masked && (
-                    <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">
+                    <span className="text-xs text-muted-foreground ml-1">
                       {field.unit}
                     </span>
                   )}
                 </span>
                 {!field.is_masked && field.raw_value !== null && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
                     onClick={() => onCopy(field.key, String(field.raw_value))}
-                    className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                     aria-label={`Copy ${field.label} value`}
                     title="Copy value"
                   >
                     {copiedKey === field.key ? (
-                      <CheckIcon className="h-4 w-4 text-green-500" />
+                      <Check className="h-4 w-4 text-green-500" />
                     ) : (
-                      <ClipboardIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                      <Clipboard className="h-4 w-4 text-muted-foreground" />
                     )}
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -312,15 +316,15 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ onError, showToast }) => {
     return (
       <div className="space-y-4" data-testid="config-skeleton">
         <div className="flex items-center justify-between">
-          <div className="h-7 w-56 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="h-7 w-56 bg-muted rounded animate-pulse" />
           <div className="flex space-x-2">
-            <div className="h-9 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-            <div className="h-9 w-9 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+            <div className="h-9 w-24 bg-muted rounded animate-pulse" />
+            <div className="h-9 w-9 bg-muted rounded animate-pulse" />
           </div>
         </div>
-        <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        <div className="h-10 w-full bg-muted rounded animate-pulse" />
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-14 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div key={i} className="h-14 bg-muted rounded animate-pulse" />
         ))}
       </div>
     );
@@ -331,17 +335,14 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ onError, showToast }) => {
   if (error) {
     return (
       <div className="text-center py-12" data-testid="config-error">
-        <ExclamationCircleIcon className="h-12 w-12 mx-auto text-red-500 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+        <h3 className="text-lg font-medium text-foreground mb-2">
           Failed to Load Configuration
         </h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">{error}</p>
-        <button
-          onClick={fetchConfig}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-        >
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button onClick={fetchConfig}>
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -355,41 +356,38 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ onError, showToast }) => {
       {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center space-x-3">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             System Configuration
           </h2>
           {config.is_local_dev && (
-            <span
-              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                         bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
+            <Badge
+              className="bg-muted text-muted-foreground"
               data-testid="local-dev-badge"
             >
               Local Development Mode
-            </span>
+            </Badge>
           )}
         </div>
 
         <div className="flex items-center space-x-2">
           {/* Export dropdown */}
           <div className="relative">
-            <button
+            <Button
+              variant="outline"
               onClick={() => setExportOpen((o) => !o)}
-              className="flex items-center px-3 py-2 text-sm border border-gray-300 dark:border-gray-600
-                         rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
-                         hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               aria-label="Export configuration"
             >
-              <ArrowDownTrayIcon className="h-4 w-4 mr-1.5" />
+              <Download className="h-4 w-4 mr-1.5" />
               Export
-            </button>
+            </Button>
             {exportOpen && (
-              <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10">
+              <div className="absolute right-0 mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-10">
                 {EXPORT_OPTIONS.map((opt) => (
                   <button
                     key={opt.format}
                     onClick={() => handleExport(opt.format)}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200
-                               hover:bg-gray-100 dark:hover:bg-gray-700 first:rounded-t-lg last:rounded-b-lg"
+                    className="w-full text-left px-4 py-2 text-sm text-foreground
+                               hover:bg-accent first:rounded-t-lg last:rounded-b-lg"
                   >
                     {opt.label}
                   </button>
@@ -399,64 +397,53 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ onError, showToast }) => {
           </div>
 
           {/* Expand / Collapse */}
-          <button
-            onClick={expandAll}
-            className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
-                       hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
+          <Button variant="outline" onClick={expandAll}>
             Expand All
-          </button>
-          <button
-            onClick={collapseAll}
-            className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
-                       hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
+          </Button>
+          <Button variant="outline" onClick={collapseAll}>
             Collapse All
-          </button>
+          </Button>
 
           {/* Refresh */}
-          <button
+          <Button
+            variant="outline"
+            size="icon"
             onClick={fetchConfig}
-            className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                       bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200
-                       hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             aria-label="Refresh configuration"
             title="Refresh"
           >
-            <ArrowPathIcon className="h-4 w-4" />
-          </button>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-        <input
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <Input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search configuration..."
           aria-label="Search configuration"
-          className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-full pl-10 pr-10"
         />
         {searchTerm && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon-xs"
             onClick={() => setSearchTerm('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="absolute right-3 top-1/2 -translate-y-1/2"
             aria-label="Clear search"
           >
-            <XMarkIcon className="h-5 w-5" />
-          </button>
+            <X className="h-5 w-5" />
+          </Button>
         )}
       </div>
 
       {/* Search results count */}
       {searchTerm.trim() && filteredGroups.length > 0 && (
-        <p className="text-sm text-gray-500 dark:text-gray-400" data-testid="search-count">
+        <p className="text-sm text-muted-foreground" data-testid="search-count">
           {totalMatchingFields} {totalMatchingFields === 1 ? 'field' : 'fields'} in{' '}
           {filteredGroups.length} {filteredGroups.length === 1 ? 'group' : 'groups'}
         </p>
@@ -465,7 +452,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ onError, showToast }) => {
       {/* No results */}
       {searchTerm.trim() && filteredGroups.length === 0 && (
         <div className="text-center py-8" data-testid="no-results">
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-muted-foreground">
             No configuration fields match "<span className="font-medium">{searchTerm}</span>"
           </p>
         </div>
@@ -487,12 +474,12 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ onError, showToast }) => {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center space-x-4 text-xs text-gray-400 dark:text-gray-500 pt-2 border-t border-gray-200 dark:border-gray-700">
+      <div className="flex items-center space-x-4 text-xs text-muted-foreground pt-2 border-t border-border">
         <span>
-          <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">****</code> = masked sensitive value
+          <code className="bg-muted px-1 rounded">****</code> = masked sensitive value
         </span>
         <span>
-          <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">(not set)</code> = not configured
+          <code className="bg-muted px-1 rounded">(not set)</code> = not configured
         </span>
       </div>
     </div>

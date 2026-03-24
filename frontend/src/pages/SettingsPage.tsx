@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  UsersIcon,
-  GlobeAltIcon,
-  ArrowLeftIcon,
-  ClipboardDocumentListIcon,
-  CogIcon,
-  ServerStackIcon,
-  IdentificationIcon,
-} from '@heroicons/react/24/outline';
+  ChevronDown,
+  ChevronRight,
+  Users,
+  Globe,
+  ArrowLeft,
+  ClipboardList,
+  Cog,
+  Layers,
+  IdCard,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import FederationPeers from '../components/FederationPeers';
 import FederationPeerForm from '../components/FederationPeerForm';
 import ConfigPanel from '../components/ConfigPanel';
@@ -23,12 +25,6 @@ import RegistryCardSettings from '../components/RegistryCardSettings';
 import { useAuth } from '../contexts/AuthContext';
 import { canAccessSettings } from '../utils/permissions';
 
-
-interface ToastState {
-  show: boolean;
-  message: string;
-  type: 'success' | 'error' | 'info';
-}
 
 interface SettingsItem {
   id: string;
@@ -62,7 +58,7 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {
     id: 'registry',
     label: 'Registry',
-    icon: <IdentificationIcon className="h-5 w-5" />,
+    icon: <IdCard className="h-5 w-5" />,
     items: [
       { id: 'card', label: 'Registry Card', path: '/settings/registry/card' },
     ],
@@ -70,7 +66,7 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {
     id: 'audit',
     label: 'Audit',
-    icon: <ClipboardDocumentListIcon className="h-5 w-5" />,
+    icon: <ClipboardList className="h-5 w-5" />,
     items: [
       { id: 'logs', label: 'Audit Logs', path: '/settings/audit/logs' },
     ],
@@ -78,7 +74,7 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {
     id: 'federation',
     label: 'Federation',
-    icon: <GlobeAltIcon className="h-5 w-5" />,
+    icon: <Globe className="h-5 w-5" />,
     items: [
       { id: 'peers', label: 'Peers', path: '/settings/federation/peers' },
     ],
@@ -86,7 +82,7 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {
     id: 'virtual-mcp',
     label: 'Virtual MCP',
-    icon: <ServerStackIcon className="h-5 w-5" />,
+    icon: <Layers className="h-5 w-5" />,
     items: [
       { id: 'servers', label: 'Virtual Servers', path: '/settings/virtual-mcp/servers' },
     ],
@@ -94,7 +90,7 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {
     id: 'iam',
     label: 'IAM',
-    icon: <UsersIcon className="h-5 w-5" />,
+    icon: <Users className="h-5 w-5" />,
     items: [
       { id: 'groups', label: 'Groups', path: '/settings/iam/groups' },
       { id: 'users', label: 'Users', path: '/settings/iam/users' },
@@ -104,14 +100,14 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
   {
     id: 'notifications',
     label: 'Notifications',
-    icon: <ClipboardDocumentListIcon className="h-5 w-5" />,
+    icon: <ClipboardList className="h-5 w-5" />,
     items: [],
     disabled: true,
   },
   {
     id: 'system-config',
     label: 'System Config',
-    icon: <CogIcon className="h-5 w-5" />,
+    icon: <Cog className="h-5 w-5" />,
     items: [
       { id: 'configuration', label: 'Configuration', path: '/settings/system-config/configuration' },
     ],
@@ -148,13 +144,6 @@ const SettingsPage: React.FC = () => {
     return initial;
   });
 
-  // Toast notification state
-  const [toast, setToast] = useState<ToastState>({
-    show: false,
-    message: '',
-    type: 'success',
-  });
-
   // Redirect non-admin users to home (only after auth has loaded)
   useEffect(() => {
     if (!loading && !canAccessSettings(user)) {
@@ -162,31 +151,23 @@ const SettingsPage: React.FC = () => {
     }
   }, [user, loading, navigate]);
 
-  // Auto-dismiss toast after 4 seconds
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => {
-        setToast((prev) => ({ ...prev, show: false }));
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast.show]);
-
   // Show spinner while auth is loading.
   // Must return a valid element (not null) because Layout uses cloneElement.
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   /**
-   * Show a toast notification.
+   * Show a toast notification via sonner.
    */
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ show: true, message, type });
+    if (type === 'error') toast.error(message);
+    else if (type === 'info') toast.info(message);
+    else toast.success(message);
   };
 
   /**
@@ -290,22 +271,22 @@ const SettingsPage: React.FC = () => {
     <div className="flex flex-col h-full">
       {/* Header with back button */}
       <div className="flex items-center space-x-4 mb-6">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => navigate('/')}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800
-                     text-gray-500 dark:text-gray-400 transition-colors"
           title="Back to Dashboard"
         >
-          <ArrowLeftIcon className="h-5 w-5" />
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
       </div>
 
       {/* Main content area with sidebar */}
       <div className="flex flex-1 gap-6 min-h-0">
         {/* Sidebar */}
         <div className="w-64 flex-shrink-0">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-200 dark:border-gray-700 p-4">
+          <div className="bg-card rounded-lg shadow-xs border border-border p-4">
             <nav className="space-y-1">
               {visibleCategories.map((category) => (
                 <div key={category.id}>
@@ -315,8 +296,8 @@ const SettingsPage: React.FC = () => {
                     disabled={category.disabled}
                     className={`w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                       category.disabled
-                        ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
-                        : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'text-muted-foreground cursor-not-allowed'
+                        : 'text-foreground hover:bg-accent'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -327,9 +308,9 @@ const SettingsPage: React.FC = () => {
                     </div>
                     {!category.disabled && (
                       expandedCategories.has(category.id) ? (
-                        <ChevronDownIcon className="h-4 w-4" />
+                        <ChevronDown className="h-4 w-4" />
                       ) : (
-                        <ChevronRightIcon className="h-4 w-4" />
+                        <ChevronRight className="h-4 w-4" />
                       )
                     )}
                   </button>
@@ -343,8 +324,8 @@ const SettingsPage: React.FC = () => {
                           onClick={() => navigate(item.path)}
                           className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
                             activeItemId === item.id
-                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium'
-                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'text-muted-foreground hover:bg-accent'
                           }`}
                         >
                           {item.label}
@@ -360,26 +341,12 @@ const SettingsPage: React.FC = () => {
 
         {/* Content area */}
         <div className="flex-1 min-w-0">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-200 dark:border-gray-700 p-6 h-full overflow-y-auto">
+          <div className="bg-card rounded-lg shadow-xs border border-border p-6 h-full overflow-y-auto">
             {renderContent()}
           </div>
         </div>
       </div>
 
-      {/* Toast notification */}
-      {toast.show && (
-        <div
-          className={`fixed bottom-4 right-4 px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 ${
-            toast.type === 'success'
-              ? 'bg-green-500 text-white'
-              : toast.type === 'error'
-              ? 'bg-red-500 text-white'
-              : 'bg-blue-500 text-white'
-          }`}
-        >
-          {toast.message}
-        </div>
-      )}
     </div>
   );
 };

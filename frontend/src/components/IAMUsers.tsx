@@ -1,16 +1,21 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  PlusIcon,
-  MagnifyingGlassIcon,
-  TrashIcon,
-  ArrowLeftIcon,
-  ArrowPathIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  PencilIcon,
-  XMarkIcon,
-  CheckIcon,
-} from '@heroicons/react/24/outline';
+  Plus,
+  Search,
+  Trash2,
+  ArrowLeft,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Pencil,
+  X,
+  Check,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useIAMUsers, useIAMGroups, createHumanUser, deleteUser, updateUserGroups, CreateHumanUserPayload } from '../hooks/useIAM';
 import DeleteConfirmation from './DeleteConfirmation';
 import SearchableSelect from './SearchableSelect';
@@ -127,7 +132,7 @@ const IAMUsers: React.FC<IAMUsersProps> = ({ onShowToast }) => {
         groups: formGroups.size > 0 ? Array.from(formGroups) : undefined,
       };
       await createHumanUser(payload);
-      onShowToast(`User "${formUsername}" created successfully`, 'success');
+      toast.success(`User "${formUsername}" created successfully`);
       resetForm();
       setView('list');
       await refetch();
@@ -136,7 +141,7 @@ const IAMUsers: React.FC<IAMUsersProps> = ({ onShowToast }) => {
       const message = Array.isArray(detail)
         ? detail.map((d: any) => d.msg).join(', ')
         : detail || 'Failed to create user';
-      onShowToast(message, 'error');
+      toast.error(message);
     } finally {
       setIsCreating(false);
     }
@@ -144,7 +149,7 @@ const IAMUsers: React.FC<IAMUsersProps> = ({ onShowToast }) => {
 
   const handleDelete = async (username: string) => {
     await deleteUser(username);
-    onShowToast(`User "${username}" deleted`, 'success');
+    toast.success(`User "${username}" deleted`);
     setDeleteTarget(null);
     await refetch();
   };
@@ -167,19 +172,18 @@ const IAMUsers: React.FC<IAMUsersProps> = ({ onShowToast }) => {
       const addedCount = result.added?.length || 0;
       const removedCount = result.removed?.length || 0;
       if (addedCount > 0 || removedCount > 0) {
-        onShowToast(
-          `Groups updated: ${addedCount} added, ${removedCount} removed`,
-          'success'
+        toast.success(
+          `Groups updated: ${addedCount} added, ${removedCount} removed`
         );
       } else {
-        onShowToast('No changes made', 'info');
+        toast.info('No changes made');
       }
       setEditingUser(null);
       setEditGroups(new Set());
       await refetch();
     } catch (err: any) {
       const message = err.response?.data?.detail || 'Failed to update groups';
-      onShowToast(message, 'error');
+      toast.error(message);
     } finally {
       setIsSavingGroups(false);
     }
@@ -213,89 +217,89 @@ const IAMUsers: React.FC<IAMUsersProps> = ({ onShowToast }) => {
   };
 
   // Helper: input border class based on error state
-  const inputClass = (field: keyof FormErrors) =>
-    `w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
-      errors[field] ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-    }`;
+  const inputErrorClass = (field: keyof FormErrors) =>
+    errors[field] ? 'border-red-500' : '';
 
   // ─── Create View ──────────────────────────────────────────────
   if (view === 'create') {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             IAM &gt; Users &gt; Create
           </h2>
-          <button
+          <Button
+            variant="ghost"
             onClick={() => { resetForm(); setView('list'); }}
-            className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           >
-            <ArrowLeftIcon className="h-4 w-4 mr-1" />
+            <ArrowLeft className="h-4 w-4 mr-1" />
             Back to List
-          </button>
+          </Button>
         </div>
 
         <div className="space-y-4 max-w-lg">
           <div>
-            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Username *</label>
-            <input type="text" value={formUsername}
+            <label className="block text-sm text-muted-foreground mb-1">Username *</label>
+            <Input type="text" value={formUsername}
               onChange={(e) => { setFormUsername(e.target.value); clearError('username'); }}
               placeholder="e.g. jdoe"
-              className={inputClass('username')} />
+              className={inputErrorClass('username')} />
             {errors.username && <p className="mt-1 text-sm text-red-500">{errors.username}</p>}
           </div>
           <div>
-            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Email *</label>
-            <input type="email" value={formEmail}
+            <label className="block text-sm text-muted-foreground mb-1">Email *</label>
+            <Input type="email" value={formEmail}
               onChange={(e) => { setFormEmail(e.target.value); clearError('email'); }}
               placeholder="user@example.com"
-              className={inputClass('email')} />
+              className={inputErrorClass('email')} />
             {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">First Name *</label>
-              <input type="text" value={formFirstName}
+              <label className="block text-sm text-muted-foreground mb-1">First Name *</label>
+              <Input type="text" value={formFirstName}
                 onChange={(e) => { setFormFirstName(e.target.value); clearError('first_name'); }}
-                className={inputClass('first_name')} />
+                className={inputErrorClass('first_name')} />
               {errors.first_name && <p className="mt-1 text-sm text-red-500">{errors.first_name}</p>}
             </div>
             <div>
-              <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Last Name *</label>
-              <input type="text" value={formLastName}
+              <label className="block text-sm text-muted-foreground mb-1">Last Name *</label>
+              <Input type="text" value={formLastName}
                 onChange={(e) => { setFormLastName(e.target.value); clearError('last_name'); }}
-                className={inputClass('last_name')} />
+                className={inputErrorClass('last_name')} />
               {errors.last_name && <p className="mt-1 text-sm text-red-500">{errors.last_name}</p>}
             </div>
           </div>
           <div>
-            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Password *</label>
+            <label className="block text-sm text-muted-foreground mb-1">Password *</label>
             <div className="relative">
-              <input
+              <Input
                 type={showPassword ? 'text' : 'password'}
                 value={formPassword}
                 onChange={(e) => { setFormPassword(e.target.value); clearError('password'); }}
                 placeholder="Initial password"
-                className={`${inputClass('password')} pr-10`}
+                className={`pr-10 ${inputErrorClass('password')}`}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-xs"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                className="absolute right-3 top-1/2 -translate-y-1/2"
                 title={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-              </button>
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
             </div>
             {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
           </div>
 
           {/* Group selection */}
           <div>
-            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-2">Groups</label>
-            <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+            <label className="block text-sm text-muted-foreground mb-2">Groups</label>
+            <div className="space-y-2 max-h-48 overflow-y-auto border border-border rounded-lg p-3">
               {groups.length === 0 ? (
-                <p className="text-xs text-gray-400">No groups available</p>
+                <p className="text-xs text-muted-foreground">No groups available</p>
               ) : (
                 groups.map((g) => (
                   <label key={g.name} className="flex items-center space-x-2 cursor-pointer">
@@ -303,9 +307,9 @@ const IAMUsers: React.FC<IAMUsersProps> = ({ onShowToast }) => {
                       type="checkbox"
                       checked={formGroups.has(g.name)}
                       onChange={() => toggleGroup(g.name)}
-                      className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500"
+                      className="rounded border-border text-primary focus:ring-ring"
                     />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{g.name}</span>
+                    <span className="text-sm text-foreground">{g.name}</span>
                   </label>
                 ))
               )}
@@ -313,16 +317,13 @@ const IAMUsers: React.FC<IAMUsersProps> = ({ onShowToast }) => {
           </div>
         </div>
 
-        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <button onClick={() => { resetForm(); setView('list'); }}
-            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+        <div className="flex justify-end space-x-3 pt-4 border-t border-border">
+          <Button variant="secondary" onClick={() => { resetForm(); setView('list'); }}>
             Cancel
-          </button>
-          <button onClick={handleCreate}
-            disabled={isCreating}
-            className="px-4 py-2 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed">
+          </Button>
+          <Button onClick={handleCreate} disabled={isCreating}>
             {isCreating ? 'Creating...' : 'Create User'}
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -332,84 +333,85 @@ const IAMUsers: React.FC<IAMUsersProps> = ({ onShowToast }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">IAM &gt; Users</h2>
+        <h2 className="text-lg font-semibold text-foreground">IAM &gt; Users</h2>
         <div className="flex items-center space-x-2">
-          <button onClick={refetch} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Refresh">
-            <ArrowPathIcon className="h-5 w-5" />
-          </button>
-          <button onClick={() => setView('create')}
-            className="flex items-center px-3 py-2 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700">
-            <PlusIcon className="h-4 w-4 mr-1" /> Create User
-          </button>
+          <Button variant="ghost" size="icon" onClick={refetch} title="Refresh">
+            <RefreshCw className="h-5 w-5" />
+          </Button>
+          <Button onClick={() => setView('create')}>
+            <Plus className="h-4 w-4 mr-1" /> Create User
+          </Button>
         </div>
       </div>
 
       <div className="relative">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search users..."
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+          className="w-full pl-10 pr-4 text-sm" />
       </div>
 
       {isLoading && (
-        <div className="flex justify-center py-12"><ArrowPathIcon className="h-6 w-6 text-gray-400 animate-spin" /></div>
+        <div className="flex justify-center py-12"><RefreshCw className="h-6 w-6 text-muted-foreground animate-spin" /></div>
       )}
       {error && !isLoading && (
-        <div className="text-center py-8 text-red-500 dark:text-red-400 text-sm">{error}</div>
+        <div className="text-center py-8 text-destructive text-sm">{error}</div>
       )}
       {!isLoading && !error && filteredUsers.length === 0 && (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-12 text-muted-foreground">
           {searchQuery ? 'No users match your search.' : 'No users yet. Create your first user.'}
         </div>
       )}
 
       {!isLoading && !error && filteredUsers.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Username</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Email</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Name</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Groups</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Action</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-sm">
+            <TableHeader>
+              <TableRow className="border-b border-border">
+                <TableHead className="text-left py-3 px-4 font-medium text-muted-foreground">Username</TableHead>
+                <TableHead className="text-left py-3 px-4 font-medium text-muted-foreground">Email</TableHead>
+                <TableHead className="text-left py-3 px-4 font-medium text-muted-foreground">Name</TableHead>
+                <TableHead className="text-left py-3 px-4 font-medium text-muted-foreground">Groups</TableHead>
+                <TableHead className="text-right py-3 px-4 font-medium text-muted-foreground">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredUsers.map((u) => (
                 <React.Fragment key={u.username}>
-                  <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{u.username}</td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{u.email || '\u2014'}</td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                  <TableRow className="border-b border-border hover:bg-accent">
+                    <TableCell className="py-3 px-4 text-foreground font-medium">{u.username}</TableCell>
+                    <TableCell className="py-3 px-4 text-muted-foreground">{u.email || '\u2014'}</TableCell>
+                    <TableCell className="py-3 px-4 text-muted-foreground">
                       {[u.first_name, u.last_name].filter(Boolean).join(' ') || '\u2014'}
-                    </td>
-                    <td className="py-3 px-4">
+                    </TableCell>
+                    <TableCell className="py-3 px-4">
                       <div className="flex flex-wrap gap-1 items-center">
                         {(u.groups || []).map((g) => (
-                          <span key={g} className="inline-block px-2 py-0.5 text-xs rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
+                          <Badge key={g} className="bg-primary/10 text-primary">
                             {g}
-                          </span>
+                          </Badge>
                         ))}
-                        {(!u.groups || u.groups.length === 0) && <span className="text-gray-400 text-xs">{'\u2014'}</span>}
-                        <button
+                        {(!u.groups || u.groups.length === 0) && <span className="text-muted-foreground text-xs">{'\u2014'}</span>}
+                        <Button
+                          variant="ghost"
+                          size="icon-xs"
                           onClick={() => startEditGroups(u.username, u.groups || [])}
-                          className="ml-2 p-1 text-gray-400 hover:text-purple-600 dark:hover:text-purple-400"
                           title="Edit groups"
+                          className="ml-2"
                         >
-                          <PencilIcon className="h-3.5 w-3.5" />
-                        </button>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button onClick={() => setDeleteTarget(u.username)} className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400" title="Delete user">
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                    <TableCell className="py-3 px-4 text-right">
+                      <Button variant="ghost" size="icon-xs" onClick={() => setDeleteTarget(u.username)} title="Delete user">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                   {deleteTarget === u.username && (
-                    <tr>
-                      <td colSpan={5} className="p-2">
+                    <TableRow>
+                      <TableCell colSpan={5} className="p-2">
                         <DeleteConfirmation
                           entityType="user"
                           entityName={u.username}
@@ -417,54 +419,55 @@ const IAMUsers: React.FC<IAMUsersProps> = ({ onShowToast }) => {
                           onConfirm={handleDelete}
                           onCancel={() => setDeleteTarget(null)}
                         />
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
                   {editingUser === u.username && (
-                    <tr className="bg-purple-50 dark:bg-purple-900/10">
-                      <td colSpan={5} className="p-4">
+                    <TableRow className="bg-primary/10">
+                      <TableCell colSpan={5} className="p-4">
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <span className="text-sm font-medium text-foreground">
                               Edit Groups for {u.username}
                             </span>
                             <div className="flex items-center gap-2">
-                              <button
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={cancelEditGroups}
-                                className="px-3 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                               >
                                 Cancel
-                              </button>
-                              <button
+                              </Button>
+                              <Button
+                                size="sm"
                                 onClick={handleSaveGroups}
                                 disabled={isSavingGroups}
-                                className="flex items-center px-3 py-1 text-xs text-white bg-purple-600 rounded hover:bg-purple-700 disabled:opacity-50"
                               >
-                                <CheckIcon className="h-3 w-3 mr-1" />
+                                <Check className="h-3 w-3 mr-1" />
                                 {isSavingGroups ? 'Saving...' : 'Save'}
-                              </button>
+                              </Button>
                             </div>
                           </div>
 
                           {/* Selected groups as removable tags */}
                           <div className="flex flex-wrap gap-2">
                             {Array.from(editGroups).map((groupName) => (
-                              <span
+                              <Badge
                                 key={groupName}
-                                className="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full"
+                                className="bg-primary/10 text-primary"
                               >
                                 {groupName}
                                 <button
                                   type="button"
                                   onClick={() => removeGroupFromEdit(groupName)}
-                                  className="ml-1 hover:text-purple-900 dark:hover:text-purple-100"
+                                  className="ml-1 hover:text-primary"
                                 >
-                                  <XMarkIcon className="h-3 w-3" />
+                                  <X className="h-3 w-3" />
                                 </button>
-                              </span>
+                              </Badge>
                             ))}
                             {editGroups.size === 0 && (
-                              <span className="text-xs text-gray-400 italic">No groups assigned</span>
+                              <span className="text-xs text-muted-foreground italic">No groups assigned</span>
                             )}
                           </div>
 
@@ -485,13 +488,13 @@ const IAMUsers: React.FC<IAMUsersProps> = ({ onShowToast }) => {
                             />
                           </div>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
                 </React.Fragment>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

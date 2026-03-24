@@ -4,7 +4,8 @@ import AuditFilterBar, { AuditFilters } from '../components/AuditFilterBar';
 import AuditLogTable, { AuditEvent } from '../components/AuditLogTable';
 import AuditEventDetail from '../components/AuditEventDetail';
 import AuditStatistics from '../components/AuditStatistics';
-import { ShieldExclamationIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { ShieldAlert, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface AuditLogsPageProps {
   embedded?: boolean;
@@ -69,13 +70,13 @@ const AuditLogsPage: React.FC<AuditLogsPageProps> = ({ embedded = false }) => {
   // Check if user is admin
   if (!user?.is_admin) {
     return (
-      <div className={embedded ? "flex items-center justify-center p-4" : "min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4"}>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 max-w-md text-center">
-          <ShieldExclamationIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+      <div className={embedded ? "flex items-center justify-center p-4" : "min-h-screen bg-muted flex items-center justify-center p-4"}>
+        <div className="bg-card rounded-lg shadow-lg p-8 max-w-md text-center">
+          <ShieldAlert className="h-16 w-16 text-destructive mx-auto mb-4" />
+          <h1 className="text-xl font-semibold text-foreground mb-2">
             Access Denied
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             You need administrator privileges to view audit logs.
           </p>
         </div>
@@ -90,30 +91,30 @@ const AuditLogsPage: React.FC<AuditLogsPageProps> = ({ embedded = false }) => {
         {/* Page Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 className="text-xl font-bold text-foreground">
               Audit Logs
             </h2>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               View and search system audit events for compliance and security monitoring.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="outline"
               onClick={() => handleExport('jsonl')}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
               title="Export as JSONL"
             >
-              <ArrowDownTrayIcon className="h-4 w-4" />
+              <Download className="h-4 w-4" />
               <span>JSONL</span>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => handleExport('csv')}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
               title="Export as CSV"
             >
-              <ArrowDownTrayIcon className="h-4 w-4" />
+              <Download className="h-4 w-4" />
               <span>CSV</span>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -158,35 +159,35 @@ const AuditLogsPage: React.FC<AuditLogsPageProps> = ({ embedded = false }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-muted">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-2xl font-bold text-foreground">
               Audit Logs
             </h1>
-            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               View and search system audit events for compliance and security monitoring.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
+              variant="outline"
               onClick={() => handleExport('jsonl')}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
               title="Export as JSONL"
             >
-              <ArrowDownTrayIcon className="h-4 w-4" />
+              <Download className="h-4 w-4" />
               <span>JSONL</span>
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => handleExport('csv')}
-              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
               title="Export as CSV"
             >
-              <ArrowDownTrayIcon className="h-4 w-4" />
+              <Download className="h-4 w-4" />
               <span>CSV</span>
-            </button>
+            </Button>
           </div>
         </div>
 

@@ -1,9 +1,15 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { ClipboardDocumentIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { ClipboardList, Key } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import axios from 'axios';
 import type { Server } from './ServerCard';
 import { useRegistryConfig } from '../hooks/useRegistryConfig';
-import useEscapeKey from '../hooks/useEscapeKey';
 
 type IDE = 'cursor' | 'roo-code' | 'claude-code' | 'kiro';
 
@@ -26,8 +32,6 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { config: registryConfig, loading: configLoading } = useRegistryConfig();
-
-  useEscapeKey(onClose, isOpen);
 
   // Determine if we're in registry-only mode
   // While config is loading, default to with-gateway behavior (safer default)
@@ -269,38 +273,28 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
     }
   }, [generateClaudeCodeCommand, onShowToast]);
 
-  if (!isOpen) {
-    return null;
-  }
-
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-3xl w-full mx-4 max-h-[80vh] overflow-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-auto bg-card p-6">
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold text-foreground">
             MCP Configuration for {server.name}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-          >
-            ✕
-          </button>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
         <div className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+            <h4 className="font-medium text-primary mb-2">
               How to use this configuration:
             </h4>
-            <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
+            <ol className="text-sm text-primary space-y-1 list-decimal list-inside">
               <li>Copy the configuration below</li>
               <li>
-                Paste it into your <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">mcp.json</code> file
+                Paste it into your <code className="bg-primary/20 px-1 rounded">mcp.json</code> file
               </li>
               {!isRegistryOnly && !jwtToken && (
                 <li>
-                  Replace <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">[YOUR_AUTH_TOKEN]</code> with your
+                  Replace <code className="bg-primary/20 px-1 rounded">[YOUR_AUTH_TOKEN]</code> with your
                   gateway authentication token (or wait for auto-generation)
                 </li>
               )}
@@ -311,18 +305,18 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
           {!isRegistryOnly ? (
             <div className={`border rounded-lg p-4 ${
               jwtToken
-                ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                ? 'bg-primary/10 border-primary/20'
                 : tokenError
-                ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                ? 'bg-destructive/10 border-destructive/20'
+                : 'bg-muted border-border'
             }`}>
               <div className="flex items-center justify-between mb-2">
                 <h4 className={`font-medium ${
                   jwtToken
-                    ? 'text-green-900 dark:text-green-100'
+                    ? 'text-primary'
                     : tokenError
-                    ? 'text-red-900 dark:text-red-100'
-                    : 'text-amber-900 dark:text-amber-100'
+                    ? 'text-destructive'
+                    : 'text-muted-foreground'
                 }`}>
                   {tokenLoading
                     ? 'Fetching Token...'
@@ -333,43 +327,45 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
                     : 'Authentication Required'}
                 </h4>
                 {!tokenLoading && (
-                  <button
+                  <Button
+                    variant="default"
+                    size="sm"
                     onClick={fetchJwtToken}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors"
+                    className="flex items-center gap-1 bg-primary hover:bg-primary/90 text-white text-xs"
                     title="Generate new token"
                   >
-                    <KeyIcon className="h-3 w-3" />
+                    <Key className="h-3 w-3" />
                     {jwtToken ? 'Refresh' : 'Get Token'}
-                  </button>
+                  </Button>
                 )}
               </div>
               {tokenLoading ? (
-                <p className="text-sm text-amber-800 dark:text-amber-200">
+                <p className="text-sm text-muted-foreground">
                   Generating JWT token for your configuration...
                 </p>
               ) : jwtToken ? (
-                <p className="text-sm text-green-800 dark:text-green-200">
+                <p className="text-sm text-primary">
                   JWT token has been automatically added to the configuration below. You can copy and paste it directly into your mcp.json file. Token expires in 8 hours.
                 </p>
               ) : tokenError ? (
-                <p className="text-sm text-red-800 dark:text-red-200">
+                <p className="text-sm text-destructive">
                   {tokenError}. Click &quot;Get Token&quot; to retry, or manually replace [YOUR_AUTH_TOKEN] with your gateway token.
                 </p>
               ) : (
-                <p className="text-sm text-amber-800 dark:text-amber-200">
+                <p className="text-sm text-muted-foreground">
                   This configuration requires gateway authentication tokens. The tokens authenticate your AI assistant with
                   the MCP Gateway, not the individual server.
                 </p>
               )}
             </div>
           ) : (
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Direct Connection Mode</h4>
-              <p className="text-sm text-blue-800 dark:text-blue-200">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+              <h4 className="font-medium text-primary mb-2">Direct Connection Mode</h4>
+              <p className="text-sm text-primary">
                 This registry operates in catalog-only mode. The configuration connects directly to the MCP server
                 endpoint without going through a gateway proxy.
               </p>
-              <p className="text-sm text-blue-800 dark:text-blue-200 mt-2">
+              <p className="text-sm text-primary mt-2">
                 <strong>Note:</strong> The MCP server may still require authentication (API key, auth header, etc.).
                 Check the server's documentation to determine if any credentials are needed.
               </p>
@@ -377,17 +373,17 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
           )}
 
           {server.mcp_endpoint && (
-            <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
-              <h4 className="font-medium text-purple-900 dark:text-purple-100 mb-2">Custom Endpoint Configured</h4>
-              <p className="text-sm text-purple-800 dark:text-purple-200">
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+              <h4 className="font-medium text-primary mb-2">Custom Endpoint Configured</h4>
+              <p className="text-sm text-primary">
                 This server uses a custom MCP endpoint:{' '}
-                <code className="bg-purple-100 dark:bg-purple-800 px-1 rounded break-all">{server.mcp_endpoint}</code>
+                <code className="bg-primary/20 px-1 rounded break-all">{server.mcp_endpoint}</code>
               </p>
             </div>
           )}
 
-          <div className="bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded-lg p-4">
-            <h4 className="font-medium text-gray-900 dark:text-white mb-3">Select your IDE/Tool:</h4>
+          <div className="bg-muted border border-border rounded-lg p-4">
+            <h4 className="font-medium text-foreground mb-3">Select your IDE/Tool:</h4>
             <div className="flex flex-wrap gap-2">
               {(['cursor', 'roo-code', 'claude-code', 'kiro'] as IDE[]).map((ide) => (
                 <button
@@ -395,8 +391,8 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
                   onClick={() => setSelectedIDE(ide)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     selectedIDE === ide
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      ? 'bg-primary text-white'
+                      : 'bg-muted text-foreground hover:bg-accent'
                   }`}
                 >
                   {ide === 'cursor'
@@ -409,7 +405,7 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Configuration format optimized for{' '}
               {selectedIDE === 'cursor'
                 ? 'Cursor'
@@ -425,48 +421,48 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
           {selectedIDE === 'claude-code' ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium text-gray-900 dark:text-white">CLI Command:</h4>
-                <button
+                <h4 className="font-medium text-foreground">CLI Command:</h4>
+                <Button
                   onClick={copyCommandToClipboard}
-                  className={`flex items-center gap-2 px-3 py-2 text-white rounded-lg transition-colors duration-200 ${
+                  className={`flex items-center gap-2 text-white ${
                     copied
-                      ? 'bg-green-700'
-                      : 'bg-green-600 hover:bg-green-700'
+                      ? 'bg-primary'
+                      : 'bg-primary hover:bg-primary/90'
                   }`}
                 >
-                  <ClipboardDocumentIcon className="h-4 w-4" />
+                  <ClipboardList className="h-4 w-4" />
                   {copied ? 'Copied!' : 'Copy Command'}
-                </button>
+                </Button>
               </div>
               <pre className="bg-gray-900 text-green-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">
                 {generateClaudeCodeCommand()}
               </pre>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Run this command in your terminal to add the MCP server to Claude Code.
               </p>
             </div>
           ) : selectedIDE === 'kiro' ? (
             <div className="space-y-2">
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-3">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Kiro Configuration:</h4>
-                <p className="text-sm text-blue-800 dark:text-blue-200">
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-3">
+                <h4 className="font-medium text-primary mb-2">Kiro Configuration:</h4>
+                <p className="text-sm text-primary">
                   Copy the JSON below and paste it into{' '}
-                  <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">~/.kiro/settings/mcp.json</code>
+                  <code className="bg-primary/20 px-1 rounded">~/.kiro/settings/mcp.json</code>
                 </p>
               </div>
               <div className="flex items-center justify-between">
-                <h4 className="font-medium text-gray-900 dark:text-white">Configuration JSON:</h4>
-                <button
+                <h4 className="font-medium text-foreground">Configuration JSON:</h4>
+                <Button
                   onClick={copyConfigToClipboard}
-                  className={`flex items-center gap-2 px-3 py-2 text-white rounded-lg transition-colors duration-200 ${
+                  className={`flex items-center gap-2 text-white ${
                     copied
-                      ? 'bg-green-700'
-                      : 'bg-green-600 hover:bg-green-700'
+                      ? 'bg-primary'
+                      : 'bg-primary hover:bg-primary/90'
                   }`}
                 >
-                  <ClipboardDocumentIcon className="h-4 w-4" />
+                  <ClipboardList className="h-4 w-4" />
                   {copied ? 'Copied!' : 'Copy to Clipboard'}
-                </button>
+                </Button>
               </div>
               <pre className="bg-gray-900 text-green-100 p-4 rounded-lg text-sm overflow-x-auto">
                 {JSON.stringify(generateMCPConfig(), null, 2)}
@@ -475,18 +471,18 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
           ) : (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium text-gray-900 dark:text-white">Configuration JSON:</h4>
-                <button
+                <h4 className="font-medium text-foreground">Configuration JSON:</h4>
+                <Button
                   onClick={copyConfigToClipboard}
-                  className={`flex items-center gap-2 px-3 py-2 text-white rounded-lg transition-colors duration-200 ${
+                  className={`flex items-center gap-2 text-white ${
                     copied
-                      ? 'bg-green-700'
-                      : 'bg-green-600 hover:bg-green-700'
+                      ? 'bg-primary'
+                      : 'bg-primary hover:bg-primary/90'
                   }`}
                 >
-                  <ClipboardDocumentIcon className="h-4 w-4" />
+                  <ClipboardList className="h-4 w-4" />
                   {copied ? 'Copied!' : 'Copy to Clipboard'}
-                </button>
+                </Button>
               </div>
               <pre className="bg-gray-900 text-green-100 p-4 rounded-lg text-sm overflow-x-auto">
                 {JSON.stringify(generateMCPConfig(), null, 2)}
@@ -494,8 +490,8 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

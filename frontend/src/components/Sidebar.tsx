@@ -1,19 +1,29 @@
-import React, { Fragment, useEffect, useState } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  XMarkIcon,
-  FunnelIcon,
-  ChartBarIcon,
-  KeyIcon,
-  ArrowLeftIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ClipboardIcon,
-  CheckIcon,
-  ArrowDownTrayIcon,
-  TagIcon,
-} from '@heroicons/react/24/outline';
+  X,
+  Filter,
+  BarChart3,
+  Key,
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  Clipboard,
+  Check,
+  Download,
+  Tag,
+} from 'lucide-react';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 
@@ -97,13 +107,13 @@ const fetchAdminTokens = async () => {
       description: 'Generated via sidebar',
       expires_in_hours: 8,
     };
-    
+
     const response = await axios.post('/api/tokens/generate', requestData, {
       headers: {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (response.data.success) {
       setTokenData(response.data);
       setShowTokenModal(true);
@@ -154,67 +164,67 @@ const fetchAdminTokens = async () => {
           <div className="space-y-2 mb-6">
             <Link
               to="/"
-              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-purple-500 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring text-foreground hover:bg-accent"
               onClick={() => window.innerWidth < 768 && setSidebarOpen(false)} // Only close on mobile
               tabIndex={0}
             >
-              <ArrowLeftIcon className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" />
               <span>Back to Dashboard</span>
             </Link>
-            
+
             <Link
               to="/generate-token"
-              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-purple-500 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300"
+              className="flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-ring bg-primary/10 text-primary"
               tabIndex={0}
             >
-              <KeyIcon className="h-4 w-4" />
+              <Key className="h-4 w-4" />
               <span>Generate Token</span>
             </Link>
           </div>
 
           {/* User Access Information */}
           {user && (
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
+            <div className="p-3 bg-muted rounded-lg mb-6">
               <div className="text-sm">
-                <div className="font-medium text-gray-900 dark:text-white mb-1">
+                <div className="font-medium text-foreground mb-1">
                   {user.username}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">
+                <div className="text-xs text-muted-foreground mb-2">
                   {user.is_admin ? (
-                    <span className="text-green-600 dark:text-green-400">🔑 Admin Access</span>
+                    <span className="text-foreground font-medium">Admin Access</span>
                   ) : user.can_modify_servers ? (
-                    <span className="text-blue-600 dark:text-blue-400">⚙️ Modify Access</span>
+                    <span className="text-foreground font-medium">Modify Access</span>
                   ) : (
-                    <span className="text-gray-600 dark:text-gray-300">👁️ Read-only Access</span>
+                    <span className="text-muted-foreground">Read-only Access</span>
                   )}
                   {user.auth_method === 'oauth2' && user.provider && (
                     <span className="ml-1">({user.provider})</span>
                   )}
                 </div>
-                
+
                 {/* Scopes toggle */}
                 {!user.is_admin && user.scopes && user.scopes.length > 0 && (
                   <div>
                     <button
                       onClick={() => setShowScopes(!showScopes)}
-                      className="flex items-center justify-between w-full text-xs text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 transition-colors py-1"
+                      className="flex items-center justify-between w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
                     >
                       <span>Scopes ({user.scopes.length})</span>
                       {showScopes ? (
-                        <ChevronUpIcon className="h-3 w-3" />
+                        <ChevronUp className="h-3 w-3" />
                       ) : (
-                        <ChevronDownIcon className="h-3 w-3" />
+                        <ChevronDown className="h-3 w-3" />
                       )}
                     </button>
-                    
+
                     {showScopes && (
                       <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
                         {user.scopes.map((scope) => (
-                          <div key={scope} className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded text-xs">
-                            <div className="font-medium text-blue-800 dark:text-blue-200">
+                          <div key={scope} className="bg-primary/10 p-2 rounded text-xs">
+                            <div className="font-medium text-primary">
                               {scope}
                             </div>
-                            <div className="text-blue-600 dark:text-blue-300 mt-1">
+                            <div className="text-primary mt-1">
                               {getScopeDescription(scope)}
                             </div>
                           </div>
@@ -229,15 +239,15 @@ const fetchAdminTokens = async () => {
 
           {/* Token Generation Help */}
           <div className="text-center">
-            <KeyIcon className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Token Generation</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <Key className="h-12 w-12 text-primary mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">Token Generation</h3>
+            <p className="text-sm text-muted-foreground mb-4">
               Create personal access tokens for programmatic access to MCP servers
             </p>
-            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-              <p>• Tokens inherit your current permissions</p>
-              <p>• Configure expiration time and scopes</p>
-              <p>• Use tokens for programmatic access</p>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>- Tokens inherit your current permissions</p>
+              <p>- Configure expiration time and scopes</p>
+              <p>- Use tokens for programmatic access</p>
             </div>
           </div>
         </div>
@@ -245,21 +255,21 @@ const fetchAdminTokens = async () => {
         /* Dashboard - Show user info, filters and stats */
         <>
           {/* User Info Header */}
-          <div className="p-4 md:p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="p-4 md:p-6 border-b border-border">
             {/* User Access Information */}
             {user && (
-              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="p-3 bg-muted rounded-lg">
                 <div className="text-sm">
-                  <div className="font-medium text-gray-900 dark:text-white mb-1">
+                  <div className="font-medium text-foreground mb-1">
                     {user.username}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-300 mb-2">
+                  <div className="text-xs text-muted-foreground mb-2">
                     {user.is_admin ? (
-                      <span className="text-green-600 dark:text-green-400">🔑 Admin Access</span>
+                      <span className="text-foreground font-medium">Admin Access</span>
                     ) : user.can_modify_servers ? (
-                      <span className="text-blue-600 dark:text-blue-400">⚙️ Modify Access</span>
+                      <span className="text-foreground font-medium">Modify Access</span>
                     ) : (
-                      <span className="text-gray-600 dark:text-gray-300">👁️ Read-only Access</span>
+                      <span className="text-muted-foreground">Read-only Access</span>
                     )}
                     {user.auth_method === 'oauth2' && user.provider && (
                       <span className="ml-1">({user.provider})</span>
@@ -268,25 +278,27 @@ const fetchAdminTokens = async () => {
 
                   {/* JWT Token Button - Available to all users */}
                   <div className="mb-2">
-                    <button
+                    <Button
                       onClick={fetchAdminTokens}
                       disabled={loading}
-                      className="w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                      variant="secondary"
+                      size="sm"
+                      className="w-full"
                     >
                       {loading ? (
                         <>
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-purple-700 dark:border-purple-300"></div>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-foreground"></div>
                           <span>Loading...</span>
                         </>
                       ) : (
                         <>
-                          <KeyIcon className="h-3 w-3" />
+                          <Key data-icon="inline-start" />
                           <span>Get JWT Token</span>
                         </>
                       )}
-                    </button>
+                    </Button>
                     {error && (
-                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>
+                      <p className="mt-1 text-xs text-destructive">{error}</p>
                     )}
                   </div>
 
@@ -295,24 +307,24 @@ const fetchAdminTokens = async () => {
                     <div>
                       <button
                         onClick={() => setShowScopes(!showScopes)}
-                        className="flex items-center justify-between w-full text-xs text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 transition-colors py-1"
+                        className="flex items-center justify-between w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
                       >
                         <span>Scopes ({user.scopes.length})</span>
                         {showScopes ? (
-                          <ChevronUpIcon className="h-3 w-3" />
+                          <ChevronUp className="h-3 w-3" />
                         ) : (
-                          <ChevronDownIcon className="h-3 w-3" />
+                          <ChevronDown className="h-3 w-3" />
                         )}
                       </button>
 
                       {showScopes && (
                         <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
                           {user.scopes.map((scope) => (
-                            <div key={scope} className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded text-xs">
-                              <div className="font-medium text-blue-800 dark:text-blue-200">
+                            <div key={scope} className="bg-primary/10 p-2 rounded text-xs">
+                              <div className="font-medium text-primary">
                                 {scope}
                               </div>
-                              <div className="text-blue-600 dark:text-blue-300 mt-1">
+                              <div className="text-primary mt-1">
                                 {getScopeDescription(scope)}
                               </div>
                             </div>
@@ -329,43 +341,42 @@ const fetchAdminTokens = async () => {
           {/* Filters Section */}
           <div className="flex-1 p-4 md:p-6">
             <div className="flex items-center space-x-2 mb-4">
-              <FunnelIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Filter Services</h3>
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium text-foreground">Filter Services</h3>
             </div>
-            
-            <div className="space-y-2">
+
+            <div className="flex flex-col gap-1">
               {filters.map((filter) => (
-                <button
+                <Button
                   key={filter.key}
+                  variant={activeFilter === filter.key ? 'secondary' : 'ghost'}
+                  size="lg"
                   onClick={() => setActiveFilter(filter.key)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-purple-500 ${
+                  className={`w-full justify-between ${
                     activeFilter === filter.key
-                      ? 'bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800'
-                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      ? 'bg-accent text-accent-foreground'
+                      : ''
                   }`}
-                  tabIndex={0}
                 >
-                  <div className="flex items-center justify-between">
-                    <span>{filter.label}</span>
-                    <span className="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
-                      {stats[filter.count as keyof typeof stats]}
-                    </span>
-                  </div>
-                </button>
+                  <span>{filter.label}</span>
+                  <Badge variant="secondary">
+                    {stats[filter.count as keyof typeof stats]}
+                  </Badge>
+                </Button>
               ))}
             </div>
           </div>
 
           {/* Tags Section */}
           {availableTags.length > 0 && (
-            <div className="border-t border-gray-200 dark:border-gray-700 p-4 md:p-6">
+            <div className="border-t border-border p-4 md:p-6">
               <div className="flex items-center space-x-2 mb-3">
-                <TagIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white">Filter by Tag</h3>
+                <Tag className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-medium text-foreground">Filter by Tag</h3>
                 {selectedTags.length > 0 && (
                   <button
                     onClick={() => selectedTags.forEach(t => onTagSelect(t))}
-                    className="text-xs text-purple-600 dark:text-purple-400 hover:underline ml-auto"
+                    className="text-xs text-primary hover:underline ml-auto"
                   >
                     Clear all
                   </button>
@@ -376,19 +387,15 @@ const fetchAdminTokens = async () => {
               {selectedTags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {selectedTags.map((tag) => (
-                    <span
+                    <Badge
                       key={tag}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
+                      variant="secondary"
+                      className="gap-1 cursor-pointer"
+                      onClick={() => onTagSelect(tag)}
                     >
                       {tag}
-                      <button
-                        onClick={() => onTagSelect(tag)}
-                        className="hover:text-purple-900 dark:hover:text-purple-100 focus:outline-hidden"
-                        aria-label={`Remove tag ${tag}`}
-                      >
-                        <XMarkIcon className="h-3 w-3" />
-                      </button>
-                    </span>
+                      <X className="h-3 w-3" data-icon="inline-end" />
+                    </Badge>
                   ))}
                 </div>
               )}
@@ -401,7 +408,7 @@ const fetchAdminTokens = async () => {
                 );
                 return (
                   <div className="relative" ref={tagDropdownRef}>
-                    <input
+                    <Input
                       type="text"
                       placeholder="Search tags..."
                       value={tagSearch}
@@ -435,10 +442,10 @@ const fetchAdminTokens = async () => {
                           setTagDropdownOpen(false);
                         }
                       }}
-                      className="w-full px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-hidden focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full text-xs"
                     />
                     {tagDropdownOpen && (
-                      <div className="absolute z-50 mt-1 w-full max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">
+                      <div className="absolute z-50 mt-1 w-full max-h-40 overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
                         {filteredTags.map((tag, idx) => (
                           <button
                             key={tag}
@@ -451,15 +458,15 @@ const fetchAdminTokens = async () => {
                             onMouseEnter={() => setTagHighlightIndex(idx)}
                             className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
                               idx === tagHighlightIndex
-                                ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                                : 'text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:text-purple-700 dark:hover:text-purple-300'
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-foreground hover:bg-primary/10 hover:text-primary dark:hover:text-primary'
                             }`}
                           >
                             {tag}
                           </button>
                         ))}
                         {filteredTags.length === 0 && (
-                          <div className="px-3 py-2 text-xs text-gray-400 dark:text-gray-500">
+                          <div className="px-3 py-2 text-xs text-muted-foreground">
                             No matching tags
                           </div>
                         )}
@@ -472,29 +479,37 @@ const fetchAdminTokens = async () => {
           )}
 
           {/* Statistics Section */}
-          <div className="border-t border-gray-200 dark:border-gray-700 p-4 md:p-6">
+          <div className="border-t border-border p-4 md:p-6">
             <div className="flex items-center space-x-2 mb-4">
-              <ChartBarIcon className="h-5 w-5 text-gray-500" />
-              <h3 className="text-sm font-medium text-gray-900 dark:text-white">Statistics</h3>
+              <BarChart3 className="h-5 w-5 text-muted-foreground" />
+              <h3 className="text-sm font-medium text-foreground">Statistics</h3>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3">
-              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-xl font-semibold text-gray-900 dark:text-white">{stats.total}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-300">Total</div>
-              </div>
-              <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <div className="text-xl font-semibold text-green-600 dark:text-green-400">{stats.enabled}</div>
-                <div className="text-xs text-green-600 dark:text-green-400">Enabled</div>
-              </div>
-              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div className="text-xl font-semibold text-gray-500 dark:text-gray-300">{stats.disabled}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-300">Disabled</div>
-              </div>
-              <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                <div className="text-xl font-semibold text-red-600 dark:text-red-400">{stats.withIssues}</div>
-                <div className="text-xs text-red-600 dark:text-red-400">Issues</div>
-              </div>
+              <Card className="text-center">
+                <CardContent className="py-3">
+                  <div className="text-xl font-semibold text-foreground">{stats.total}</div>
+                  <div className="text-xs text-muted-foreground">Total</div>
+                </CardContent>
+              </Card>
+              <Card className="text-center">
+                <CardContent className="py-3">
+                  <div className="text-xl font-semibold text-primary">{stats.enabled}</div>
+                  <div className="text-xs text-muted-foreground">Enabled</div>
+                </CardContent>
+              </Card>
+              <Card className="text-center">
+                <CardContent className="py-3">
+                  <div className="text-xl font-semibold text-muted-foreground">{stats.disabled}</div>
+                  <div className="text-xs text-muted-foreground">Disabled</div>
+                </CardContent>
+              </Card>
+              <Card className="text-center">
+                <CardContent className="py-3">
+                  <div className="text-xl font-semibold text-destructive">{stats.withIssues}</div>
+                  <div className="text-xs text-muted-foreground">Issues</div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </>
@@ -504,172 +519,99 @@ const fetchAdminTokens = async () => {
 
   return (
     <>
-      {/* Mobile sidebar only */}
+      {/* Mobile sidebar - Sheet */}
       {window.innerWidth < 768 && (
-        <Transition.Root show={sidebarOpen} as={Fragment}>
-          <Dialog as="div" className="relative z-50" onClose={setSidebarOpen}>
-            <Transition.Child
-              as={Fragment}
-              enter="transition-opacity ease-linear duration-300"
-              enterFrom="opacity-0"
-              enterTo="opacity-100"
-              leave="transition-opacity ease-linear duration-300"
-              leaveFrom="opacity-100"
-              leaveTo="opacity-0"
-            >
-              <div className="fixed inset-0 bg-gray-900/80" />
-            </Transition.Child>
-
-            <div className="fixed inset-0 flex">
-              <Transition.Child
-                as={Fragment}
-                enter="transition ease-in-out duration-300 transform"
-                enterFrom="-translate-x-full"
-                enterTo="translate-x-0"
-                leave="transition ease-in-out duration-300 transform"
-                leaveFrom="translate-x-0"
-                leaveTo="-translate-x-full"
-              >
-                <Dialog.Panel className="relative mr-16 flex w-full max-w-xs flex-1">
-                  <Transition.Child
-                    as={Fragment}
-                    enter="ease-in-out duration-300"
-                    enterFrom="opacity-0"
-                    enterTo="opacity-100"
-                    leave="ease-in-out duration-300"
-                    leaveFrom="opacity-100"
-                    leaveTo="opacity-0"
-                  >
-                    <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
-                      <button
-                        type="button"
-                        className="-m-2.5 p-2.5"
-                        onClick={() => setSidebarOpen(false)}
-                        aria-label="Close sidebar"
-                      >
-                        <XMarkIcon className="h-6 w-6 text-white" />
-                      </button>
-                    </div>
-                  </Transition.Child>
-                  
-                  <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-                    {sidebarContent}
-                  </div>
-                </Dialog.Panel>
-              </Transition.Child>
-            </div>
-          </Dialog>
-        </Transition.Root>
-      )}
-
-      {/* Desktop sidebar only */}
-      {window.innerWidth >= 768 && (
-        <Transition show={sidebarOpen} as={Fragment}>
-          <Transition.Child
-            as={Fragment}
-            enter="transition ease-in-out duration-300 transform"
-            enterFrom="-translate-x-full"
-            enterTo="translate-x-0"
-            leave="transition ease-in-out duration-300 transform"
-            leaveFrom="translate-x-0"
-            leaveTo="-translate-x-full"
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetContent
+            side="left"
+            className="w-full max-w-xs p-0 bg-card border-r border-border"
+            showCloseButton={false}
           >
-            <div className="fixed left-0 top-16 bottom-0 z-40 w-64 lg:w-72 xl:w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+            <div className="absolute right-0 top-0 -mr-12 flex w-16 justify-center pt-5">
+              <button
+                type="button"
+                className="-m-2.5 p-2.5"
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Close sidebar"
+              >
+                <X className="h-6 w-6 text-white" />
+              </button>
+            </div>
+            <div className="flex grow flex-col gap-y-5 overflow-y-auto">
               {sidebarContent}
             </div>
-          </Transition.Child>
-        </Transition>
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Desktop sidebar */}
+      {window.innerWidth >= 768 && sidebarOpen && (
+        <div className="fixed left-0 top-16 bottom-0 z-40 w-64 lg:w-72 xl:w-80 bg-card border-r border-border overflow-y-auto transition ease-in-out duration-300 transform">
+          {sidebarContent}
+        </div>
       )}
 
       {/* Token Modal */}
-      <Transition appear show={showTokenModal} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => setShowTokenModal(false)}>
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-black bg-opacity-25" />
-          </Transition.Child>
+      <Dialog open={showTokenModal} onOpenChange={setShowTokenModal}>
+        <DialogContent className="sm:max-w-3xl bg-card p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-medium leading-6 text-foreground">
+              JWT Access Token
+            </DialogTitle>
+          </DialogHeader>
 
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-              >
-                <Dialog.Panel className="w-full max-w-3xl transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
-                  <Dialog.Title
-                    as="h3"
-                    className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4"
-                  >
-                    JWT Access Token
-                  </Dialog.Title>
-
-                  {tokenData && (
-                    <div className="space-y-4">
-                      {/* Action Buttons */}
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={handleCopyTokens}
-                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                        >
-                          {copied ? (
-                            <>
-                              <CheckIcon className="h-4 w-4" />
-                              <span>Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <ClipboardIcon className="h-4 w-4" />
-                              <span>Copy JSON</span>
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={handleDownloadTokens}
-                          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                        >
-                          <ArrowDownTrayIcon className="h-4 w-4" />
-                          <span>Download JSON</span>
-                        </button>
-                      </div>
-
-                      {/* Token Data Display */}
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 max-h-96 overflow-y-auto">
-                        <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-all">
-                          {JSON.stringify(tokenData, null, 2)}
-                        </pre>
-                      </div>
-
-                      {/* Close Button */}
-                      <div className="flex justify-end">
-                        <button
-                          onClick={() => setShowTokenModal(false)}
-                          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
+          {tokenData && (
+            <div className="space-y-4">
+              {/* Action Buttons */}
+              <div className="flex space-x-2">
+                <Button
+                  onClick={handleCopyTokens}
+                  className="flex items-center space-x-2 bg-primary text-white hover:bg-primary/90 text-sm"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Clipboard className="h-4 w-4" />
+                      <span>Copy JSON</span>
+                    </>
                   )}
-                </Dialog.Panel>
-              </Transition.Child>
+                </Button>
+                <Button
+                  onClick={handleDownloadTokens}
+                  className="flex items-center space-x-2 bg-primary text-white hover:bg-primary/90 text-sm"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download JSON</span>
+                </Button>
+              </div>
+
+              {/* Token Data Display */}
+              <div className="bg-muted rounded-lg p-4 max-h-96 overflow-y-auto">
+                <pre className="text-xs text-foreground whitespace-pre-wrap break-all">
+                  {JSON.stringify(tokenData, null, 2)}
+                </pre>
+              </div>
+
+              {/* Close Button */}
+              <div className="flex justify-end">
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowTokenModal(false)}
+                  className="text-sm"
+                >
+                  Close
+                </Button>
+              </div>
             </div>
-          </div>
-        </Dialog>
-      </Transition>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
 
-export default Sidebar; 
+export default Sidebar;

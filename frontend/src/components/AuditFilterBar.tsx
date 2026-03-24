@@ -2,10 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import SearchableSelect, { SelectOption } from './SearchableSelect';
 import axios from 'axios';
 import {
-  FunnelIcon,
-  XMarkIcon,
-  ArrowPathIcon,
-} from '@heroicons/react/24/outline';
+  Filter,
+  X,
+  RefreshCw,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export interface AuditFilters {
   stream: 'registry_api' | 'mcp_access';
@@ -137,11 +141,11 @@ const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
     }
   }, [filters.stream]);
 
-  const handleStreamChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleStreamChange = (value: string) => {
     // Clear operation and resource type filters when switching streams
     onFilterChange({
       ...filters,
-      stream: e.target.value as 'registry_api' | 'mcp_access',
+      stream: value as 'registry_api' | 'mcp_access',
       operation: undefined,
       resourceType: undefined,
     });
@@ -168,17 +172,17 @@ const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
     });
   };
 
-  const handleOperationChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleOperationChange = (value: string) => {
     onFilterChange({
       ...filters,
-      operation: e.target.value || undefined,
+      operation: value || undefined,
     });
   };
 
-  const handleResourceTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleResourceTypeChange = (value: string) => {
     onFilterChange({
       ...filters,
-      resourceType: e.target.value || undefined,
+      resourceType: value || undefined,
     });
   };
 
@@ -189,8 +193,7 @@ const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
     });
   };
 
-  const handleStatusPresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
+  const handleStatusPresetChange = (value: string) => {
     let statusMin: number | undefined;
     let statusMax: number | undefined;
 
@@ -256,78 +259,81 @@ const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
   );
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xs border border-gray-200 dark:border-gray-700 p-4 mb-4">
+    <Card className="p-4 mb-4">
       <div className="flex items-center gap-2 mb-4">
-        <FunnelIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <Filter className="h-5 w-5 text-muted-foreground" />
+        <h3 className="text-sm font-medium text-foreground">
           Filters
         </h3>
         {hasActiveFilters && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleClearFilters}
-            className="ml-auto flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="ml-auto"
           >
-            <XMarkIcon className="h-4 w-4" />
+            <X className="h-4 w-4" />
             Clear filters
-          </button>
+          </Button>
         )}
         {onRefresh && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon-sm"
             onClick={onRefresh}
             disabled={loading}
-            className="ml-2 p-1.5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors disabled:opacity-50"
             title="Refresh"
+            className="ml-2"
           >
-            <ArrowPathIcon className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
         )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Stream Selector */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Log Stream
           </label>
-          <select
-            value={filters.stream}
-            onChange={handleStreamChange}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="registry_api">Registry API</option>
-            <option value="mcp_access">MCP Access</option>
-          </select>
+          <Select value={filters.stream} onValueChange={handleStreamChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select stream" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="registry_api">Registry API</SelectItem>
+              <SelectItem value="mcp_access">MCP Access</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Date Range - From */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             From Date
           </label>
-          <input
+          <Input
             type="datetime-local"
             value={filters.from || ''}
             onChange={handleFromChange}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
         {/* Date Range - To */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             To Date
           </label>
-          <input
+          <Input
             type="datetime-local"
             value={filters.to || ''}
             onChange={handleToChange}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
         {/* Username Filter */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Username
           </label>
           <SearchableSelect
@@ -338,31 +344,32 @@ const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
             isLoading={optionsLoading}
             allowCustom={true}
             specialOptions={[{ value: '', label: 'All Users' }]}
-            focusColor="focus:ring-blue-500"
+            focusColor="focus:ring-ring"
           />
         </div>
 
         {/* Operation / MCP Method Filter */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             {isMcpStream ? 'MCP Method' : 'Operation'}
           </label>
-          <select
-            value={filters.operation || ''}
-            onChange={handleOperationChange}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {operationOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          <Select value={filters.operation || ''} onValueChange={handleOperationChange}>
+            <SelectTrigger>
+              <SelectValue placeholder={isMcpStream ? 'All Methods' : 'All Operations'} />
+            </SelectTrigger>
+            <SelectContent>
+              {operationOptions.map((opt) => (
+                <SelectItem key={opt.value || '__all__'} value={opt.value || '__all__'}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Resource Type / Server Name Filter */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             {isMcpStream ? 'Server Name' : 'Resource Type'}
           </label>
           {isMcpStream ? (
@@ -374,42 +381,44 @@ const AuditFilterBar: React.FC<AuditFilterBarProps> = ({
               isLoading={optionsLoading}
               allowCustom={true}
               specialOptions={[{ value: '', label: 'All Servers' }]}
-              focusColor="focus:ring-blue-500"
+              focusColor="focus:ring-ring"
             />
           ) : (
-            <select
-              value={filters.resourceType || ''}
-              onChange={handleResourceTypeChange}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {resourceTypeOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <Select value={filters.resourceType || ''} onValueChange={handleResourceTypeChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Resources" />
+              </SelectTrigger>
+              <SelectContent>
+                {resourceTypeOptions.map((opt) => (
+                  <SelectItem key={opt.value || '__all__'} value={opt.value || '__all__'}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
         </div>
 
         {/* Status Code Range Filter */}
         <div>
-          <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+          <label className="block text-xs font-medium text-muted-foreground mb-1">
             Status Code
           </label>
-          <select
-            value={getStatusPresetValue()}
-            onChange={handleStatusPresetChange}
-            className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            {STATUS_PRESETS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          <Select value={getStatusPresetValue() || '__all__'} onValueChange={(v) => handleStatusPresetChange(v === '__all__' ? '' : v)}>
+            <SelectTrigger>
+              <SelectValue placeholder="All Status Codes" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_PRESETS.map((opt) => (
+                <SelectItem key={opt.value || '__all__'} value={opt.value || '__all__'}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

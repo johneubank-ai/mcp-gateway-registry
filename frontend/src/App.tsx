@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { TooltipProvider } from './components/ui/tooltip';
+import { Toaster } from './components/ui/sonner';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import TokenGeneration from './pages/TokenGeneration';
@@ -26,6 +28,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <TooltipProvider>
         <Router basename={getBasename()}>
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -61,6 +64,8 @@ function App() {
             } />
           </Routes>
         </Router>
+        <Toaster />
+        </TooltipProvider>
       </AuthProvider>
     </ThemeProvider>
   );

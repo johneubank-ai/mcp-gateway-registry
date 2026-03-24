@@ -1,58 +1,25 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeftIcon,
-  CloudArrowUpIcon,
-  DocumentTextIcon,
-  ServerIcon,
-  CpuChipIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-  XMarkIcon,
-  InformationCircleIcon,
-} from '@heroicons/react/24/outline';
+  ArrowLeft,
+  CloudUpload,
+  FileText,
+  Server,
+  Cpu,
+  CheckCircle,
+  AlertCircle,
+  Info,
+} from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-
-
-// Toast notification component
-interface ToastProps {
-  message: string;
-  type: 'success' | 'error';
-  onClose: () => void;
-}
-
-const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose();
-    }, 4000);
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  return (
-    <div className="fixed top-4 right-4 z-50 animate-slide-in-top">
-      <div className={`flex items-center p-4 rounded-lg shadow-lg border ${
-        type === 'success'
-          ? 'bg-green-50 border-green-200 text-green-800 dark:bg-green-900/50 dark:border-green-700 dark:text-green-200'
-          : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/50 dark:border-red-700 dark:text-red-200'
-      }`}>
-        {type === 'success' ? (
-          <CheckCircleIcon className="h-5 w-5 mr-3 flex-shrink-0" />
-        ) : (
-          <ExclamationCircleIcon className="h-5 w-5 mr-3 flex-shrink-0" />
-        )}
-        <p className="text-sm font-medium">{message}</p>
-        <button
-          onClick={onClose}
-          className="ml-3 flex-shrink-0 text-current opacity-70 hover:opacity-100"
-        >
-          <XMarkIcon className="h-4 w-4" />
-        </button>
-      </div>
-    </div>
-  );
-};
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Card } from '@/components/ui/card';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 type RegistrationType = 'server' | 'agent';
@@ -158,7 +125,6 @@ const RegisterPage: React.FC = () => {
   const [jsonContent, setJsonContent] = useState<string>('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
 
   const generatePath = useCallback((name: string): string => {
@@ -329,9 +295,9 @@ const RegisterPage: React.FC = () => {
           }));
         }
 
-        setToast({ message: 'JSON file loaded successfully', type: 'success' });
+        toast.success('JSON file loaded successfully');
       } catch {
-        setToast({ message: 'Invalid JSON file', type: 'error' });
+        toast.error('Invalid JSON file');
       }
     };
     reader.readAsText(file);
@@ -395,7 +361,7 @@ const RegisterPage: React.FC = () => {
         },
       });
 
-      setToast({ message: 'Server registered successfully!', type: 'success' });
+      toast.success('Server registered successfully!');
       setTimeout(() => navigate('/'), 1500);
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { detail?: string; error?: string; reason?: string } } };
@@ -403,7 +369,7 @@ const RegisterPage: React.FC = () => {
         || axiosError.response?.data?.reason
         || axiosError.response?.data?.detail
         || 'Failed to register server';
-      setToast({ message, type: 'error' });
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -444,7 +410,7 @@ const RegisterPage: React.FC = () => {
         },
       });
 
-      setToast({ message: 'Agent registered successfully!', type: 'success' });
+      toast.success('Agent registered successfully!');
       setTimeout(() => navigate('/'), 1500);
     } catch (error: unknown) {
       const axiosError = error as { response?: { data?: { detail?: string | { message?: string } } } };
@@ -456,16 +422,16 @@ const RegisterPage: React.FC = () => {
           message = axiosError.response.data.detail.message;
         }
       }
-      setToast({ message, type: 'error' });
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   }, [loading, agentForm, validateAgentForm, navigate]);
 
 
-  const inputClass = "block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-purple-500 focus:border-purple-500";
-  const labelClass = "block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1";
-  const errorClass = "mt-1 text-sm text-red-500 dark:text-red-400";
+  const inputClass = "block w-full px-3 py-2 border border-border rounded-md bg-card text-foreground focus:ring-ring focus:border-ring";
+  const labelClass = "block text-sm font-medium text-foreground mb-1";
+  const errorClass = "mt-1 text-sm text-destructive";
 
 
   const renderServerForm = () => (
@@ -473,18 +439,18 @@ const RegisterPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Required Fields */}
         <div className="md:col-span-2">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-            <span className="bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 px-2 py-1 rounded text-xs mr-2">Required</span>
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center">
+            <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs mr-2">Required</span>
             Basic Information
           </h3>
         </div>
 
         <div>
-          <label className={labelClass}>Server Name *</label>
-          <input
+          <Label className={labelClass}>Server Name *</Label>
+          <Input
             type="text"
             required
-            className={`${inputClass} ${errors.name ? 'border-red-500' : ''}`}
+            className={errors.name ? 'border-destructive' : ''}
             value={serverForm.name}
             onChange={(e) => handleServerNameChange(e.target.value)}
             placeholder="e.g., My Custom Server"
@@ -493,25 +459,25 @@ const RegisterPage: React.FC = () => {
         </div>
 
         <div>
-          <label className={labelClass}>Path *</label>
-          <input
+          <Label className={labelClass}>Path *</Label>
+          <Input
             type="text"
             required
-            className={`${inputClass} ${errors.path ? 'border-red-500' : ''}`}
+            className={errors.path ? 'border-destructive' : ''}
             value={serverForm.path}
             onChange={(e) => setServerForm(prev => ({ ...prev, path: e.target.value }))}
             placeholder="/my-server"
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Auto-generated from name, but can be customized</p>
+          <p className="mt-1 text-xs text-muted-foreground">Auto-generated from name, but can be customized</p>
           {errors.path && <p className={errorClass}>{errors.path}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className={labelClass}>Proxy URL *</label>
-          <input
+          <Label className={labelClass}>Proxy URL *</Label>
+          <Input
             type="url"
             required
-            className={`${inputClass} ${errors.proxy_pass_url ? 'border-red-500' : ''}`}
+            className={errors.proxy_pass_url ? 'border-destructive' : ''}
             value={serverForm.proxy_pass_url}
             onChange={(e) => setServerForm(prev => ({ ...prev, proxy_pass_url: e.target.value }))}
             placeholder="http://localhost:8080"
@@ -520,10 +486,10 @@ const RegisterPage: React.FC = () => {
         </div>
 
         <div className="md:col-span-2">
-          <label className={labelClass}>Description *</label>
-          <textarea
+          <Label className={labelClass}>Description *</Label>
+          <Textarea
             required
-            className={`${inputClass} ${errors.description ? 'border-red-500' : ''}`}
+            className={errors.description ? 'border-destructive' : ''}
             rows={3}
             value={serverForm.description}
             onChange={(e) => setServerForm(prev => ({ ...prev, description: e.target.value }))}
@@ -534,42 +500,44 @@ const RegisterPage: React.FC = () => {
 
         {/* Optional Fields */}
         <div className="md:col-span-2 mt-4">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-            <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded text-xs mr-2">Optional</span>
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center">
+            <span className="bg-secondary text-muted-foreground px-2 py-1 rounded text-xs mr-2">Optional</span>
             Additional Settings
           </h3>
         </div>
 
         <div>
-          <label className={labelClass}>Tags</label>
-          <input
+          <Label className={labelClass}>Tags</Label>
+          <Input
             type="text"
-            className={inputClass}
             value={serverForm.tags}
             onChange={(e) => setServerForm(prev => ({ ...prev, tags: e.target.value }))}
             placeholder="tag1, tag2, tag3"
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Comma-separated list</p>
+          <p className="mt-1 text-xs text-muted-foreground">Comma-separated list</p>
         </div>
 
         <div>
-          <label className={labelClass}>Visibility</label>
-          <select
-            className={inputClass}
+          <Label className={labelClass}>Visibility</Label>
+          <Select
             value={serverForm.visibility}
-            onChange={(e) => setServerForm(prev => ({ ...prev, visibility: e.target.value }))}
+            onValueChange={(val) => setServerForm(prev => ({ ...prev, visibility: val }))}
           >
-            <option value="public">Public</option>
-            <option value="private">Private</option>
-            <option value="group-restricted">Group Restricted</option>
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="public">Public</SelectItem>
+              <SelectItem value="private">Private</SelectItem>
+              <SelectItem value="group-restricted">Group Restricted</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="md:col-span-2">
-          <label className={labelClass}>Repository URL</label>
-          <input
+          <Label className={labelClass}>Repository URL</Label>
+          <Input
             type="url"
-            className={inputClass}
             value={serverForm.repository_url}
             onChange={(e) => setServerForm(prev => ({ ...prev, repository_url: e.target.value }))}
             placeholder="https://github.com/username/repo"
@@ -578,22 +546,20 @@ const RegisterPage: React.FC = () => {
 
         {/* Backend Authentication */}
         <div className="md:col-span-2 mt-4">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-            <span className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-2 py-1 rounded text-xs mr-2">Optional</span>
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center">
+            <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs mr-2">Optional</span>
             Backend Authentication
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 -mt-2 mb-4">
+          <p className="text-sm text-muted-foreground -mt-2 mb-4">
             Configure credentials the gateway will use when proxying requests to your backend MCP server.
           </p>
         </div>
 
         <div>
-          <label className={labelClass}>Authentication Scheme</label>
-          <select
-            className={inputClass}
+          <Label className={labelClass}>Authentication Scheme</Label>
+          <Select
             value={serverForm.auth_scheme}
-            onChange={(e) => {
-              const newScheme = e.target.value;
+            onValueChange={(newScheme) => {
               setServerForm(prev => ({
                 ...prev,
                 auth_scheme: newScheme,
@@ -602,25 +568,29 @@ const RegisterPage: React.FC = () => {
               }));
             }}
           >
-            <option value="none">None</option>
-            <option value="bearer">Bearer Token</option>
-            <option value="api_key">API Key</option>
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              <SelectItem value="bearer">Bearer Token</SelectItem>
+              <SelectItem value="api_key">API Key</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {serverForm.auth_scheme !== 'none' && (
           <div>
-            <label className={labelClass}>
+            <Label className={labelClass}>
               {serverForm.auth_scheme === 'bearer' ? 'Bearer Token' : 'API Key'} *
-            </label>
-            <input
+            </Label>
+            <Input
               type="password"
-              className={inputClass}
               value={serverForm.auth_credential}
               onChange={(e) => setServerForm(prev => ({ ...prev, auth_credential: e.target.value }))}
               placeholder={serverForm.auth_scheme === 'bearer' ? 'Enter bearer token' : 'Enter API key'}
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-xs text-muted-foreground">
               This credential is stored securely and never displayed after saving.
             </p>
           </div>
@@ -628,15 +598,14 @@ const RegisterPage: React.FC = () => {
 
         {serverForm.auth_scheme === 'api_key' && (
           <div>
-            <label className={labelClass}>Header Name</label>
-            <input
+            <Label className={labelClass}>Header Name</Label>
+            <Input
               type="text"
-              className={inputClass}
               value={serverForm.auth_header_name}
               onChange={(e) => setServerForm(prev => ({ ...prev, auth_header_name: e.target.value }))}
               placeholder="X-API-Key"
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-xs text-muted-foreground">
               The HTTP header name used to send the API key (default: X-API-Key)
             </p>
           </div>
@@ -644,113 +613,111 @@ const RegisterPage: React.FC = () => {
 
         {/* Advanced Settings */}
         <div className="md:col-span-2 mt-4">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-            <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded text-xs mr-2">Advanced</span>
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center">
+            <span className="bg-secondary text-muted-foreground px-2 py-1 rounded text-xs mr-2">Advanced</span>
             Custom Endpoints & Metadata
           </h3>
         </div>
 
         <div>
-          <label className={labelClass}>MCP Endpoint (optional)</label>
-          <input
+          <Label className={labelClass}>MCP Endpoint (optional)</Label>
+          <Input
             type="url"
-            className={inputClass}
             value={serverForm.mcp_endpoint}
             onChange={(e) => setServerForm(prev => ({ ...prev, mcp_endpoint: e.target.value }))}
             placeholder="http://server.com/custom-mcp-path"
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Override default /mcp endpoint path</p>
+          <p className="mt-1 text-xs text-muted-foreground">Override default /mcp endpoint path</p>
         </div>
 
         <div>
-          <label className={labelClass}>SSE Endpoint (optional)</label>
-          <input
+          <Label className={labelClass}>SSE Endpoint (optional)</Label>
+          <Input
             type="url"
-            className={inputClass}
             value={serverForm.sse_endpoint}
             onChange={(e) => setServerForm(prev => ({ ...prev, sse_endpoint: e.target.value }))}
             placeholder="http://server.com/custom-sse-path"
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Override default /sse endpoint path</p>
+          <p className="mt-1 text-xs text-muted-foreground">Override default /sse endpoint path</p>
         </div>
 
         <div className="md:col-span-2">
-          <label className={labelClass}>Metadata (optional, JSON)</label>
-          <textarea
-            className={inputClass}
+          <Label className={labelClass}>Metadata (optional, JSON)</Label>
+          <Textarea
             rows={3}
             value={serverForm.metadata}
             onChange={(e) => setServerForm(prev => ({ ...prev, metadata: e.target.value }))}
             placeholder='{"team": "platform", "owner": "alice@example.com", "cost_center": "CC-1001"}'
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Custom key-value pairs for organization, compliance, or integration purposes</p>
+          <p className="mt-1 text-xs text-muted-foreground">Custom key-value pairs for organization, compliance, or integration purposes</p>
         </div>
       </div>
 
       {/* Lifecycle & Provider Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="md:col-span-2">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          <h3 className="text-lg font-medium text-foreground mb-4">
             Lifecycle & Provider Information
           </h3>
         </div>
 
         <div>
-          <label className={labelClass}>Status</label>
-          <select
-            className={inputClass}
+          <Label className={labelClass}>Status</Label>
+          <Select
             value={serverForm.status}
-            onChange={(e) => setServerForm(prev => ({ ...prev, status: e.target.value }))}
+            onValueChange={(val) => setServerForm(prev => ({ ...prev, status: val }))}
           >
-            <option value="active">Active</option>
-            <option value="beta">Beta</option>
-            <option value="draft">Draft</option>
-            <option value="deprecated">Deprecated</option>
-          </select>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Lifecycle status of this server</p>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="beta">Beta</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="deprecated">Deprecated</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="mt-1 text-xs text-muted-foreground">Lifecycle status of this server</p>
         </div>
 
         <div>
-          <label className={labelClass}>Provider Organization</label>
-          <input
+          <Label className={labelClass}>Provider Organization</Label>
+          <Input
             type="text"
-            className={inputClass}
             value={serverForm.provider_organization}
             onChange={(e) => setServerForm(prev => ({ ...prev, provider_organization: e.target.value }))}
             placeholder="ACME Inc."
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Organization providing this server</p>
+          <p className="mt-1 text-xs text-muted-foreground">Organization providing this server</p>
         </div>
 
         <div>
-          <label className={labelClass}>Provider URL</label>
-          <input
+          <Label className={labelClass}>Provider URL</Label>
+          <Input
             type="url"
-            className={inputClass}
             value={serverForm.provider_url}
             onChange={(e) => setServerForm(prev => ({ ...prev, provider_url: e.target.value }))}
             placeholder="https://example.com"
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Provider's website or documentation URL</p>
+          <p className="mt-1 text-xs text-muted-foreground">Provider's website or documentation URL</p>
         </div>
 
       </div>
 
-      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <button
+      <div className="flex justify-end space-x-3 pt-6 border-t border-border">
+        <Button
           type="button"
+          variant="secondary"
           onClick={() => navigate('/')}
-          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
           disabled={loading}
-          className="px-6 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
         >
           {loading ? 'Registering...' : 'Register Server'}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -761,18 +728,18 @@ const RegisterPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Required Fields */}
         <div className="md:col-span-2">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-            <span className="bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300 px-2 py-1 rounded text-xs mr-2">Required</span>
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center">
+            <span className="bg-primary/10 text-primary px-2 py-1 rounded text-xs mr-2">Required</span>
             Basic Information
           </h3>
         </div>
 
         <div>
-          <label className={labelClass}>Agent Name *</label>
-          <input
+          <Label className={labelClass}>Agent Name *</Label>
+          <Input
             type="text"
             required
-            className={`${inputClass} ${errors.name ? 'border-red-500' : ''}`}
+            className={errors.name ? 'border-destructive' : ''}
             value={agentForm.name}
             onChange={(e) => handleAgentNameChange(e.target.value)}
             placeholder="e.g., My AI Agent"
@@ -781,37 +748,37 @@ const RegisterPage: React.FC = () => {
         </div>
 
         <div>
-          <label className={labelClass}>Path (auto-generated)</label>
-          <input
+          <Label className={labelClass}>Path (auto-generated)</Label>
+          <Input
             type="text"
-            className={`${inputClass} ${errors.path ? 'border-red-500' : ''}`}
+            className={errors.path ? 'border-destructive' : ''}
             value={agentForm.path}
             onChange={(e) => setAgentForm(prev => ({ ...prev, path: e.target.value }))}
             placeholder="/my-agent"
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Leave empty to auto-generate from name</p>
+          <p className="mt-1 text-xs text-muted-foreground">Leave empty to auto-generate from name</p>
           {errors.path && <p className={errorClass}>{errors.path}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className={labelClass}>Agent URL *</label>
-          <input
+          <Label className={labelClass}>Agent URL *</Label>
+          <Input
             type="url"
             required
-            className={`${inputClass} ${errors.url ? 'border-red-500' : ''}`}
+            className={errors.url ? 'border-destructive' : ''}
             value={agentForm.url}
             onChange={(e) => setAgentForm(prev => ({ ...prev, url: e.target.value }))}
             placeholder="https://my-agent.example.com"
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">The endpoint URL where the agent can be reached</p>
+          <p className="mt-1 text-xs text-muted-foreground">The endpoint URL where the agent can be reached</p>
           {errors.url && <p className={errorClass}>{errors.url}</p>}
         </div>
 
         <div className="md:col-span-2">
-          <label className={labelClass}>Description *</label>
-          <textarea
+          <Label className={labelClass}>Description *</Label>
+          <Textarea
             required
-            className={`${inputClass} ${errors.description ? 'border-red-500' : ''}`}
+            className={errors.description ? 'border-destructive' : ''}
             rows={3}
             value={agentForm.description}
             onChange={(e) => setAgentForm(prev => ({ ...prev, description: e.target.value }))}
@@ -822,17 +789,16 @@ const RegisterPage: React.FC = () => {
 
         {/* Optional Fields */}
         <div className="md:col-span-2 mt-4">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-            <span className="bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded text-xs mr-2">Optional</span>
+          <h3 className="text-lg font-medium text-foreground mb-4 flex items-center">
+            <span className="bg-secondary text-muted-foreground px-2 py-1 rounded text-xs mr-2">Optional</span>
             Additional Settings
           </h3>
         </div>
 
         <div>
-          <label className={labelClass}>Protocol Version</label>
-          <input
+          <Label className={labelClass}>Protocol Version</Label>
+          <Input
             type="text"
-            className={inputClass}
             value={agentForm.protocol_version}
             onChange={(e) => setAgentForm(prev => ({ ...prev, protocol_version: e.target.value }))}
             placeholder="1.0"
@@ -840,10 +806,9 @@ const RegisterPage: React.FC = () => {
         </div>
 
         <div>
-          <label className={labelClass}>Agent Version</label>
-          <input
+          <Label className={labelClass}>Agent Version</Label>
+          <Input
             type="text"
-            className={inputClass}
             value={agentForm.version}
             onChange={(e) => setAgentForm(prev => ({ ...prev, version: e.target.value }))}
             placeholder="1.0.0"
@@ -851,47 +816,49 @@ const RegisterPage: React.FC = () => {
         </div>
 
         <div>
-          <label className={labelClass}>Tags</label>
-          <input
+          <Label className={labelClass}>Tags</Label>
+          <Input
             type="text"
-            className={inputClass}
             value={agentForm.tags}
             onChange={(e) => setAgentForm(prev => ({ ...prev, tags: e.target.value }))}
             placeholder="ai, assistant, nlp"
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Comma-separated list</p>
+          <p className="mt-1 text-xs text-muted-foreground">Comma-separated list</p>
         </div>
 
         <div>
-          <label className={labelClass}>Visibility</label>
-          <select
-            className={inputClass}
+          <Label className={labelClass}>Visibility</Label>
+          <Select
             value={agentForm.visibility}
-            onChange={(e) => setAgentForm(prev => ({ ...prev, visibility: e.target.value }))}
+            onValueChange={(val) => setAgentForm(prev => ({ ...prev, visibility: val }))}
           >
-            <option value="public">Public</option>
-            <option value="private">Private</option>
-            <option value="group-restricted">Group Restricted</option>
-          </select>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="public">Public</SelectItem>
+              <SelectItem value="private">Private</SelectItem>
+              <SelectItem value="group-restricted">Group Restricted</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="flex items-center">
           <label className="flex items-center">
             <input
               type="checkbox"
-              className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+              className="h-4 w-4 text-primary focus:ring-ring border-border rounded"
               checked={agentForm.streaming}
               onChange={(e) => setAgentForm(prev => ({ ...prev, streaming: e.target.checked }))}
             />
-            <span className="ml-2 text-sm text-gray-700 dark:text-gray-200">Supports streaming responses</span>
+            <span className="ml-2 text-sm text-foreground">Supports streaming responses</span>
           </label>
         </div>
 
         <div className="md:col-span-2">
-          <label className={labelClass}>Repository URL</label>
-          <input
+          <Label className={labelClass}>Repository URL</Label>
+          <Input
             type="url"
-            className={inputClass}
             value={agentForm.repository_url}
             onChange={(e) => setAgentForm(prev => ({ ...prev, repository_url: e.target.value }))}
             placeholder="https://github.com/username/repo"
@@ -902,67 +869,68 @@ const RegisterPage: React.FC = () => {
       {/* Lifecycle & Provider Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="md:col-span-2">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          <h3 className="text-lg font-medium text-foreground mb-4">
             Lifecycle & Provider Information
           </h3>
         </div>
 
         <div>
-          <label className={labelClass}>Status</label>
-          <select
-            className={inputClass}
+          <Label className={labelClass}>Status</Label>
+          <Select
             value={agentForm.status}
-            onChange={(e) => setAgentForm(prev => ({ ...prev, status: e.target.value }))}
+            onValueChange={(val) => setAgentForm(prev => ({ ...prev, status: val }))}
           >
-            <option value="active">Active</option>
-            <option value="beta">Beta</option>
-            <option value="draft">Draft</option>
-            <option value="deprecated">Deprecated</option>
-          </select>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Lifecycle status of this agent</p>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="beta">Beta</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="deprecated">Deprecated</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="mt-1 text-xs text-muted-foreground">Lifecycle status of this agent</p>
         </div>
 
         <div>
-          <label className={labelClass}>Provider Organization</label>
-          <input
+          <Label className={labelClass}>Provider Organization</Label>
+          <Input
             type="text"
-            className={inputClass}
             value={agentForm.provider_organization}
             onChange={(e) => setAgentForm(prev => ({ ...prev, provider_organization: e.target.value }))}
             placeholder="ACME Inc."
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Organization providing this agent</p>
+          <p className="mt-1 text-xs text-muted-foreground">Organization providing this agent</p>
         </div>
 
         <div>
-          <label className={labelClass}>Provider URL</label>
-          <input
+          <Label className={labelClass}>Provider URL</Label>
+          <Input
             type="url"
-            className={inputClass}
             value={agentForm.provider_url}
             onChange={(e) => setAgentForm(prev => ({ ...prev, provider_url: e.target.value }))}
             placeholder="https://example.com"
           />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Provider's website or documentation URL</p>
+          <p className="mt-1 text-xs text-muted-foreground">Provider's website or documentation URL</p>
         </div>
 
       </div>
 
-      <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <button
+      <div className="flex justify-end space-x-3 pt-6 border-t border-border">
+        <Button
           type="button"
+          variant="secondary"
           onClick={() => navigate('/')}
-          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
           disabled={loading}
-          className="px-6 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-md transition-colors"
         >
           {loading ? 'Registering...' : 'Register Agent'}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -971,14 +939,14 @@ const RegisterPage: React.FC = () => {
   const renderJsonUpload = () => (
     <div className="space-y-6">
       {/* File Upload Area */}
-      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
-        <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
+      <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+        <CloudUpload className="mx-auto h-12 w-12 text-muted-foreground" />
         <div className="mt-4">
           <label htmlFor="json-upload" className="cursor-pointer">
-            <span className="text-purple-600 dark:text-purple-400 hover:text-purple-500 font-medium">
+            <span className="text-primary hover:text-primary/80 font-medium">
               Upload a file
             </span>
-            <span className="text-gray-500 dark:text-gray-400"> or drag and drop</span>
+            <span className="text-muted-foreground"> or drag and drop</span>
           </label>
           <input
             id="json-upload"
@@ -988,7 +956,7 @@ const RegisterPage: React.FC = () => {
             onChange={handleFileUpload}
           />
         </div>
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-xs text-muted-foreground">
           {registrationType === 'server' ? 'modelcard.json' : 'agentcard.json'} (JSON format)
         </p>
       </div>
@@ -996,9 +964,9 @@ const RegisterPage: React.FC = () => {
       {/* JSON Preview */}
       {jsonContent && (
         <div>
-          <label className={labelClass}>JSON Preview</label>
+          <Label className={labelClass}>JSON Preview</Label>
           <div className="relative">
-            <pre className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-auto max-h-64 text-sm text-gray-800 dark:text-gray-200">
+            <pre className="bg-muted border border-border rounded-lg p-4 overflow-auto max-h-64 text-sm text-foreground">
               {jsonContent}
             </pre>
           </div>
@@ -1006,14 +974,14 @@ const RegisterPage: React.FC = () => {
       )}
 
       {/* Info Box */}
-      <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
         <div className="flex">
-          <InformationCircleIcon className="h-5 w-5 text-blue-400 flex-shrink-0" />
+          <Info className="h-5 w-5 text-primary flex-shrink-0" />
           <div className="ml-3">
-            <h4 className="text-sm font-medium text-blue-800 dark:text-blue-200">
+            <h4 className="text-sm font-medium text-primary">
               About JSON Upload
             </h4>
-            <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
+            <p className="mt-1 text-sm text-primary">
               Upload a {registrationType === 'server' ? 'modelcard.json' : 'agentcard.json'} file to automatically populate the form fields.
               You can then review and modify the values before submitting.
             </p>
@@ -1023,8 +991,8 @@ const RegisterPage: React.FC = () => {
 
       {/* Render the appropriate form below */}
       {jsonContent && (
-        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+        <div className="pt-6 border-t border-border">
+          <h3 className="text-lg font-medium text-foreground mb-4">
             Review and Submit
           </h3>
           {registrationType === 'server' ? renderServerForm() : renderAgentForm()}
@@ -1033,14 +1001,14 @@ const RegisterPage: React.FC = () => {
 
       {/* Cancel button when no JSON loaded */}
       {!jsonContent && (
-        <div className="flex justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
-          <button
+        <div className="flex justify-end pt-6 border-t border-border">
+          <Button
             type="button"
+            variant="secondary"
             onClick={() => navigate('/')}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -1054,21 +1022,22 @@ const RegisterPage: React.FC = () => {
   if (!canRegisterServer && !canRegisterAgent) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 text-center">
-          <ExclamationCircleIcon className="mx-auto h-12 w-12 text-yellow-400" />
-          <h3 className="mt-4 text-lg font-medium text-yellow-800 dark:text-yellow-200">
+        <div className="bg-muted border border-border rounded-lg p-6 text-center">
+          <AlertCircle className="mx-auto h-12 w-12 text-muted-foreground" />
+          <h3 className="mt-4 text-lg font-medium text-muted-foreground">
             Permission Required
           </h3>
-          <p className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+          <p className="mt-2 text-sm text-muted-foreground">
             You do not have permission to register servers or agents.
             Please contact an administrator to request access.
           </p>
-          <button
+          <Button
+            variant="secondary"
             onClick={() => navigate('/')}
-            className="mt-4 px-4 py-2 text-sm font-medium text-yellow-800 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-900 hover:bg-yellow-200 dark:hover:bg-yellow-800 rounded-md transition-colors"
+            className="mt-4"
           >
             Return to Dashboard
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -1077,136 +1046,100 @@ const RegisterPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-
       {/* Header */}
       <div className="mb-8">
-        <button
+        <Button
+          variant="ghost"
           onClick={() => navigate('/')}
-          className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 transition-colors"
+          className="flex items-center text-muted-foreground hover:text-foreground mb-4"
         >
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
+          <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        </Button>
+        <h1 className="text-2xl font-bold text-foreground">
           Register New Service
         </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-muted-foreground">
           Register a new MCP server or A2A agent to the gateway registry.
         </p>
       </div>
 
       {/* Registration Type Selector */}
       <div className="mb-8">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
+        <Label className="block text-sm font-medium text-foreground mb-3">
           What would you like to register?
-        </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <button
-            type="button"
+        </Label>
+        <ToggleGroup
+          type="single"
+          value={registrationType}
+          onValueChange={(value) => { if (value) setRegistrationType(value as RegistrationType); }}
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+        >
+          <ToggleGroupItem
+            value="server"
             disabled={!canRegisterServer}
-            onClick={() => setRegistrationType('server')}
-            className={`relative flex items-center p-4 border-2 rounded-lg transition-all ${
-              registrationType === 'server'
-                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-            } ${!canRegisterServer ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            className="relative flex items-center justify-start gap-4 p-4 h-auto rounded-lg data-[state=on]:bg-accent"
           >
-            <ServerIcon className={`h-8 w-8 ${
-              registrationType === 'server' ? 'text-purple-600' : 'text-gray-400'
-            }`} />
-            <div className="ml-4 text-left">
-              <p className={`font-medium ${
-                registrationType === 'server' ? 'text-purple-900 dark:text-purple-100' : 'text-gray-900 dark:text-white'
-              }`}>
-                MCP Server
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+            <Server className="h-8 w-8 shrink-0" />
+            <div className="text-left">
+              <p className="font-medium">MCP Server</p>
+              <p className="text-sm text-muted-foreground font-normal">
                 Model Context Protocol server
               </p>
             </div>
             {registrationType === 'server' && (
-              <CheckCircleIcon className="absolute top-3 right-3 h-5 w-5 text-purple-600" />
+              <CheckCircle className="absolute top-3 right-3 h-5 w-5" />
             )}
-          </button>
+          </ToggleGroupItem>
 
-          <button
-            type="button"
+          <ToggleGroupItem
+            value="agent"
             disabled={!canRegisterAgent}
-            onClick={() => setRegistrationType('agent')}
-            className={`relative flex items-center p-4 border-2 rounded-lg transition-all ${
-              registrationType === 'agent'
-                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
-                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-            } ${!canRegisterAgent ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+            className="relative flex items-center justify-start gap-4 p-4 h-auto rounded-lg data-[state=on]:bg-accent"
           >
-            <CpuChipIcon className={`h-8 w-8 ${
-              registrationType === 'agent' ? 'text-purple-600' : 'text-gray-400'
-            }`} />
-            <div className="ml-4 text-left">
-              <p className={`font-medium ${
-                registrationType === 'agent' ? 'text-purple-900 dark:text-purple-100' : 'text-gray-900 dark:text-white'
-              }`}>
-                A2A Agent
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+            <Cpu className="h-8 w-8 shrink-0" />
+            <div className="text-left">
+              <p className="font-medium">A2A Agent</p>
+              <p className="text-sm text-muted-foreground font-normal">
                 Agent-to-Agent protocol agent
               </p>
             </div>
             {registrationType === 'agent' && (
-              <CheckCircleIcon className="absolute top-3 right-3 h-5 w-5 text-purple-600" />
+              <CheckCircle className="absolute top-3 right-3 h-5 w-5" />
             )}
-          </button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       {/* Registration Mode Selector */}
       <div className="mb-8">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">
+        <Label className="block text-sm font-medium text-foreground mb-3">
           Registration Method
-        </label>
-        <div className="flex space-x-4">
-          <button
-            type="button"
-            onClick={() => setRegistrationMode('form')}
-            className={`flex items-center px-4 py-2 rounded-lg border transition-all ${
-              registrationMode === 'form'
-                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <DocumentTextIcon className="h-5 w-5 mr-2" />
+        </Label>
+        <ToggleGroup
+          type="single"
+          value={registrationMode}
+          onValueChange={(value) => { if (value) setRegistrationMode(value as 'form' | 'json'); }}
+        >
+          <ToggleGroupItem value="form">
+            <FileText data-icon="inline-start" />
             Quick Form
-          </button>
-          <button
-            type="button"
-            onClick={() => setRegistrationMode('json')}
-            className={`flex items-center px-4 py-2 rounded-lg border transition-all ${
-              registrationMode === 'json'
-                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <CloudArrowUpIcon className="h-5 w-5 mr-2" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="json">
+            <CloudUpload data-icon="inline-start" />
             JSON Upload
-          </button>
-        </div>
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       {/* Form Content */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xs border border-gray-200 dark:border-gray-700 p-6">
+      <Card className="p-6">
         {registrationMode === 'form' ? (
           registrationType === 'server' ? renderServerForm() : renderAgentForm()
         ) : (
           renderJsonUpload()
         )}
-      </div>
+      </Card>
     </div>
   );
 };

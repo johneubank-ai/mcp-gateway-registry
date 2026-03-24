@@ -1,17 +1,30 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  PlusIcon,
-  MagnifyingGlassIcon,
-  ArrowPathIcon,
-  EllipsisVerticalIcon,
-  PencilIcon,
-  TrashIcon,
-  PlayIcon,
-  ExclamationCircleIcon,
-} from '@heroicons/react/24/outline';
-import { Menu, Transition } from '@headlessui/react';
+  Plus,
+  Search,
+  RefreshCw,
+  MoreVertical,
+  Pencil,
+  Trash2,
+  Play,
+  AlertCircle,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   useFederationPeers,
   PeerRegistry,
@@ -19,7 +32,6 @@ import {
   deletePeer,
   syncPeer,
 } from '../hooks/useFederationPeers';
-import useEscapeKey from '../hooks/useEscapeKey';
 
 
 /**
@@ -48,7 +60,7 @@ function getHealthColorClasses(health: PeerHealthStatus): string {
     case 'error':
       return 'bg-red-500';
     default:
-      return 'bg-gray-400';
+      return 'bg-muted-foreground';
   }
 }
 
@@ -89,7 +101,7 @@ interface PeerActionMenuProps {
 
 /**
  * PeerActionMenu renders the action dropdown for a peer row.
- * Uses portal to escape overflow containers.
+ * Uses shadcn DropdownMenu with portal for proper z-index handling.
  */
 const PeerActionMenu: React.FC<PeerActionMenuProps> = ({
   peer,
@@ -98,110 +110,48 @@ const PeerActionMenu: React.FC<PeerActionMenuProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-
-  const updatePosition = useCallback(() => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setMenuPosition({
-        top: rect.bottom + 4,
-        left: rect.right - 192, // 192px = w-48 width
-      });
-    }
-  }, []);
-
   return (
-    <Menu as="div" className="relative inline-block text-left">
-      {({ open }) => {
-        // Update position when menu opens
-        if (open) {
-          // Use setTimeout to ensure DOM is ready
-          setTimeout(updatePosition, 0);
-        }
-
-        return (
-          <>
-            <Menu.Button
-              ref={buttonRef}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              <EllipsisVerticalIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-            </Menu.Button>
-            {open &&
-              createPortal(
-                <Transition
-                  show={open}
-                  enter="transition ease-out duration-100"
-                  enterFrom="transform opacity-0 scale-95"
-                  enterTo="transform opacity-100 scale-100"
-                  leave="transition ease-in duration-75"
-                  leaveFrom="transform opacity-100 scale-100"
-                  leaveTo="transform opacity-0 scale-95"
-                >
-                  <Menu.Items
-                    static
-                    className="fixed z-[9999] w-48 rounded-lg bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-hidden"
-                    style={{
-                      top: menuPosition.top,
-                      left: menuPosition.left,
-                    }}
-                  >
-                    <div className="py-1">
-                      <Menu.Item>
-                        {({ active }) => (
-                          <button
-                            onClick={onSync}
-                            disabled={isSyncing || !peer.enabled}
-                            className={`${
-                              active ? 'bg-gray-100 dark:bg-gray-700' : ''
-                            } flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50`}
-                          >
-                            {isSyncing ? (
-                              <ArrowPathIcon className="h-4 w-4 mr-3 animate-spin" />
-                            ) : (
-                              <PlayIcon className="h-4 w-4 mr-3" />
-                            )}
-                            {isSyncing ? 'Syncing...' : 'Sync Now'}
-                          </button>
-                        )}
-                      </Menu.Item>
-                      <Menu.Item>
-                        {({ active }) => (
-                          <button
-                            onClick={onEdit}
-                            className={`${
-                              active ? 'bg-gray-100 dark:bg-gray-700' : ''
-                            } flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200`}
-                          >
-                            <PencilIcon className="h-4 w-4 mr-3" />
-                            Edit
-                          </button>
-                        )}
-                      </Menu.Item>
-                      <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
-                      <Menu.Item>
-                        {({ active }) => (
-                          <button
-                            onClick={onDelete}
-                            className={`${
-                              active ? 'bg-gray-100 dark:bg-gray-700' : ''
-                            } flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400`}
-                          >
-                            <TrashIcon className="h-4 w-4 mr-3" />
-                            Delete
-                          </button>
-                        )}
-                      </Menu.Item>
-                    </div>
-                  </Menu.Items>
-                </Transition>,
-                document.body
-              )}
-          </>
-        );
-      }}
-    </Menu>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="p-2 rounded-lg hover:bg-accent"
+        >
+          <MoreVertical className="h-5 w-5 text-muted-foreground" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem
+          onClick={onSync}
+          disabled={isSyncing || !peer.enabled}
+          className="flex items-center text-sm text-foreground cursor-pointer"
+        >
+          {isSyncing ? (
+            <RefreshCw className="h-4 w-4 mr-3 animate-spin" />
+          ) : (
+            <Play className="h-4 w-4 mr-3" />
+          )}
+          {isSyncing ? 'Syncing...' : 'Sync Now'}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={onEdit}
+          className="flex items-center text-sm text-foreground cursor-pointer"
+        >
+          <Pencil className="h-4 w-4 mr-3" />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={onDelete}
+          variant="destructive"
+          className="flex items-center text-sm cursor-pointer"
+        >
+          <Trash2 className="h-4 w-4 mr-3" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
@@ -220,8 +170,6 @@ const FederationPeers: React.FC<FederationPeersProps> = ({ onShowToast }) => {
   const [deleteTarget, setDeleteTarget] = useState<PeerWithStatus | null>(null);
   const [typedName, setTypedName] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
-
-  useEscapeKey(() => { setDeleteTarget(null); setTypedName(''); }, !!deleteTarget);
 
   // Auto-refresh every 30 seconds for sync status updates
   useEffect(() => {
@@ -330,15 +278,15 @@ const FederationPeers: React.FC<FederationPeersProps> = ({ onShowToast }) => {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-          <div className="h-10 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+          <div className="h-10 w-32 bg-muted rounded animate-pulse" />
         </div>
-        <div className="h-10 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+        <div className="h-10 w-64 bg-muted rounded animate-pulse" />
         <div className="space-y-2">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-16 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"
+              className="h-16 bg-muted rounded animate-pulse"
             />
           ))}
         </div>
@@ -350,17 +298,17 @@ const FederationPeers: React.FC<FederationPeersProps> = ({ onShowToast }) => {
   if (error) {
     return (
       <div className="text-center py-12">
-        <ExclamationCircleIcon className="h-12 w-12 mx-auto text-red-500 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <AlertCircle className="h-12 w-12 mx-auto text-red-500 mb-4" />
+        <h3 className="text-lg font-medium text-foreground mb-2">
           Failed to Load Peers
         </h3>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">{error}</p>
-        <button
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button
           onClick={refetch}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          className="bg-primary text-white hover:bg-primary/90"
         >
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -370,42 +318,39 @@ const FederationPeers: React.FC<FederationPeersProps> = ({ onShowToast }) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             Federation Peers
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Manage peer registries for cross-registry synchronization
           </p>
         </div>
-        <button
+        <Button
           onClick={() => navigate('/settings/federation/peers/add')}
-          className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg
-                     hover:bg-purple-700 transition-colors"
+          className="flex items-center bg-primary text-white hover:bg-primary/90"
         >
-          <PlusIcon className="h-5 w-5 mr-2" />
+          <Plus className="h-5 w-5 mr-2" />
           Add Peer
-        </button>
+        </Button>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-        <input
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+        <Input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search peers..."
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-800 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2"
         />
       </div>
 
       {/* Peers table */}
       {filteredPeers.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
+        <div className="text-center py-12 bg-muted rounded-lg">
           <svg
-            className="h-12 w-12 mx-auto text-gray-400 dark:text-gray-600 mb-4"
+            className="h-12 w-12 mx-auto text-muted-foreground mb-4"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -417,71 +362,71 @@ const FederationPeers: React.FC<FederationPeersProps> = ({ onShowToast }) => {
               d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
             />
           </svg>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-medium text-foreground mb-2">
             {searchQuery ? 'No matching peers' : 'No peers configured'}
           </h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-muted-foreground mb-4">
             {searchQuery
               ? 'Try a different search term'
               : 'Add a peer registry to enable federation'}
           </p>
           {!searchQuery && (
-            <button
+            <Button
               onClick={() => navigate('/settings/federation/peers/add')}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              className="bg-primary text-white hover:bg-primary/90"
             >
               Add First Peer
-            </button>
+            </Button>
           )}
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900/50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Name
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Endpoint
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Sync Mode
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Interval
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Last Sync
                 </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-card divide-y divide-border">
               {filteredPeers.map((peer) => {
                 const health = getPeerHealth(peer);
                 const isSyncing = syncingPeers.has(peer.peer_id);
 
                 return (
-                  <tr key={peer.peer_id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <tr key={peer.peer_id} className="hover:bg-accent">
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        <span className="text-sm font-medium text-foreground">
                           {peer.name}
                         </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="text-xs text-muted-foreground">
                           {peer.peer_id}
                         </span>
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <span
-                        className="text-sm text-gray-600 dark:text-gray-300 truncate block max-w-[200px]"
+                        className="text-sm text-muted-foreground truncate block max-w-[200px]"
                         title={peer.endpoint}
                       >
                         {peer.endpoint}
@@ -492,20 +437,20 @@ const FederationPeers: React.FC<FederationPeersProps> = ({ onShowToast }) => {
                         <span
                           className={`h-2 w-2 rounded-full ${getHealthColorClasses(health)}`}
                         />
-                        <span className="text-sm text-gray-600 dark:text-gray-300 capitalize">
+                        <span className="text-sm text-muted-foreground capitalize">
                           {peer.enabled ? 'Enabled' : 'Disabled'}
                         </span>
                       </div>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground">
                         {getSyncModeLabel(peer)}
                       </span>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {peer.sync_interval_minutes}m
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       <span title={peer.syncStatus?.last_successful_sync || 'Never synced'}>
                         {formatLastSync(peer.syncStatus?.last_successful_sync)}
                       </span>
@@ -528,53 +473,59 @@ const FederationPeers: React.FC<FederationPeersProps> = ({ onShowToast }) => {
       )}
 
       {/* Delete confirmation modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            setTypedName('');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md bg-card p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-foreground">
               Delete Peer
-            </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              This action is irreversible. All servers and agents synced from this
-              peer will be removed.
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              Type <strong>{deleteTarget.name}</strong> to confirm:
-            </p>
-            <input
-              type="text"
-              value={typedName}
-              onChange={(e) => setTypedName(e.target.value)}
-              placeholder={deleteTarget.name}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mb-4">
+            This action is irreversible. All servers and agents synced from this
+            peer will be removed.
+          </p>
+          <p className="text-sm text-muted-foreground mb-3">
+            Type <strong>{deleteTarget?.name}</strong> to confirm:
+          </p>
+          <Input
+            type="text"
+            value={typedName}
+            onChange={(e) => setTypedName(e.target.value)}
+            placeholder={deleteTarget?.name}
+            disabled={isDeleting}
+            className="w-full mb-4"
+          />
+          <div className="flex justify-end space-x-3">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setDeleteTarget(null);
+                setTypedName('');
+              }}
               disabled={isDeleting}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                         bg-white dark:bg-gray-900 text-gray-900 dark:text-white mb-4"
-            />
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setDeleteTarget(null);
-                  setTypedName('');
-                }}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200
-                           rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={typedName !== deleteTarget.name || isDeleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700
-                           disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              >
-                {isDeleting && <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />}
-                Delete
-              </button>
-            </div>
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={typedName !== deleteTarget?.name || isDeleting}
+              className="flex items-center"
+            >
+              {isDeleting && <RefreshCw className="h-4 w-4 mr-2 animate-spin" />}
+              Delete
+            </Button>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

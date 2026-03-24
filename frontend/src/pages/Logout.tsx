@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircleIcon } from '@heroicons/react/24/outline';
+import { CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 const Logout: React.FC = () => {
   const navigate = useNavigate();
@@ -15,43 +17,43 @@ const Logout: React.FC = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-muted flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center mb-6">
-          <CheckCircleIcon className="h-16 w-16 text-green-500" />
+          <CheckCircle className="h-16 w-16 text-primary" />
         </div>
-        <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-white">
+        <h2 className="text-center text-3xl font-bold text-foreground">
           Successfully Logged Out
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-center text-sm text-muted-foreground">
           You have been logged out from all sessions
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="card p-8">
+        <Card className="p-8">
           <div className="text-center space-y-6">
-            <p className="text-gray-700 dark:text-gray-300">
+            <p className="text-foreground">
               Your session has been terminated and you've been logged out from the identity provider.
             </p>
 
             <div className="pt-4">
-              <button
+              <Button
                 onClick={() => navigate('/login')}
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-xs text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-all duration-200 hover:shadow-md"
+                className="w-full"
               >
                 Return to Login
-              </button>
+              </Button>
             </div>
 
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-muted-foreground">
               Redirecting to login in 5 seconds...
             </p>
           </div>
-        </div>
+        </Card>
 
         <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-muted-foreground">
             AI Gateway & Registry - Secure Access Management
           </p>
         </div>

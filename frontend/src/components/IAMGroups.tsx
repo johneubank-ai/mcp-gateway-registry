@@ -1,17 +1,22 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  PlusIcon,
-  MagnifyingGlassIcon,
-  TrashIcon,
-  ArrowLeftIcon,
-  ArrowPathIcon,
-  ArrowDownTrayIcon,
-  DocumentArrowUpIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  XMarkIcon,
-  PencilIcon,
-} from '@heroicons/react/24/outline';
+  Plus,
+  Search,
+  Trash2,
+  ArrowLeft,
+  RefreshCw,
+  Download,
+  FileUp,
+  ChevronDown,
+  ChevronRight,
+  X,
+  Pencil,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   useIAMGroups,
   createGroup,
@@ -139,8 +144,8 @@ const ServerToolsSelector: React.FC<ServerToolsSelectorProps> = ({
   if (serverPath === '*') {
     return (
       <div>
-        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tools</label>
-        <p className="text-xs text-gray-400 italic">All tools on all servers</p>
+        <label className="block text-xs text-muted-foreground mb-1">Tools</label>
+        <p className="text-xs text-muted-foreground italic">All tools on all servers</p>
       </div>
     );
   }
@@ -149,8 +154,8 @@ const ServerToolsSelector: React.FC<ServerToolsSelectorProps> = ({
   if (!serverPath) {
     return (
       <div>
-        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tools</label>
-        <p className="text-xs text-gray-400 italic">Select a server first</p>
+        <label className="block text-xs text-muted-foreground mb-1">Tools</label>
+        <p className="text-xs text-muted-foreground italic">Select a server first</p>
       </div>
     );
   }
@@ -159,18 +164,18 @@ const ServerToolsSelector: React.FC<ServerToolsSelectorProps> = ({
   if (selectedTools.includes('*')) {
     return (
       <div>
-        <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tools</label>
+        <label className="block text-xs text-muted-foreground mb-1">Tools</label>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full">
+          <Badge className="bg-primary/10 text-primary">
             * (All tools)
             <button
               type="button"
               onClick={() => handleRemoveTool('*')}
-              className="ml-1 hover:text-purple-900 dark:hover:text-purple-100"
+              className="ml-1 hover:text-primary"
             >
-              <XMarkIcon className="h-3 w-3" />
+              <X className="h-3 w-3" />
             </button>
-          </span>
+          </Badge>
         </div>
       </div>
     );
@@ -187,25 +192,25 @@ const ServerToolsSelector: React.FC<ServerToolsSelectorProps> = ({
 
   return (
     <div>
-      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Tools</label>
+      <label className="block text-xs text-muted-foreground mb-1">Tools</label>
       <div className="space-y-2">
         {/* Selected tools as removable tags */}
         {selectedTools.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {selectedTools.map((toolName) => (
-              <span
+              <Badge
                 key={toolName}
-                className="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full"
+                className="bg-primary/10 text-primary"
               >
                 {toolName}
                 <button
                   type="button"
                   onClick={() => handleRemoveTool(toolName)}
-                  className="ml-1 hover:text-purple-900 dark:hover:text-purple-100"
+                  className="ml-1 hover:text-primary"
                 >
-                  <XMarkIcon className="h-3 w-3" />
+                  <X className="h-3 w-3" />
                 </button>
-              </span>
+              </Badge>
             ))}
           </div>
         )}
@@ -403,7 +408,7 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
         scope_config: Object.keys(scopeConfig).length > 0 ? scopeConfig : undefined,
       };
       await createGroup(payload);
-      onShowToast(`Group "${formName}" created successfully`, 'success');
+      toast.success(`Group "${formName}" created successfully`);
       resetForm();
       setView('list');
       await refetch();
@@ -412,7 +417,7 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
       const message = Array.isArray(detail)
         ? detail.map((d: any) => d.msg).join(', ')
         : detail || 'Failed to create group';
-      onShowToast(message, 'error');
+      toast.error(message);
     } finally {
       setIsCreating(false);
     }
@@ -420,7 +425,7 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
 
   const handleDelete = async (name: string) => {
     await deleteGroup(name);
-    onShowToast(`Group "${name}" deleted`, 'success');
+    toast.success(`Group "${name}" deleted`);
     setDeleteTarget(null);
     await refetch();
   };
@@ -480,7 +485,7 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
     } catch (err: any) {
       const detail = err.response?.data?.detail;
       const message = typeof detail === 'string' ? detail : 'Failed to load group details';
-      onShowToast(message, 'error');
+      toast.error(message);
       setEditingGroup(null);
     } finally {
       setIsLoadingGroup(false);
@@ -571,7 +576,7 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
       };
 
       await updateGroup(editingGroup, payload);
-      onShowToast(`Group "${editingGroup}" updated successfully`, 'success');
+      toast.success(`Group "${editingGroup}" updated successfully`);
       resetForm();
       setEditingGroup(null);
       setGroupDetail(null);
@@ -582,7 +587,7 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
       const message = Array.isArray(detail)
         ? detail.map((d: any) => d.msg).join(', ')
         : detail || 'Failed to update group';
-      onShowToast(message, 'error');
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -630,9 +635,9 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
         setUiPermissions(perms);
       }
 
-      onShowToast('JSON loaded', 'success');
+      toast.success('JSON loaded');
     } catch {
-      onShowToast('Invalid JSON file', 'error');
+      toast.error('Invalid JSON file');
     }
   };
 
@@ -697,63 +702,210 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
     });
   };
 
+  // ─── Shared form sections ─────────────────────────────────────
+
+  const renderServerAccessSection = () => (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-foreground">Server Access</p>
+        <Button variant="link" size="sm" onClick={addServerEntry}>
+          + Add Server
+        </Button>
+      </div>
+      {serversLoading && (
+        <p className="text-xs text-muted-foreground">Loading servers...</p>
+      )}
+      {serverAccess.map((entry, idx) => (
+          <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">
+                Server {idx + 1}
+              </span>
+              {serverAccess.length > 1 && (
+                <Button variant="link" size="sm" onClick={() => removeServerEntry(idx)} className="text-red-500">
+                  Remove
+                </Button>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Server</label>
+              <SearchableSelect
+                options={availableServers.map((s) => ({
+                  value: s.path,
+                  label: `${s.type === 'virtual' ? '[Virtual] ' : ''}${s.name} (${s.path})`,
+                  description: s.description,
+                }))}
+                value={entry.server}
+                onChange={(val) => {
+                  updateServerEntry(idx, 'server', val);
+                  // Reset tools when server changes
+                  updateServerEntry(idx, 'tools', []);
+                }}
+                placeholder="Search servers..."
+                isLoading={serversLoading}
+                maxDescriptionWords={8}
+                specialOptions={[
+                  { value: '*', label: '* (All servers)', description: 'Grant access to all servers' },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-muted-foreground mb-1">Methods</label>
+              <div className="flex flex-wrap gap-2">
+                {COMMON_METHODS.map((method) => (
+                  <label key={method} className="flex items-center space-x-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={entry.methods.includes(method)}
+                      onChange={() => toggleMethod(idx, method)}
+                      className="rounded border-border text-primary focus:ring-ring h-3 w-3"
+                    />
+                    <span className="text-xs text-muted-foreground">{method}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <ServerToolsSelector
+              serverPath={entry.server}
+              selectedTools={entry.tools}
+              onChange={(tools) => updateServerEntry(idx, 'tools', tools)}
+            />
+          </div>
+      ))}
+    </div>
+  );
+
+  const renderAgentAccessSection = () => (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-foreground">
+        Agent Access
+        <span className="text-xs text-muted-foreground ml-1">(optional)</span>
+      </p>
+      {/* Selected agents as removable tags */}
+      {selectedAgents.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {selectedAgents.map((agentName) => (
+            <Badge
+              key={agentName}
+              className="bg-primary/10 text-primary"
+            >
+              {agentName}
+              <button
+                type="button"
+                onClick={() => setSelectedAgents((prev) => prev.filter((a) => a !== agentName))}
+                className="ml-1 hover:text-primary"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      {/* Searchable agent selector */}
+      <SearchableSelect
+        options={availableAgents
+          .filter((a) => !selectedAgents.includes(a.path))
+          .map((a) => ({
+            value: a.path,
+            label: `${a.name} (${a.path})`,
+            description: a.description,
+          }))}
+        value=""
+        onChange={(val) => {
+          if (val && !selectedAgents.includes(val)) {
+            setSelectedAgents((prev) => [...prev, val]);
+          }
+        }}
+        placeholder="Search and add agents..."
+        isLoading={agentsLoading}
+        maxDescriptionWords={8}
+      />
+    </div>
+  );
+
+  const renderUiPermissionsSection = () => (
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={() => setShowUiPermissions(!showUiPermissions)}
+        className="flex items-center space-x-2 text-sm font-medium text-foreground hover:text-foreground"
+      >
+        {showUiPermissions ? (
+          <ChevronDown className="h-4 w-4" />
+        ) : (
+          <ChevronRight className="h-4 w-4" />
+        )}
+        <span>
+          UI Permissions
+          <span className="text-xs text-muted-foreground ml-1">(enter "all" or a comma-separated list of service/agent names)</span>
+        </span>
+      </button>
+      {showUiPermissions && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-6">
+          {UI_PERMISSION_KEYS.map(({ key, label }) => (
+            <div key={key}>
+              <label className="block text-xs text-muted-foreground mb-1">{label}</label>
+              <Input
+                type="text"
+                value={uiPermissions[key] || ''}
+                onChange={(e) => setPermValue(key, e.target.value)}
+                placeholder="e.g. all or currenttime, mcpgw"
+                className="text-sm"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   // ─── Create View ──────────────────────────────────────────────
   if (view === 'create') {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             IAM &gt; Groups &gt; Create
           </h2>
-          <button
+          <Button
+            variant="ghost"
             onClick={() => { resetForm(); setView('list'); }}
-            className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           >
-            <ArrowLeftIcon className="h-4 w-4 mr-1" />
+            <ArrowLeft className="h-4 w-4 mr-1" />
             Back to List
-          </button>
+          </Button>
         </div>
 
         {/* ── Basic Info ─────────────────────────────────────── */}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Group Name *</label>
-            <input
+            <label className="block text-sm text-muted-foreground mb-1">Group Name *</label>
+            <Input
               type="text"
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               placeholder="e.g. currenttime-users"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                         bg-white dark:bg-gray-900 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Description</label>
-            <input
+            <label className="block text-sm text-muted-foreground mb-1">Description</label>
+            <Input
               type="text"
               value={formDescription}
               onChange={(e) => setFormDescription(e.target.value)}
               placeholder="Optional description"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                         bg-white dark:bg-gray-900 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+            <label className="block text-sm text-muted-foreground mb-1">
               Group Mappings
-              <span className="text-xs text-gray-400 ml-1">(optional, comma-separated)</span>
+              <span className="text-xs text-muted-foreground ml-1">(optional, comma-separated)</span>
             </label>
-            <input
+            <Input
               type="text"
               value={groupMappings}
               onChange={(e) => setGroupMappings(e.target.value)}
               placeholder="e.g. currenttime-users, other-group"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                         bg-white dark:bg-gray-900 text-gray-900 dark:text-white
-                         focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
           <div className="flex items-center space-x-2">
@@ -761,191 +913,39 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
               type="checkbox"
               checked={createInIdp}
               onChange={(e) => setCreateInIdp(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500"
+              className="rounded border-border text-primary focus:ring-ring"
             />
-            <label className="text-sm text-gray-600 dark:text-gray-400">
+            <label className="text-sm text-muted-foreground">
               Create in Identity Provider (Keycloak / Entra ID)
             </label>
           </div>
         </div>
 
         {/* ── Server Access ──────────────────────────────────── */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Server Access</p>
-            <button
-              onClick={addServerEntry}
-              className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
-            >
-              + Add Server
-            </button>
-          </div>
-          {serversLoading && (
-            <p className="text-xs text-gray-400">Loading servers...</p>
-          )}
-          {serverAccess.map((entry, idx) => (
-              <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    Server {idx + 1}
-                  </span>
-                  {serverAccess.length > 1 && (
-                    <button
-                      onClick={() => removeServerEntry(idx)}
-                      className="text-xs text-red-500 hover:underline"
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Server</label>
-                  <SearchableSelect
-                    options={availableServers.map((s) => ({
-                      value: s.path,
-                      label: `${s.type === 'virtual' ? '[Virtual] ' : ''}${s.name} (${s.path})`,
-                      description: s.description,
-                    }))}
-                    value={entry.server}
-                    onChange={(val) => {
-                      updateServerEntry(idx, 'server', val);
-                      // Reset tools when server changes
-                      updateServerEntry(idx, 'tools', []);
-                    }}
-                    placeholder="Search servers..."
-                    isLoading={serversLoading}
-                    maxDescriptionWords={8}
-                    specialOptions={[
-                      { value: '*', label: '* (All servers)', description: 'Grant access to all servers' },
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Methods</label>
-                  <div className="flex flex-wrap gap-2">
-                    {COMMON_METHODS.map((method) => (
-                      <label key={method} className="flex items-center space-x-1 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={entry.methods.includes(method)}
-                          onChange={() => toggleMethod(idx, method)}
-                          className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500 h-3 w-3"
-                        />
-                        <span className="text-xs text-gray-600 dark:text-gray-400">{method}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <ServerToolsSelector
-                  serverPath={entry.server}
-                  selectedTools={entry.tools}
-                  onChange={(tools) => updateServerEntry(idx, 'tools', tools)}
-                />
-              </div>
-          ))}
-        </div>
+        {renderServerAccessSection()}
 
         {/* ── Agent Access ──────────────────────────────────── */}
-        <div className="space-y-3">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Agent Access
-            <span className="text-xs text-gray-400 ml-1">(optional)</span>
-          </p>
-          {/* Selected agents as removable tags */}
-          {selectedAgents.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {selectedAgents.map((agentName) => (
-                <span
-                  key={agentName}
-                  className="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30
-                             text-purple-700 dark:text-purple-300 rounded-full"
-                >
-                  {agentName}
-                  <button
-                    type="button"
-                    onClick={() => setSelectedAgents((prev) => prev.filter((a) => a !== agentName))}
-                    className="ml-1 hover:text-purple-900 dark:hover:text-purple-100"
-                  >
-                    <XMarkIcon className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-          {/* Searchable agent selector */}
-          <SearchableSelect
-            options={availableAgents
-              .filter((a) => !selectedAgents.includes(a.path))
-              .map((a) => ({
-                value: a.path,
-                label: `${a.name} (${a.path})`,
-                description: a.description,
-              }))}
-            value=""
-            onChange={(val) => {
-              if (val && !selectedAgents.includes(val)) {
-                setSelectedAgents((prev) => [...prev, val]);
-              }
-            }}
-            placeholder="Search and add agents..."
-            isLoading={agentsLoading}
-            maxDescriptionWords={8}
-          />
-        </div>
+        {renderAgentAccessSection()}
 
         {/* ── UI Permissions (collapsible) ───────────────────── */}
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => setShowUiPermissions(!showUiPermissions)}
-            className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-          >
-            {showUiPermissions ? (
-              <ChevronDownIcon className="h-4 w-4" />
-            ) : (
-              <ChevronRightIcon className="h-4 w-4" />
-            )}
-            <span>
-              UI Permissions
-              <span className="text-xs text-gray-400 ml-1">(enter "all" or a comma-separated list of service/agent names)</span>
-            </span>
-          </button>
-          {showUiPermissions && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-6">
-              {UI_PERMISSION_KEYS.map(({ key, label }) => (
-                <div key={key}>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-                  <input
-                    type="text"
-                    value={uiPermissions[key] || ''}
-                    onChange={(e) => setPermValue(key, e.target.value)}
-                    placeholder="e.g. all or currenttime, mcpgw"
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg
-                               bg-white dark:bg-gray-900 text-gray-900 dark:text-white
-                               focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {renderUiPermissionsSection()}
 
         {/* ── JSON Upload / Preview ──────────────────────────── */}
         <div className="space-y-4">
-          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <p className="text-sm font-medium text-foreground">
             Or Upload JSON Configuration
           </p>
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
-            className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6
-                       text-center hover:border-purple-400 dark:hover:border-purple-500 transition-colors"
+            className="border-2 border-dashed border-border rounded-lg p-6
+                       text-center hover:border-primary dark:hover:border-primary transition-colors"
           >
-            <DocumentArrowUpIcon className="h-8 w-8 mx-auto text-gray-400 dark:text-gray-500 mb-2" />
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+            <FileUp className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground mb-1">
               Drag &amp; drop a scope JSON file here
             </p>
-            <label className="cursor-pointer text-sm text-purple-600 dark:text-purple-400 hover:underline">
+            <label className="cursor-pointer text-sm text-primary hover:underline">
               or click to browse
               <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" />
             </label>
@@ -953,43 +953,37 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
 
           {jsonPreview && (
             <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <p className="text-sm font-medium text-foreground mb-2">
                 JSON Preview (auto-generated from form):
               </p>
-              <pre className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700
-                              rounded-lg p-4 text-xs font-mono text-gray-800 dark:text-gray-200
+              <pre className="bg-muted border border-border
+                              rounded-lg p-4 text-xs font-mono text-foreground
                               overflow-auto max-h-64">
                 {jsonPreview}
               </pre>
             </div>
           )}
 
-          <button
-            onClick={downloadExampleJson}
-            className="flex items-center text-sm text-purple-600 dark:text-purple-400 hover:underline"
-          >
-            <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+          <Button variant="link" onClick={downloadExampleJson}>
+            <Download className="h-4 w-4 mr-1" />
             Download Example JSON
-          </button>
+          </Button>
         </div>
 
         {/* ── Actions ────────────────────────────────────────── */}
-        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-          <button
+        <div className="flex justify-end space-x-3 pt-4 border-t border-border">
+          <Button
+            variant="secondary"
             onClick={() => { resetForm(); setView('list'); }}
-            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700
-                       rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleCreate}
             disabled={!formName.trim() || isCreating}
-            className="px-4 py-2 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700
-                       disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isCreating ? 'Creating...' : 'Create Group'}
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -1001,21 +995,21 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-foreground">
             IAM &gt; Groups &gt; Edit: {editingGroup}
           </h2>
-          <button
+          <Button
+            variant="ghost"
             onClick={() => { resetForm(); setEditingGroup(null); setGroupDetail(null); setView('list'); }}
-            className="flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           >
-            <ArrowLeftIcon className="h-4 w-4 mr-1" />
+            <ArrowLeft className="h-4 w-4 mr-1" />
             Back to List
-          </button>
+          </Button>
         </div>
 
         {isLoadingGroup && (
           <div className="flex justify-center py-12">
-            <ArrowPathIcon className="h-6 w-6 text-gray-400 animate-spin" />
+            <RefreshCw className="h-6 w-6 text-muted-foreground animate-spin" />
           </div>
         )}
 
@@ -1024,216 +1018,56 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
             {/* ── Basic Info ─────────────────────────────────────── */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Group Name</label>
-                <input
+                <label className="block text-sm text-muted-foreground mb-1">Group Name</label>
+                <Input
                   type="text"
                   value={formName}
                   disabled
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                             bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400
-                             cursor-not-allowed"
+                  className="bg-muted text-muted-foreground cursor-not-allowed"
                 />
-                <p className="text-xs text-gray-400 mt-1">Group name cannot be changed</p>
+                <p className="text-xs text-muted-foreground mt-1">Group name cannot be changed</p>
               </div>
               <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Description</label>
-                <input
+                <label className="block text-sm text-muted-foreground mb-1">Description</label>
+                <Input
                   type="text"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder="Optional description"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                             bg-white dark:bg-gray-900 text-gray-900 dark:text-white
-                             focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <label className="block text-sm text-muted-foreground mb-1">
                   Group Mappings
-                  <span className="text-xs text-gray-400 ml-1">(optional, comma-separated)</span>
+                  <span className="text-xs text-muted-foreground ml-1">(optional, comma-separated)</span>
                 </label>
-                <input
+                <Input
                   type="text"
                   value={groupMappings}
                   onChange={(e) => setGroupMappings(e.target.value)}
                   placeholder="e.g. currenttime-users, other-group"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                             bg-white dark:bg-gray-900 text-gray-900 dark:text-white
-                             focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
             </div>
 
             {/* ── Server Access ──────────────────────────────────── */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Server Access</p>
-                <button
-                  onClick={addServerEntry}
-                  className="text-xs text-purple-600 dark:text-purple-400 hover:underline"
-                >
-                  + Add Server
-                </button>
-              </div>
-              {serversLoading && (
-                <p className="text-xs text-gray-400">Loading servers...</p>
-              )}
-              {serverAccess.map((entry, idx) => (
-                  <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                        Server {idx + 1}
-                      </span>
-                      {serverAccess.length > 1 && (
-                        <button
-                          onClick={() => removeServerEntry(idx)}
-                          className="text-xs text-red-500 hover:underline"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Server</label>
-                      <SearchableSelect
-                        options={availableServers.map((s) => ({
-                          value: s.path,
-                          label: `${s.type === 'virtual' ? '[Virtual] ' : ''}${s.name} (${s.path})`,
-                          description: s.description,
-                        }))}
-                        value={entry.server}
-                        onChange={(val) => {
-                          updateServerEntry(idx, 'server', val);
-                          // Reset tools when server changes
-                          updateServerEntry(idx, 'tools', []);
-                        }}
-                        placeholder="Search servers..."
-                        isLoading={serversLoading}
-                        maxDescriptionWords={8}
-                        specialOptions={[
-                          { value: '*', label: '* (All servers)', description: 'Grant access to all servers' },
-                        ]}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Methods</label>
-                      <div className="flex flex-wrap gap-2">
-                        {COMMON_METHODS.map((method) => (
-                          <label key={method} className="flex items-center space-x-1 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={entry.methods.includes(method)}
-                              onChange={() => toggleMethod(idx, method)}
-                              className="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500 h-3 w-3"
-                            />
-                            <span className="text-xs text-gray-600 dark:text-gray-400">{method}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    <ServerToolsSelector
-                      serverPath={entry.server}
-                      selectedTools={entry.tools}
-                      onChange={(tools) => updateServerEntry(idx, 'tools', tools)}
-                    />
-                  </div>
-              ))}
-            </div>
+            {renderServerAccessSection()}
 
             {/* ── Agent Access ──────────────────────────────────── */}
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Agent Access
-                <span className="text-xs text-gray-400 ml-1">(optional)</span>
-              </p>
-              {/* Selected agents as removable tags */}
-              {selectedAgents.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {selectedAgents.map((agentName) => (
-                    <span
-                      key={agentName}
-                      className="inline-flex items-center px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900/30
-                                 text-purple-700 dark:text-purple-300 rounded-full"
-                    >
-                      {agentName}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedAgents((prev) => prev.filter((a) => a !== agentName))}
-                        className="ml-1 hover:text-purple-900 dark:hover:text-purple-100"
-                      >
-                        <XMarkIcon className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              {/* Searchable agent selector */}
-              <SearchableSelect
-                options={availableAgents
-                  .filter((a) => !selectedAgents.includes(a.path))
-                  .map((a) => ({
-                    value: a.path,
-                    label: `${a.name} (${a.path})`,
-                    description: a.description,
-                  }))}
-                value=""
-                onChange={(val) => {
-                  if (val && !selectedAgents.includes(val)) {
-                    setSelectedAgents((prev) => [...prev, val]);
-                  }
-                }}
-                placeholder="Search and add agents..."
-                isLoading={agentsLoading}
-                maxDescriptionWords={8}
-              />
-            </div>
+            {renderAgentAccessSection()}
 
             {/* ── UI Permissions (collapsible) ───────────────────── */}
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => setShowUiPermissions(!showUiPermissions)}
-                className="flex items-center space-x-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
-              >
-                {showUiPermissions ? (
-                  <ChevronDownIcon className="h-4 w-4" />
-                ) : (
-                  <ChevronRightIcon className="h-4 w-4" />
-                )}
-                <span>
-                  UI Permissions
-                  <span className="text-xs text-gray-400 ml-1">(enter "all" or a comma-separated list of service/agent names)</span>
-                </span>
-              </button>
-              {showUiPermissions && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-6">
-                  {UI_PERMISSION_KEYS.map(({ key, label }) => (
-                    <div key={key}>
-                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</label>
-                      <input
-                        type="text"
-                        value={uiPermissions[key] || ''}
-                        onChange={(e) => setPermValue(key, e.target.value)}
-                        placeholder="e.g. all or currenttime, mcpgw"
-                        className="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg
-                                   bg-white dark:bg-gray-900 text-gray-900 dark:text-white
-                                   focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            {renderUiPermissionsSection()}
 
             {/* ── JSON Preview ──────────────────────────────────────── */}
             {jsonPreview && (
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <p className="text-sm font-medium text-foreground mb-2">
                     JSON Preview (auto-generated from form):
                   </p>
-                  <pre className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700
-                                  rounded-lg p-4 text-xs font-mono text-gray-800 dark:text-gray-200
+                  <pre className="bg-muted border border-border
+                                  rounded-lg p-4 text-xs font-mono text-foreground
                                   overflow-auto max-h-64">
                     {jsonPreview}
                   </pre>
@@ -1242,22 +1076,19 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
             )}
 
             {/* ── Actions ────────────────────────────────────────── */}
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <button
+            <div className="flex justify-end space-x-3 pt-4 border-t border-border">
+              <Button
+                variant="secondary"
                 onClick={() => { resetForm(); setEditingGroup(null); setGroupDetail(null); setView('list'); }}
-                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700
-                           rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleUpdate}
                 disabled={isSaving}
-                className="px-4 py-2 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700
-                           disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -1270,50 +1101,45 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <h2 className="text-lg font-semibold text-foreground">
           IAM &gt; Groups
         </h2>
         <div className="flex items-center space-x-2">
-          <button onClick={refetch} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" title="Refresh">
-            <ArrowPathIcon className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => setView('create')}
-            className="flex items-center px-3 py-2 text-sm text-white bg-purple-600 rounded-lg hover:bg-purple-700"
-          >
-            <PlusIcon className="h-4 w-4 mr-1" />
+          <Button variant="ghost" size="icon" onClick={refetch} title="Refresh">
+            <RefreshCw className="h-5 w-5" />
+          </Button>
+          <Button onClick={() => setView('create')}>
+            <Plus className="h-4 w-4 mr-1" />
             Create Group
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search groups..."
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-900 text-gray-900 dark:text-white text-sm
-                     focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 text-sm"
         />
       </div>
 
       {/* Loading / Error / Empty states */}
       {isLoading && (
         <div className="flex justify-center py-12">
-          <ArrowPathIcon className="h-6 w-6 text-gray-400 animate-spin" />
+          <RefreshCw className="h-6 w-6 text-muted-foreground animate-spin" />
         </div>
       )}
 
       {error && !isLoading && (
-        <div className="text-center py-8 text-red-500 dark:text-red-400 text-sm">{error}</div>
+        <div className="text-center py-8 text-destructive text-sm">{error}</div>
       )}
 
       {!isLoading && !error && filteredGroups.length === 0 && (
-        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+        <div className="text-center py-12 text-muted-foreground">
           {searchQuery ? 'No groups match your search.' : 'No groups yet. Create your first group.'}
         </div>
       )}
@@ -1321,47 +1147,50 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
       {/* Table */}
       {!isLoading && !error && filteredGroups.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Name</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Description</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Path</th>
-                <th className="text-right py-3 px-4 font-medium text-gray-500 dark:text-gray-400">Action</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table className="w-full text-sm">
+            <TableHeader>
+              <TableRow className="border-b border-border">
+                <TableHead className="text-left py-3 px-4 font-medium text-muted-foreground">Name</TableHead>
+                <TableHead className="text-left py-3 px-4 font-medium text-muted-foreground">Description</TableHead>
+                <TableHead className="text-left py-3 px-4 font-medium text-muted-foreground">Path</TableHead>
+                <TableHead className="text-right py-3 px-4 font-medium text-muted-foreground">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {filteredGroups.map((group) => (
                 <React.Fragment key={group.name}>
-                  <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                    <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{group.name}</td>
-                    <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{group.description || '\u2014'}</td>
-                    <td className="py-3 px-4 text-gray-500 dark:text-gray-500 font-mono text-xs">{group.path || '\u2014'}</td>
-                    <td className="py-3 px-4 text-right">
-                      <button
+                  <TableRow className="border-b border-border hover:bg-accent">
+                    <TableCell className="py-3 px-4 text-foreground font-medium">{group.name}</TableCell>
+                    <TableCell className="py-3 px-4 text-muted-foreground">{group.description || '\u2014'}</TableCell>
+                    <TableCell className="py-3 px-4 text-muted-foreground font-mono text-xs">{group.path || '\u2014'}</TableCell>
+                    <TableCell className="py-3 px-4 text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
                         onClick={() => handleEditClick(group.name)}
-                        className="p-1 text-gray-400 hover:text-purple-500 dark:hover:text-purple-400 mr-1"
                         title="Edit group"
                         disabled={isLoadingGroup && editingGroup === group.name}
+                        className="mr-1"
                       >
                         {isLoadingGroup && editingGroup === group.name ? (
-                          <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                          <RefreshCw className="h-4 w-4 animate-spin" />
                         ) : (
-                          <PencilIcon className="h-4 w-4" />
+                          <Pencil className="h-4 w-4" />
                         )}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
                         onClick={() => setDeleteTarget(group.name)}
-                        className="p-1 text-gray-400 hover:text-red-500 dark:hover:text-red-400"
                         title="Delete group"
                       >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                   {deleteTarget === group.name && (
-                    <tr>
-                      <td colSpan={4} className="p-2">
+                    <TableRow>
+                      <TableCell colSpan={4} className="p-2">
                         <DeleteConfirmation
                           entityType="group"
                           entityName={group.name}
@@ -1369,13 +1198,13 @@ const IAMGroups: React.FC<IAMGroupsProps> = ({ onShowToast }) => {
                           onConfirm={handleDelete}
                           onCancel={() => setDeleteTarget(null)}
                         />
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )}
                 </React.Fragment>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>

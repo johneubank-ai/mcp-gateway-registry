@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
-  DocumentTextIcon,
-  GlobeAltIcon,
-  EnvelopeIcon,
-  LinkIcon,
-  InformationCircleIcon,
-} from '@heroicons/react/24/outline';
+  FileText,
+  Globe,
+  Mail,
+  Link,
+  Info,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card } from '@/components/ui/card';
 
 interface RegistryCardData {
   schema_version: string;
@@ -83,9 +88,7 @@ const RegistryCardSettings: React.FC<RegistryCardSettingsProps> = ({ onShowToast
         ? 'Registry card not initialized. Please configure REGISTRY_URL, REGISTRY_NAME, and REGISTRY_ORGANIZATION_NAME in .env'
         : err.response?.data?.detail || 'Failed to load registry card';
       setError(errorMsg);
-      if (onShowToast) {
-        onShowToast(errorMsg, 'error');
-      }
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -102,18 +105,14 @@ const RegistryCardSettings: React.FC<RegistryCardSettingsProps> = ({ onShowToast
         contact_url: formData.contact_url || null,
       });
 
-      if (onShowToast) {
-        onShowToast('Registry card updated successfully', 'success');
-      }
+      toast.success('Registry card updated successfully');
 
       // Refresh the card
       await fetchRegistryCard();
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || 'Failed to update registry card';
       setError(errorMsg);
-      if (onShowToast) {
-        onShowToast(errorMsg, 'error');
-      }
+      toast.error(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -129,8 +128,8 @@ const RegistryCardSettings: React.FC<RegistryCardSettingsProps> = ({ onShowToast
     return (
       <div className="flex items-center justify-center py-12">
         <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-purple-600 dark:border-purple-400"></div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Loading registry card...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary dark:border-primary"></div>
+          <p className="text-sm text-muted-foreground">Loading registry card...</p>
         </div>
       </div>
     );
@@ -138,18 +137,15 @@ const RegistryCardSettings: React.FC<RegistryCardSettingsProps> = ({ onShowToast
 
   if (error && !card) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-        <h3 className="font-medium text-red-900 dark:text-red-100 mb-2 flex items-center gap-2">
-          <InformationCircleIcon className="h-5 w-5" />
+      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6">
+        <h3 className="font-medium text-destructive mb-2 flex items-center gap-2">
+          <Info className="h-5 w-5" />
           Error Loading Registry Card
         </h3>
-        <p className="text-sm text-red-800 dark:text-red-200 mb-4">{error}</p>
-        <button
-          onClick={fetchRegistryCard}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-        >
+        <p className="text-sm text-destructive mb-4">{error}</p>
+        <Button variant="destructive" onClick={fetchRegistryCard}>
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -160,51 +156,51 @@ const RegistryCardSettings: React.FC<RegistryCardSettingsProps> = ({ onShowToast
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+        <h2 className="text-xl font-bold text-foreground mb-2">
           Registry Card
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-muted-foreground">
           Manage your registry's metadata and contact information for federation discovery.
         </p>
       </div>
 
       {/* Read-only Information */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <h3 className="font-medium text-blue-900 dark:text-blue-100 mb-3 flex items-center gap-2">
-          <InformationCircleIcon className="h-5 w-5" />
+      <Card className="bg-primary/10 dark:bg-primary/10 border-primary/20 dark:border-primary/20 p-4">
+        <h3 className="font-medium text-foreground mb-3 flex items-center gap-2">
+          <Info className="h-5 w-5" />
           Registry Information
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <div>
-            <span className="text-blue-700 dark:text-blue-300 font-medium">Registry ID:</span>
-            <p className="text-blue-900 dark:text-blue-100 font-mono">{card.id}</p>
+            <span className="text-primary font-medium">Registry ID:</span>
+            <p className="text-foreground font-mono">{card.id}</p>
           </div>
           <div>
-            <span className="text-blue-700 dark:text-blue-300 font-medium">Name:</span>
-            <p className="text-blue-900 dark:text-blue-100">{card.name}</p>
+            <span className="text-primary font-medium">Name:</span>
+            <p className="text-foreground">{card.name}</p>
           </div>
           <div>
-            <span className="text-blue-700 dark:text-blue-300 font-medium">Organization:</span>
-            <p className="text-blue-900 dark:text-blue-100">{card.organization_name}</p>
+            <span className="text-primary font-medium">Organization:</span>
+            <p className="text-foreground">{card.organization_name}</p>
           </div>
           <div>
-            <span className="text-blue-700 dark:text-blue-300 font-medium">Registry URL:</span>
-            <p className="text-blue-900 dark:text-blue-100 font-mono break-all">{card.registry_url}</p>
+            <span className="text-primary font-medium">Registry URL:</span>
+            <p className="text-foreground font-mono break-all">{card.registry_url}</p>
           </div>
           <div>
-            <span className="text-blue-700 dark:text-blue-300 font-medium">Federation Endpoint:</span>
-            <p className="text-blue-900 dark:text-blue-100 font-mono break-all">{card.federation_endpoint}</p>
+            <span className="text-primary font-medium">Federation Endpoint:</span>
+            <p className="text-foreground font-mono break-all">{card.federation_endpoint}</p>
           </div>
           <div>
-            <span className="text-blue-700 dark:text-blue-300 font-medium">API Version:</span>
-            <p className="text-blue-900 dark:text-blue-100">{card.federation_api_version}</p>
+            <span className="text-primary font-medium">API Version:</span>
+            <p className="text-foreground">{card.federation_api_version}</p>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Authentication Configuration */}
-      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-        <h3 className="font-medium text-green-900 dark:text-green-100 mb-3 flex items-center gap-2">
+      <Card className="bg-primary/10 border-primary/20 p-4">
+        <h3 className="font-medium text-foreground mb-3 flex items-center gap-2">
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
@@ -212,109 +208,94 @@ const RegistryCardSettings: React.FC<RegistryCardSettingsProps> = ({ onShowToast
         </h3>
         <div className="space-y-3 text-sm">
           <div>
-            <span className="text-green-700 dark:text-green-300 font-medium">Supported Schemes:</span>
-            <p className="text-green-900 dark:text-green-100 mt-1">
+            <span className="text-primary font-medium">Supported Schemes:</span>
+            <p className="text-foreground mt-1">
               {card.authentication.schemes.join(', ')}
             </p>
           </div>
           {card.authentication.oauth2_issuer && (
             <div>
-              <span className="text-green-700 dark:text-green-300 font-medium">OAuth2 Issuer:</span>
-              <p className="text-green-900 dark:text-green-100 font-mono break-all mt-1">
+              <span className="text-primary font-medium">OAuth2 Issuer:</span>
+              <p className="text-foreground font-mono break-all mt-1">
                 {card.authentication.oauth2_issuer}
               </p>
             </div>
           )}
           {card.authentication.oauth2_token_endpoint && (
             <div>
-              <span className="text-green-700 dark:text-green-300 font-medium">OAuth2 Token Endpoint:</span>
-              <p className="text-green-900 dark:text-green-100 font-mono break-all mt-1">
+              <span className="text-primary font-medium">OAuth2 Token Endpoint:</span>
+              <p className="text-foreground font-mono break-all mt-1">
                 {card.authentication.oauth2_token_endpoint}
               </p>
             </div>
           )}
           <div>
-            <span className="text-green-700 dark:text-green-300 font-medium">Scopes Supported:</span>
-            <p className="text-green-900 dark:text-green-100 mt-1">
+            <span className="text-primary font-medium">Scopes Supported:</span>
+            <p className="text-foreground mt-1">
               {card.authentication.scopes_supported.join(', ')}
             </p>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Editable Fields */}
       <div className="space-y-4">
-        <h3 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-          <DocumentTextIcon className="h-5 w-5" />
+        <h3 className="font-medium text-foreground flex items-center gap-2">
+          <FileText className="h-5 w-5" />
           Editable Information
         </h3>
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Description
           </label>
-          <textarea
+          <Textarea
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             placeholder="Describe your registry's purpose and contents..."
             rows={3}
             maxLength={1000}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-purple-500 focus:border-transparent
-                     placeholder-gray-400 dark:placeholder-gray-500"
           />
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             {formData.description.length}/1000 characters
           </p>
         </div>
 
         {/* Contact Email */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-            <EnvelopeIcon className="h-4 w-4" />
+          <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+            <Mail className="h-4 w-4" />
             Contact Email
           </label>
-          <input
+          <Input
             type="email"
             value={formData.contact_email}
             onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
             placeholder="contact@example.com"
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-purple-500 focus:border-transparent
-                     placeholder-gray-400 dark:placeholder-gray-500"
           />
         </div>
 
         {/* Contact URL */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
-            <LinkIcon className="h-4 w-4" />
+          <label className="block text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+            <Link className="h-4 w-4" />
             Contact URL
           </label>
-          <input
+          <Input
             type="url"
             value={formData.contact_url}
             onChange={(e) => setFormData({ ...formData, contact_url: e.target.value })}
             placeholder="https://example.com/contact"
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:ring-2 focus:ring-purple-500 focus:border-transparent
-                     placeholder-gray-400 dark:placeholder-gray-500"
           />
         </div>
       </div>
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <button
+        <Button
           onClick={handleSave}
           disabled={!hasChanges || saving}
-          className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg
-                   disabled:opacity-50 disabled:cursor-not-allowed transition-colors
-                   flex items-center gap-2"
         >
           {saving ? (
             <>
@@ -324,26 +305,26 @@ const RegistryCardSettings: React.FC<RegistryCardSettingsProps> = ({ onShowToast
           ) : (
             'Save Changes'
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Capabilities */}
-      <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-        <h3 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-          <GlobeAltIcon className="h-5 w-5" />
+      <Card className="bg-muted p-4">
+        <h3 className="font-medium text-foreground mb-3 flex items-center gap-2">
+          <Globe className="h-5 w-5" />
           Capabilities
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
           {Object.entries(card.capabilities).map(([key, value]) => (
             <div key={key} className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${value ? 'bg-green-500' : 'bg-gray-400'}`} />
-              <span className="text-gray-700 dark:text-gray-300">
+              <div className={`w-2 h-2 rounded-full ${value ? 'bg-emerald-500' : 'bg-muted-foreground'}`} />
+              <span className="text-foreground">
                 {key.replace(/_/g, ' ')}
               </span>
             </div>
           ))}
         </div>
-      </div>
+      </Card>
     </div>
   );
 };
