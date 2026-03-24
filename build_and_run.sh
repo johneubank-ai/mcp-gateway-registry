@@ -183,24 +183,28 @@ if [ "$USE_PREBUILT" = false ]; then
 
     log "Node.js $(node -v) and npm $(npm -v) are available"
 
-    # Build the React frontend
-    log "Building React frontend..."
-    if [ ! -d "frontend" ]; then
-        handle_error "Frontend directory not found"
+    # Build the React frontend (skip if already built)
+    if [ -d "frontend/build" ] && [ -f "frontend/build/index.html" ]; then
+        log "Frontend build already exists - skipping rebuild"
+    else
+        log "Building React frontend..."
+        if [ ! -d "frontend" ]; then
+            handle_error "Frontend directory not found"
+        fi
+
+        cd frontend
+
+        # Install frontend dependencies
+        log "Installing frontend dependencies..."
+        npm install || handle_error "Failed to install frontend dependencies"
+
+        # Build the React application
+        log "Building React application for production..."
+        npm run build || handle_error "Failed to build React application"
+
+        log "Frontend build completed successfully"
+        cd ..
     fi
-
-    cd frontend
-
-    # Install frontend dependencies
-    log "Installing frontend dependencies..."
-    npm install || handle_error "Failed to install frontend dependencies"
-
-    # Build the React application
-    log "Building React application for production..."
-    npm run build || handle_error "Failed to build React application"
-
-    log "Frontend build completed successfully"
-    cd ..
 else
     log "Skipping frontend build (using pre-built images)"
 fi
@@ -221,16 +225,22 @@ log "Found .env file"
 # Load environment variables from .env file early so we can check STORAGE_BACKEND
 source .env
 
-# Check if docker compose is installed
-if ! docker compose version &> /dev/null; then
-    log "ERROR: docker compose is not available"
-    log "Please install Docker Compose v2: https://docs.docker.com/compose/install/"
-    exit 1
+# Check if compose command is available (skip for Podman which was already validated)
+if [ "$USE_PODMAN" = false ]; then
+    if ! docker compose version &> /dev/null; then
+        log "ERROR: docker compose is not available"
+        log "Please install Docker Compose v2: https://docs.docker.com/compose/install/"
+        exit 1
+    fi
 fi
 
 # Stop and remove existing services if they exist
 log "Stopping existing services (if any)..."
-$COMPOSE_CMD $COMPOSE_FILES down --remove-orphans || log "No existing services to stop"
+if [[ "$COMPOSE_CMD" == "docker compose" ]]; then
+    $COMPOSE_CMD $COMPOSE_FILES down --remove-orphans || log "No existing services to stop"
+else
+    $COMPOSE_CMD $COMPOSE_FILES down || log "No existing services to stop"
+fi
 log "Existing services stopped"
 
 # Clean up FAISS index files to force registry to recreate them
@@ -474,7 +484,11 @@ else
     fi
 
     # Build with parallel jobs and build cache
-    $COMPOSE_CMD $COMPOSE_FILES build --parallel --progress=auto || handle_error "Compose build failed"
+    if [[ "$COMPOSE_CMD" == "docker compose" ]]; then
+        $COMPOSE_CMD $COMPOSE_FILES build --parallel --progress=auto || handle_error "Compose build failed"
+    else
+        $COMPOSE_CMD $COMPOSE_FILES build || handle_error "Compose build failed"
+    fi
     log "Container images built successfully with optimization"
 fi
 
