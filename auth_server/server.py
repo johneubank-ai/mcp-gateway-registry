@@ -4,6 +4,7 @@ Configuration is passed via headers instead of environment variables.
 """
 
 import argparse
+import base64
 import hashlib
 import hmac
 import json
@@ -69,10 +70,29 @@ from registry.auth.internal import (
 
 MAX_TOKEN_LIFETIME_HOURS = 24
 DEFAULT_TOKEN_LIFETIME_HOURS = 8
+MCP_OAUTH_DEFAULT_SCOPE = os.environ.get("MCP_OAUTH_DEFAULT_SCOPE", "mcp:tools")
+MCP_OAUTH_SUPPORTED_SCOPES = [
+    scope
+    for scope in os.environ.get("MCP_OAUTH_SUPPORTED_SCOPES", MCP_OAUTH_DEFAULT_SCOPE).split()
+    if scope
+]
+MCP_OAUTH_CODE_TTL_SECONDS = int(os.environ.get("MCP_OAUTH_CODE_TTL_SECONDS", "600"))
+MCP_OAUTH_ACCESS_TOKEN_TTL_SECONDS = int(
+    os.environ.get("MCP_OAUTH_ACCESS_TOKEN_TTL_SECONDS", "3600")
+)
+MCP_OAUTH_REFRESH_TOKEN_TTL_SECONDS = int(
+    os.environ.get("MCP_OAUTH_REFRESH_TOKEN_TTL_SECONDS", "2592000")
+)
 
 # Rate limiting for token generation (simple in-memory counter)
 user_token_generation_counts = {}
 MAX_TOKENS_PER_USER_PER_HOUR = int(os.environ.get("MAX_TOKENS_PER_USER_PER_HOUR", "100"))
+
+# In-memory OAuth 2.1 state for MCP clients. This is sufficient for local/dev use
+# and can be replaced with persistent storage in a later rollout.
+oauth_authorization_codes: dict[str, dict[str, Any]] = {}
+oauth_refresh_tokens: dict[str, dict[str, Any]] = {}
+oauth_clients: dict[str, dict[str, Any]] = {}
 
 # Global scopes configuration (will be loaded during FastAPI startup)
 SCOPES_CONFIG = {}
@@ -725,6 +745,308 @@ class GenerateTokenResponse(BaseModel):
     description: str | None = None
 
 
+class OAuthClientRegistrationRequest(BaseModel):
+    """Minimal dynamic client registration payload for MCP clients."""
+
+    redirect_uris: list[str]
+    client_name: str | None = None
+    grant_types: list[str] = ["authorization_code", "refresh_token"]
+    response_types: list[str] = ["code"]
+    token_endpoint_auth_method: str = "none"
+
+
+def _normalize_scope_value(value: Any) -> list[str]:
+    """Normalize string/list scope values to a simple list."""
+    if not value:
+        return []
+    if isinstance(value, str):
+        return [item for item in value.split() if item]
+    if isinstance(value, (list, tuple, set)):
+        return [str(item) for item in value if item]
+    return [str(value)]
+
+
+def _get_internal_scopes_from_claims(claims: dict[str, Any]) -> list[str]:
+    """Prefer internal MCP scopes when present, otherwise fall back to OAuth scopes."""
+    if "mcp_scopes" in claims:
+        return _normalize_scope_value(claims.get("mcp_scopes"))
+    return _normalize_scope_value(claims.get("scope"))
+
+
+def _get_request_scheme(request: Request) -> str:
+    """Resolve the original request scheme behind reverse proxies."""
+    return "https" if is_request_https(request) else "http"
+
+
+def _get_request_base_url(request: Request) -> str:
+    """Build an external base URL from forwarded headers."""
+    host = request.headers.get("host")
+    if host:
+        return f"{_get_request_scheme(request)}://{host}{ROOT_PATH}"
+    return str(request.base_url).rstrip("/")
+
+
+def _strip_registry_root_path(path: str) -> str:
+    """Strip the configured registry root path from a request path."""
+    normalized_path = path.lstrip("/")
+    registry_prefix = REGISTRY_ROOT_PATH.strip("/")
+    if registry_prefix and normalized_path.startswith(f"{registry_prefix}/"):
+        return normalized_path[len(registry_prefix) + 1 :]
+    if registry_prefix and normalized_path == registry_prefix:
+        return ""
+    return normalized_path
+
+
+def _canonicalize_resource_url(resource: str) -> str:
+    """Canonicalize a protected-resource URL for audience matching."""
+    parsed = urlparse(resource)
+    if not parsed.scheme or not parsed.netloc:
+        raise ValueError("OAuth resource must be an absolute URL")
+    path = parsed.path or "/"
+    return f"{parsed.scheme}://{parsed.netloc}{path}"
+
+
+def _resource_metadata_path_from_original_url(original_url: str) -> str | None:
+    """Map an MCP request URL to the protected-resource metadata path suffix."""
+    if not original_url:
+        return None
+
+    parsed = urlparse(original_url)
+    clean_path = _strip_registry_root_path(parsed.path)
+    clean_path = clean_path.strip("/")
+    return clean_path or None
+
+
+def _resource_metadata_url_from_original_url(original_url: str) -> str | None:
+    """Build the protected-resource metadata URL for an MCP request."""
+    if not original_url:
+        return None
+
+    parsed = urlparse(original_url)
+    metadata_path = _resource_metadata_path_from_original_url(original_url)
+    if not parsed.scheme or not parsed.netloc or not metadata_path:
+        return None
+
+    quoted_metadata_path = urllib.parse.quote(metadata_path, safe="/")
+    return f"{parsed.scheme}://{parsed.netloc}/.well-known/oauth-protected-resource/{quoted_metadata_path}"
+
+
+def _is_mcp_gateway_request(original_url: str | None) -> bool:
+    """Return True when the request targets a proxied MCP resource."""
+    return bool(original_url) and not _is_registry_api_request(original_url) and not _is_federation_api_request(original_url)
+
+
+def _escape_auth_header_value(value: str) -> str:
+    """Escape auth header values safely."""
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _build_www_authenticate_value(
+    original_url: str | None,
+    error: str | None = None,
+    error_description: str | None = None,
+) -> str:
+    """Build a Bearer challenge suitable for MCP OAuth resource discovery."""
+    parts = ['Bearer realm="mcp-gateway"']
+
+    if _is_mcp_gateway_request(original_url):
+        metadata_url = _resource_metadata_url_from_original_url(original_url)
+        if metadata_url:
+            parts.append(f'resource_metadata="{_escape_auth_header_value(metadata_url)}"')
+        if MCP_OAUTH_DEFAULT_SCOPE:
+            parts.append(f'scope="{_escape_auth_header_value(MCP_OAUTH_DEFAULT_SCOPE)}"')
+
+    if error:
+        parts.append(f'error="{_escape_auth_header_value(error)}"')
+    if error_description:
+        parts.append(f'error_description="{_escape_auth_header_value(error_description)}"')
+
+    return ", ".join(parts) if len(parts) > 1 else "Bearer"
+
+
+def _build_auth_headers(
+    original_url: str | None,
+    error: str | None = None,
+    error_description: str | None = None,
+) -> dict[str, str]:
+    """Build common authentication error headers."""
+    return {
+        "WWW-Authenticate": _build_www_authenticate_value(
+            original_url,
+            error=error,
+            error_description=error_description,
+        ),
+        "Connection": "close",
+    }
+
+
+def _compute_pkce_s256_challenge(code_verifier: str) -> str:
+    """Compute an RFC 7636 S256 code challenge."""
+    digest = hashlib.sha256(code_verifier.encode("utf-8")).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode("utf-8")
+
+
+def _is_redirect_uri_allowed(client_record: dict[str, Any], redirect_uri: str) -> bool:
+    """Validate a redirect URI against a registered client."""
+    return redirect_uri in client_record.get("redirect_uris", [])
+
+
+def _upsert_oauth_client(
+    client_id: str,
+    redirect_uris: list[str],
+    client_name: str | None = None,
+) -> dict[str, Any]:
+    """Create or update an in-memory public OAuth client."""
+    client_record = oauth_clients.setdefault(
+        client_id,
+        {
+            "client_id": client_id,
+            "client_name": client_name or client_id,
+            "redirect_uris": [],
+            "token_endpoint_auth_method": "none",
+            "grant_types": ["authorization_code", "refresh_token"],
+            "response_types": ["code"],
+        },
+    )
+
+    for redirect_uri in redirect_uris:
+        if redirect_uri not in client_record["redirect_uris"]:
+            client_record["redirect_uris"].append(redirect_uri)
+
+    if client_name:
+        client_record["client_name"] = client_name
+
+    return client_record
+
+
+def _get_default_oauth_provider_name() -> str | None:
+    """Select the provider used for browser login during MCP OAuth."""
+    enabled_providers = get_enabled_providers()
+    if not enabled_providers:
+        return None
+
+    auth_provider_env = os.getenv("AUTH_PROVIDER")
+    enabled_names = {provider["name"] for provider in enabled_providers}
+    if auth_provider_env and auth_provider_env in enabled_names:
+        return auth_provider_env
+
+    if len(enabled_providers) == 1:
+        return enabled_providers[0]["name"]
+
+    logger.warning(
+        "Multiple OAuth providers are enabled for MCP OAuth. Falling back to the first enabled provider: %s",
+        enabled_providers[0]["name"],
+    )
+    return enabled_providers[0]["name"]
+
+
+def _build_oauth_token_response(
+    access_token: str,
+    scope_list: list[str],
+    issued_at: int,
+    expires_in: int,
+    refresh_token: str | None = None,
+) -> dict[str, Any]:
+    """Build a standard OAuth token response."""
+    response = {
+        "access_token": access_token,
+        "token_type": "Bearer",
+        "expires_in": expires_in,
+        "scope": " ".join(scope_list),
+        "issued_at": issued_at,
+    }
+    if refresh_token:
+        response["refresh_token"] = refresh_token
+        response["refresh_expires_in"] = MCP_OAUTH_REFRESH_TOKEN_TTL_SECONDS
+    return response
+
+
+def _issue_oauth_access_token(
+    user_context: dict[str, Any],
+    client_id: str,
+    resource: str,
+    oauth_scopes: list[str],
+    mcp_scopes: list[str],
+) -> tuple[str, int, int]:
+    """Issue an auth-server signed access token for an MCP protected resource."""
+    current_time = int(time.time())
+    claims = {
+        "iss": JWT_ISSUER,
+        "aud": resource,
+        "resource": resource,
+        "sub": user_context["username"],
+        "preferred_username": user_context["username"],
+        "email": user_context.get("email"),
+        "name": user_context.get("name"),
+        "groups": user_context.get("groups", []),
+        "scope": " ".join(oauth_scopes),
+        "mcp_scopes": mcp_scopes,
+        "client_id": client_id,
+        "token_use": "access",
+        "auth_method": "oauth2_code",
+        "provider": user_context.get("provider"),
+        "iat": current_time,
+        "exp": current_time + MCP_OAUTH_ACCESS_TOKEN_TTL_SECONDS,
+    }
+    return (
+        jwt.encode(claims, SECRET_KEY, algorithm="HS256"),
+        current_time,
+        MCP_OAUTH_ACCESS_TOKEN_TTL_SECONDS,
+    )
+
+
+def _audience_matches_expected_resource(
+    audience: str | list[str] | None,
+    expected_resource: str,
+) -> bool:
+    """Check whether a token audience includes the expected protected resource."""
+    if audience in (None, "", JWT_AUDIENCE):
+        return True
+    if isinstance(audience, str):
+        return audience == expected_resource
+    if isinstance(audience, list):
+        return expected_resource in audience
+    return False
+
+
+def _enforce_resource_audience(validation_result: dict[str, Any], original_url: str | None) -> None:
+    """Enforce resource-bound audiences for OAuth-issued gateway tokens."""
+    if not _is_mcp_gateway_request(original_url):
+        return
+
+    claims = validation_result.get("data") or {}
+    expected_resource = _canonicalize_resource_url(original_url)
+    if not _audience_matches_expected_resource(claims.get("aud"), expected_resource):
+        raise ValueError(
+            f"Token audience does not match protected resource. Expected audience {expected_resource}"
+        )
+
+
+def _append_query_params(url: str, params: dict[str, str]) -> str:
+    """Append query parameters to a URL without losing existing parameters."""
+    parsed = urlparse(url)
+    existing_params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+    for key, value in params.items():
+        existing_params[key] = [value]
+    new_query = urllib.parse.urlencode(existing_params, doseq=True)
+    return urllib.parse.urlunparse(
+        (parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment)
+    )
+
+
+def _oauth_error_redirect(
+    redirect_uri: str,
+    error: str,
+    error_description: str,
+    state: str | None = None,
+) -> RedirectResponse:
+    """Redirect an OAuth authorization error back to the client."""
+    params = {"error": error, "error_description": error_description}
+    if state:
+        params["state"] = state
+    return RedirectResponse(url=_append_query_params(redirect_uri, params), status_code=302)
+
+
 class SimplifiedCognitoValidator:
     """
     Simplified Cognito token validator that doesn't rely on environment variables
@@ -945,13 +1267,16 @@ class SimplifiedCognitoValidator:
             ValueError: If token is invalid
         """
         try:
+            unverified_claims = jwt.decode(access_token, options={"verify_signature": False})
+            audience = unverified_claims.get("aud", JWT_AUDIENCE)
+
             # Decode and validate JWT using shared SECRET_KEY
             claims = jwt.decode(
                 access_token,
                 SECRET_KEY,
                 algorithms=["HS256"],
                 issuer=JWT_ISSUER,
-                audience=JWT_AUDIENCE,
+                audience=audience,
                 options={
                     "verify_exp": True,
                     "verify_iat": True,
@@ -967,8 +1292,7 @@ class SimplifiedCognitoValidator:
                 raise ValueError(f"Invalid token_use: {token_use}")
 
             # Extract scopes from space-separated string
-            scope_string = claims.get("scope", "")
-            scopes = scope_string.split() if scope_string else []
+            scopes = _get_internal_scopes_from_claims(claims)
 
             # Extract groups from claims (for OAuth user tokens)
             groups = claims.get("groups", [])
@@ -988,6 +1312,7 @@ class SimplifiedCognitoValidator:
                 "username": claims.get("sub", ""),
                 "expires_at": claims.get("exp"),
                 "scopes": scopes,
+                "oauth_scopes": _normalize_scope_value(claims.get("scope")),
                 "groups": groups,
                 "token_type": "user_generated",
             }
@@ -1169,12 +1494,11 @@ async def validate_request(request: Request):
     mcp_session_id = request.headers.get("Mcp-Session-Id")
 
     try:
-        # Extract headers
-        # Check for X-Authorization first (custom header used by this gateway)
-        # Only if X-Authorization is not present, check standard Authorization header
-        authorization = request.headers.get("X-Authorization")
+        # Extract headers. Prefer the standard Authorization header and keep
+        # X-Authorization as a legacy fallback during migration.
+        authorization = request.headers.get("Authorization")
         if not authorization:
-            authorization = request.headers.get("Authorization")
+            authorization = request.headers.get("X-Authorization")
         cookie_header = request.headers.get("Cookie", "")
         user_pool_id = request.headers.get("X-User-Pool-Id")
         client_id = request.headers.get("X-Client-Id")
@@ -1281,7 +1605,7 @@ async def validate_request(request: Request):
                 return JSONResponse(
                     content={"detail": "Authorization header required"},
                     status_code=401,
-                    headers={"WWW-Authenticate": "Bearer", "Connection": "close"},
+                    headers=_build_auth_headers(original_url),
                 )
 
             if not authorization.startswith("Bearer "):
@@ -1291,7 +1615,7 @@ async def validate_request(request: Request):
                 return JSONResponse(
                     content={"detail": "Authorization header must use Bearer scheme"},
                     status_code=401,
-                    headers={"WWW-Authenticate": "Bearer", "Connection": "close"},
+                    headers=_build_auth_headers(original_url),
                 )
 
             bearer_token = authorization[len("Bearer ") :].strip()
@@ -1345,7 +1669,7 @@ async def validate_request(request: Request):
                 return JSONResponse(
                     content={"detail": "Authorization header required"},
                     status_code=401,
-                    headers={"WWW-Authenticate": "Bearer", "Connection": "close"},
+                    headers=_build_auth_headers(original_url),
                 )
 
             # Validate static API key (REGISTRY_API_TOKEN is guaranteed to be set here)
@@ -1354,7 +1678,7 @@ async def validate_request(request: Request):
                 return JSONResponse(
                     content={"detail": "Authorization header must use Bearer scheme"},
                     status_code=401,
-                    headers={"WWW-Authenticate": "Bearer", "Connection": "close"},
+                    headers=_build_auth_headers(original_url),
                 )
 
             bearer_token = authorization[len("Bearer ") :].strip()
@@ -1434,50 +1758,66 @@ async def validate_request(request: Request):
                 raise HTTPException(
                     status_code=401,
                     detail="Missing or invalid Authorization header. Expected: Bearer <token> or valid session cookie",
-                    headers={"WWW-Authenticate": "Bearer", "Connection": "close"},
+                    headers=_build_auth_headers(
+                        original_url,
+                        error="invalid_token",
+                        error_description="Bearer token or valid session cookie required",
+                    ),
                 )
 
             # Extract token
             access_token = authorization.split(" ")[1]
 
-            # Get authentication provider based on AUTH_PROVIDER environment variable
             try:
-                auth_provider = get_auth_provider()
-                logger.info(f"Using authentication provider: {auth_provider.__class__.__name__}")
+                unverified_claims = jwt.decode(access_token, options={"verify_signature": False})
+            except Exception:
+                unverified_claims = {}
 
-                # Provider-specific validation
-                if hasattr(auth_provider, "validate_token"):
-                    # For Keycloak, no additional headers needed
-                    validation_result = auth_provider.validate_token(access_token)
-                    logger.info(
-                        f"Token validation successful using {auth_provider.__class__.__name__}"
-                    )
+            try:
+                if unverified_claims.get("iss") == JWT_ISSUER:
+                    validation_result = validator.validate_self_signed_token(access_token)
+                    logger.info("Token validation successful using auth-server self-signed JWT")
                 else:
-                    # Fallback to old validation for compatibility
-                    if not user_pool_id:
-                        logger.warning("Missing X-User-Pool-Id header for Cognito validation")
-                        raise HTTPException(
-                            status_code=400,
-                            detail="Missing X-User-Pool-Id header",
-                            headers={"Connection": "close"},
-                        )
-
-                    if not client_id:
-                        logger.warning("Missing X-Client-Id header for Cognito validation")
-                        raise HTTPException(
-                            status_code=400,
-                            detail="Missing X-Client-Id header",
-                            headers={"Connection": "close"},
-                        )
-
-                    # Use old validator for backward compatibility
-                    validation_result = validator.validate_token(
-                        access_token=access_token,
-                        user_pool_id=user_pool_id,
-                        client_id=client_id,
-                        region=region,
+                    # Get authentication provider based on AUTH_PROVIDER environment variable
+                    auth_provider = get_auth_provider()
+                    logger.info(
+                        f"Using authentication provider: {auth_provider.__class__.__name__}"
                     )
 
+                    # Provider-specific validation
+                    if hasattr(auth_provider, "validate_token"):
+                        # For Keycloak and Entra, no additional headers needed
+                        validation_result = auth_provider.validate_token(access_token)
+                        logger.info(
+                            f"Token validation successful using {auth_provider.__class__.__name__}"
+                        )
+                    else:
+                        # Fallback to old validation for compatibility
+                        if not user_pool_id:
+                            logger.warning("Missing X-User-Pool-Id header for Cognito validation")
+                            raise HTTPException(
+                                status_code=400,
+                                detail="Missing X-User-Pool-Id header",
+                                headers={"Connection": "close"},
+                            )
+
+                        if not client_id:
+                            logger.warning("Missing X-Client-Id header for Cognito validation")
+                            raise HTTPException(
+                                status_code=400,
+                                detail="Missing X-Client-Id header",
+                                headers={"Connection": "close"},
+                            )
+
+                        # Use old validator for backward compatibility
+                        validation_result = validator.validate_token(
+                            access_token=access_token,
+                            user_pool_id=user_pool_id,
+                            client_id=client_id,
+                            region=region,
+                        )
+            except ValueError:
+                raise
             except Exception as e:
                 logger.error(f"Authentication provider error: {e}")
                 raise HTTPException(
@@ -1487,6 +1827,7 @@ async def validate_request(request: Request):
                 )
 
         logger.info(f"Token validation successful using method: {validation_result['method']}")
+        _enforce_resource_audience(validation_result, original_url)
 
         # Enrich groups from MongoDB if empty (for M2M clients)
         try:
@@ -1724,7 +2065,11 @@ async def validate_request(request: Request):
         raise HTTPException(
             status_code=401,
             detail=str(e),
-            headers={"WWW-Authenticate": "Bearer", "Connection": "close"},
+            headers=_build_auth_headers(
+                original_url,
+                error="invalid_token",
+                error_description=str(e),
+            ),
         )
     except HTTPException as e:
         # Re-raise client error HTTPExceptions (4xx) as-is
@@ -1935,6 +2280,7 @@ async def generate_user_token(request: GenerateTokenRequest):
                 "email": user_email,
                 "groups": user_groups,
                 "scope": " ".join(requested_scopes) if requested_scopes else "",
+                "mcp_scopes": requested_scopes,
                 "token_use": "access",
                 "auth_method": "oauth2",
                 "provider": provider,
@@ -2344,6 +2690,326 @@ def get_enabled_providers():
 
     logger.info(f"Returning {len(enabled)} enabled providers: {[p['name'] for p in enabled]}")
     return enabled
+
+
+@app.get("/.well-known/oauth-authorization-server")
+async def get_oauth_authorization_server_metadata(request: Request):
+    """Expose OAuth authorization server metadata for MCP clients."""
+    issuer = _get_request_base_url(request)
+    metadata = {
+        "issuer": issuer,
+        "authorization_endpoint": f"{issuer}/authorize",
+        "token_endpoint": f"{issuer}/token",
+        "registration_endpoint": f"{issuer}/register",
+        "jwks_uri": f"{issuer}/jwks.json",
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code", "refresh_token"],
+        "token_endpoint_auth_methods_supported": ["none"],
+        "code_challenge_methods_supported": ["S256"],
+        "scopes_supported": MCP_OAUTH_SUPPORTED_SCOPES or [MCP_OAUTH_DEFAULT_SCOPE],
+        "response_modes_supported": ["query"],
+    }
+    return JSONResponse(content=metadata)
+
+
+@app.get("/.well-known/openid-configuration")
+async def get_openid_configuration(request: Request):
+    """Mirror OAuth metadata for clients that probe OIDC discovery."""
+    issuer = _get_request_base_url(request)
+    metadata = {
+        "issuer": issuer,
+        "authorization_endpoint": f"{issuer}/authorize",
+        "token_endpoint": f"{issuer}/token",
+        "registration_endpoint": f"{issuer}/register",
+        "jwks_uri": f"{issuer}/jwks.json",
+        "response_types_supported": ["code"],
+        "grant_types_supported": ["authorization_code", "refresh_token"],
+        "token_endpoint_auth_methods_supported": ["none"],
+        "code_challenge_methods_supported": ["S256"],
+        "scopes_supported": MCP_OAUTH_SUPPORTED_SCOPES or [MCP_OAUTH_DEFAULT_SCOPE],
+        "subject_types_supported": ["public"],
+        "id_token_signing_alg_values_supported": ["HS256"],
+    }
+    return JSONResponse(content=metadata)
+
+
+@app.get("/jwks.json")
+async def get_oauth_jwks():
+    """Return an empty JWKS for clients that probe this optional endpoint."""
+    return JSONResponse(content={"keys": []})
+
+
+@app.post("/register")
+async def register_oauth_client(request: OAuthClientRegistrationRequest):
+    """Register a public OAuth client for MCP login flows."""
+    if not request.redirect_uris:
+        raise HTTPException(status_code=400, detail="redirect_uris is required")
+
+    client_id = secrets.token_urlsafe(24)
+    client_record = _upsert_oauth_client(
+        client_id=client_id,
+        redirect_uris=request.redirect_uris,
+        client_name=request.client_name,
+    )
+    client_record["grant_types"] = request.grant_types
+    client_record["response_types"] = request.response_types
+    client_record["token_endpoint_auth_method"] = request.token_endpoint_auth_method
+
+    response = {
+        "client_id": client_id,
+        "client_name": client_record["client_name"],
+        "redirect_uris": client_record["redirect_uris"],
+        "grant_types": client_record["grant_types"],
+        "response_types": client_record["response_types"],
+        "token_endpoint_auth_method": client_record["token_endpoint_auth_method"],
+        "client_id_issued_at": int(time.time()),
+    }
+    return JSONResponse(content=response, status_code=201)
+
+
+@app.get("/authorize")
+async def authorize_oauth_client(
+    request: Request,
+    response_type: str,
+    client_id: str,
+    redirect_uri: str,
+    code_challenge: str,
+    resource: str,
+    code_challenge_method: str = "S256",
+    scope: str | None = None,
+    state: str | None = None,
+    prompt: str | None = None,
+    mcp_gateway_session: str | None = Cookie(None),
+):
+    """Perform an OAuth 2.1 authorization-code flow using the browser session."""
+    if response_type != "code":
+        return _oauth_error_redirect(
+            redirect_uri,
+            "unsupported_response_type",
+            "Only response_type=code is supported",
+            state,
+        )
+
+    if code_challenge_method != "S256":
+        return _oauth_error_redirect(
+            redirect_uri,
+            "invalid_request",
+            "Only S256 PKCE challenges are supported",
+            state,
+        )
+
+    try:
+        canonical_resource = _canonicalize_resource_url(resource)
+    except ValueError as exc:
+        return _oauth_error_redirect(redirect_uri, "invalid_target", str(exc), state)
+
+    requested_oauth_scopes = _normalize_scope_value(scope) or [MCP_OAUTH_DEFAULT_SCOPE]
+    supported_scopes = set(MCP_OAUTH_SUPPORTED_SCOPES or [MCP_OAUTH_DEFAULT_SCOPE])
+    if not set(requested_oauth_scopes).issubset(supported_scopes):
+        invalid_scopes = sorted(set(requested_oauth_scopes) - supported_scopes)
+        return _oauth_error_redirect(
+            redirect_uri,
+            "invalid_scope",
+            f"Unsupported scopes requested: {', '.join(invalid_scopes)}",
+            state,
+        )
+
+    client_record = oauth_clients.get(client_id) or _upsert_oauth_client(
+        client_id=client_id,
+        redirect_uris=[redirect_uri],
+        client_name=client_id,
+    )
+    if not _is_redirect_uri_allowed(client_record, redirect_uri):
+        return _oauth_error_redirect(
+            redirect_uri,
+            "invalid_client",
+            "redirect_uri is not registered for this client",
+            state,
+        )
+
+    if not mcp_gateway_session:
+        if prompt == "none":
+            return _oauth_error_redirect(
+                redirect_uri,
+                "login_required",
+                "An active login session is required",
+                state,
+            )
+
+        default_provider = _get_default_oauth_provider_name()
+        if not default_provider:
+            raise HTTPException(
+                status_code=503,
+                detail="No OAuth identity provider is enabled for MCP login",
+            )
+
+        login_url = _append_query_params(
+            f"{_get_request_base_url(request)}/oauth2/login/{default_provider}",
+            {"redirect_uri": str(request.url)},
+        )
+        return RedirectResponse(url=login_url, status_code=302)
+
+    try:
+        session_validation = await validate_session_cookie(mcp_gateway_session)
+    except ValueError:
+        default_provider = _get_default_oauth_provider_name()
+        if not default_provider:
+            raise HTTPException(
+                status_code=401,
+                detail="Session expired and no OAuth provider is enabled for re-authentication",
+            )
+        login_url = _append_query_params(
+            f"{_get_request_base_url(request)}/oauth2/login/{default_provider}",
+            {"redirect_uri": str(request.url)},
+        )
+        return RedirectResponse(url=login_url, status_code=302)
+
+    internal_scopes = session_validation.get("scopes", [])
+    if not internal_scopes:
+        return _oauth_error_redirect(
+            redirect_uri,
+            "access_denied",
+            "Your account does not have any gateway scopes",
+            state,
+        )
+
+    session_data = session_validation.get("data", {})
+    user_context = {
+        "username": session_validation.get("username", ""),
+        "email": session_data.get("email"),
+        "name": session_data.get("name"),
+        "groups": session_validation.get("groups", []),
+        "provider": session_data.get("provider"),
+    }
+
+    code = secrets.token_urlsafe(32)
+    oauth_authorization_codes[code] = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "resource": canonical_resource,
+        "oauth_scopes": requested_oauth_scopes,
+        "mcp_scopes": internal_scopes,
+        "user_context": user_context,
+        "code_challenge": code_challenge,
+        "code_challenge_method": code_challenge_method,
+        "expires_at": int(time.time()) + MCP_OAUTH_CODE_TTL_SECONDS,
+    }
+
+    return RedirectResponse(
+        url=_append_query_params(
+            redirect_uri,
+            {
+                "code": code,
+                **({"state": state} if state else {}),
+            },
+        ),
+        status_code=302,
+    )
+
+
+@app.post("/token")
+async def issue_oauth_token(request: Request):
+    """Exchange authorization codes and refresh tokens for gateway access tokens."""
+    raw_body = await request.body()
+    form_data = {
+        key: values[0]
+        for key, values in urllib.parse.parse_qs(raw_body.decode("utf-8"), keep_blank_values=True).items()
+    }
+
+    grant_type = form_data.get("grant_type")
+    client_id = form_data.get("client_id")
+    redirect_uri = form_data.get("redirect_uri")
+
+    if not client_id:
+        raise HTTPException(status_code=400, detail="client_id is required")
+
+    if grant_type == "authorization_code":
+        code = form_data.get("code")
+        code_verifier = form_data.get("code_verifier")
+        if not code or not redirect_uri or not code_verifier:
+            raise HTTPException(
+                status_code=400,
+                detail="code, redirect_uri, and code_verifier are required",
+            )
+
+        code_record = oauth_authorization_codes.pop(code, None)
+        if not code_record or int(time.time()) > code_record.get("expires_at", 0):
+            raise HTTPException(status_code=400, detail="authorization code is invalid or expired")
+
+        if code_record.get("client_id") != client_id:
+            raise HTTPException(status_code=400, detail="authorization code client mismatch")
+
+        if code_record.get("redirect_uri") != redirect_uri:
+            raise HTTPException(status_code=400, detail="redirect_uri does not match authorization request")
+
+        expected_code_challenge = _compute_pkce_s256_challenge(code_verifier)
+        if not hmac.compare_digest(expected_code_challenge, code_record.get("code_challenge", "")):
+            raise HTTPException(status_code=400, detail="PKCE code_verifier is invalid")
+
+        access_token, issued_at, expires_in = _issue_oauth_access_token(
+            user_context=code_record["user_context"],
+            client_id=client_id,
+            resource=code_record["resource"],
+            oauth_scopes=code_record["oauth_scopes"],
+            mcp_scopes=code_record["mcp_scopes"],
+        )
+
+        refresh_token = secrets.token_urlsafe(48)
+        oauth_refresh_tokens[refresh_token] = {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "resource": code_record["resource"],
+            "oauth_scopes": code_record["oauth_scopes"],
+            "mcp_scopes": code_record["mcp_scopes"],
+            "user_context": code_record["user_context"],
+            "expires_at": int(time.time()) + MCP_OAUTH_REFRESH_TOKEN_TTL_SECONDS,
+        }
+
+        return JSONResponse(
+            content=_build_oauth_token_response(
+                access_token=access_token,
+                scope_list=code_record["oauth_scopes"],
+                issued_at=issued_at,
+                expires_in=expires_in,
+                refresh_token=refresh_token,
+            )
+        )
+
+    if grant_type == "refresh_token":
+        refresh_token = form_data.get("refresh_token")
+        if not refresh_token:
+            raise HTTPException(status_code=400, detail="refresh_token is required")
+
+        refresh_record = oauth_refresh_tokens.pop(refresh_token, None)
+        if not refresh_record or int(time.time()) > refresh_record.get("expires_at", 0):
+            raise HTTPException(status_code=400, detail="refresh token is invalid or expired")
+
+        if refresh_record.get("client_id") != client_id:
+            raise HTTPException(status_code=400, detail="refresh token client mismatch")
+
+        access_token, issued_at, expires_in = _issue_oauth_access_token(
+            user_context=refresh_record["user_context"],
+            client_id=client_id,
+            resource=refresh_record["resource"],
+            oauth_scopes=refresh_record["oauth_scopes"],
+            mcp_scopes=refresh_record["mcp_scopes"],
+        )
+
+        rotated_refresh_token = secrets.token_urlsafe(48)
+        refresh_record["expires_at"] = int(time.time()) + MCP_OAUTH_REFRESH_TOKEN_TTL_SECONDS
+        oauth_refresh_tokens[rotated_refresh_token] = refresh_record
+
+        return JSONResponse(
+            content=_build_oauth_token_response(
+                access_token=access_token,
+                scope_list=refresh_record["oauth_scopes"],
+                issued_at=issued_at,
+                expires_in=expires_in,
+                refresh_token=rotated_refresh_token,
+            )
+        )
+
+    raise HTTPException(status_code=400, detail="Unsupported grant_type")
 
 
 @app.get("/oauth2/providers")

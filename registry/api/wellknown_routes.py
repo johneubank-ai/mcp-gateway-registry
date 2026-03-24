@@ -15,6 +15,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _build_request_base_url(request: Request) -> str:
+    """Build an external base URL from the current request."""
+    host = request.headers.get("host")
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    if host:
+        return f"{proto}://{host}"
+    return str(request.base_url).rstrip("/")
+
+
+def _get_protected_resource_metadata_url(server_path: str, request: Request) -> str:
+    """Build the protected-resource metadata URL for a server."""
+    clean_path = server_path.strip("/")
+    return f"{_build_request_base_url(request)}/.well-known/oauth-protected-resource/{clean_path}/mcp"
+
+
 @router.get("/mcp-servers")
 async def get_wellknown_mcp_servers(
     request: Request, user_context: dict | None = None
@@ -99,7 +114,7 @@ def _format_server_discovery(server_info: dict, request: Request) -> dict:
     transport_type = _get_transport_type(server_info)
 
     # Get authentication requirements
-    auth_info = _get_authentication_info(server_info)
+    auth_info = _get_authentication_info(server_info, request, server_url)
 
     # Get first 5 tools as preview
     tools_preview = _get_tools_preview(server_info, max_tools=5)
@@ -150,29 +165,64 @@ def _get_transport_type(server_config: dict) -> str:
     return server_config.get("transport", "streamable-http")
 
 
-def _get_authentication_info(server_info: dict) -> dict:
-    """Extract authentication requirements for server.
-
-    Reads auth_scheme (the new field). Legacy auth_type is migrated to
-    auth_scheme at read time by the service layer, so we only need to
-    check auth_scheme here.
-    """
+def _get_authentication_info(server_info: dict, request: Request, server_url: str) -> dict:
+    """Describe gateway auth for MCP clients plus any upstream server auth requirements."""
     auth_scheme = server_info.get("auth_scheme", "none")
     auth_provider = server_info.get("auth_provider", "default")
 
+    auth_info = {
+        "type": "oauth2",
+        "required": True,
+        "authorization_servers": [_build_request_base_url(request)],
+        "resource": server_url,
+        "resource_metadata_url": _get_protected_resource_metadata_url(
+            server_info.get("path", ""),
+            request,
+        ),
+        "scopes": ["mcp:tools"],
+    }
+
     if auth_scheme == "bearer":
-        return {
+        auth_info["upstream"] = {
             "type": "oauth2",
             "required": True,
-            "authorization_url": "/auth/oauth/authorize",
             "provider": auth_provider,
-            "scopes": ["mcp:read", f"{auth_provider}:read"],
         }
     elif auth_scheme == "api_key":
         header_name = server_info.get("auth_header_name", "X-API-Key")
-        return {"type": "api-key", "required": True, "header": header_name}
-    else:
-        return {"type": "none", "required": False}
+        auth_info["upstream"] = {
+            "type": "api-key",
+            "required": True,
+            "header": header_name,
+        }
+
+    return auth_info
+
+
+@router.get("/oauth-protected-resource/{resource_path:path}")
+async def get_oauth_protected_resource(
+    resource_path: str,
+    request: Request,
+) -> JSONResponse:
+    """Return protected-resource metadata for an MCP endpoint exposed by the gateway."""
+    if not settings.enable_wellknown_discovery:
+        raise HTTPException(status_code=404, detail="Well-known discovery is disabled")
+
+    clean_path = resource_path.strip("/")
+    if not clean_path:
+        raise HTTPException(status_code=404, detail="Protected resource not found")
+
+    metadata = {
+        "resource": f"{_build_request_base_url(request)}/{clean_path}",
+        "authorization_servers": [_build_request_base_url(request)],
+        "scopes_supported": ["mcp:tools"],
+        "bearer_methods_supported": ["header"],
+    }
+    headers = {
+        "Cache-Control": f"public, max-age={settings.wellknown_cache_ttl}",
+        "Content-Type": "application/json",
+    }
+    return JSONResponse(content=metadata, headers=headers)
 
 
 def _get_tools_preview(server_info: dict, max_tools: int = 5) -> list:

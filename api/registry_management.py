@@ -241,24 +241,46 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from registry_client import (
-    AgentProvider,
-    AgentRegistration,
-    AgentRescanResponse,
-    AgentSecurityScanResponse,
-    AgentVisibility,
-    AnthropicServerList,
-    AnthropicServerResponse,
-    InternalServiceRegistration,
-    RatingInfoResponse,
-    RatingResponse,
-    RegistryClient,
-    Skill,
-    SkillRegistrationRequest,
-    ToolMapping,
-    ToolScopeOverride,
-    VirtualServerCreateRequest,
-)
+try:
+    # Support `python -m api.registry_management` when `api` is imported as a package.
+    from .registry_client import (
+        AgentProvider,
+        AgentRegistration,
+        AgentRescanResponse,
+        AgentSecurityScanResponse,
+        AgentVisibility,
+        AnthropicServerList,
+        AnthropicServerResponse,
+        InternalServiceRegistration,
+        RatingInfoResponse,
+        RatingResponse,
+        RegistryClient,
+        Skill,
+        SkillRegistrationRequest,
+        ToolMapping,
+        ToolScopeOverride,
+        VirtualServerCreateRequest,
+    )
+except ImportError:
+    # Preserve direct script execution: `python api/registry_management.py`.
+    from registry_client import (
+        AgentProvider,
+        AgentRegistration,
+        AgentRescanResponse,
+        AgentSecurityScanResponse,
+        AgentVisibility,
+        AnthropicServerList,
+        AnthropicServerResponse,
+        InternalServiceRegistration,
+        RatingInfoResponse,
+        RatingResponse,
+        RegistryClient,
+        Skill,
+        SkillRegistrationRequest,
+        ToolMapping,
+        ToolScopeOverride,
+        VirtualServerCreateRequest,
+    )
 
 # Configure logging
 logging.basicConfig(

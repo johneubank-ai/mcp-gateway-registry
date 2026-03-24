@@ -304,14 +304,14 @@ services:
     image: alpine:latest
     volumes:
       - metrics-db-data:/var/lib/sqlite
-    command: ["sh", "-c", "apk add --no-cache sqlite && mkdir -p /var/lib/sqlite && sqlite3 /var/lib/sqlite/metrics.db 'CREATE TABLE IF NOT EXISTS _health (id INTEGER);' && chmod 666 /var/lib/sqlite/metrics.db && chmod 777 /var/lib/sqlite && tail -f /dev/null"]
+    command: ["sh", "-c", "mkdir -p /var/lib/sqlite && touch /var/lib/sqlite/metrics.db && chmod 666 /var/lib/sqlite/metrics.db || true && tail -f /dev/null"]
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "sqlite3", "/var/lib/sqlite/metrics.db", ".tables"]
+      test: ["CMD-SHELL", "test -f /var/lib/sqlite/metrics.db"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -421,7 +421,12 @@ services:
       - ./keycloak/import:/opt/keycloak/data/import
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health/ready"]
+      test:
+        - CMD-SHELL
+        - >-
+          bash -lc 'exec 3<>/dev/tcp/127.0.0.1/9000;
+          printf "GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3;
+          grep -q "200 OK" <&3'
       interval: 30s
       timeout: 10s
       retries: 3

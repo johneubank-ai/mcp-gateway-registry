@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { vi } from 'vitest';
 import ServerConfigModal from '../ServerConfigModal';
 import type { Server } from '../ServerCard';
@@ -50,6 +50,10 @@ function getDisplayedConfig(): any {
   return JSON.parse(preElement.textContent || '');
 }
 
+function selectIde(label: string) {
+  fireEvent.click(screen.getByRole('button', { name: label }));
+}
+
 describe('ServerConfigModal URL generation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,6 +73,7 @@ describe('ServerConfigModal URL generation', () => {
     });
 
     renderModal();
+    selectIde('Cursor');
     const config = getDisplayedConfig();
 
     // Cursor is the default IDE — config uses "mcpServers" key
@@ -92,6 +97,7 @@ describe('ServerConfigModal URL generation', () => {
     });
 
     renderModal({ proxy_pass_url: 'http://internal-host:8080/mcp' });
+    selectIde('Cursor');
     const config = getDisplayedConfig();
 
     const serverConfig = config.mcpServers['test-server'];
@@ -117,6 +123,7 @@ describe('ServerConfigModal URL generation', () => {
       mcp_endpoint: 'https://custom-endpoint.example.com/mcp',
       proxy_pass_url: 'http://internal-host:8080/mcp',
     });
+    selectIde('Cursor');
     let config = getDisplayedConfig();
     let serverConfig = config.mcpServers['test-server'];
     expect(serverConfig.url).toBe('https://custom-endpoint.example.com/mcp');
@@ -139,8 +146,32 @@ describe('ServerConfigModal URL generation', () => {
       mcp_endpoint: 'https://custom-endpoint.example.com/mcp',
       proxy_pass_url: 'http://internal-host:8080/mcp',
     });
+    selectIde('Cursor');
     config = getDisplayedConfig();
     serverConfig = config.mcpServers['test-server'];
     expect(serverConfig.url).toBe('https://custom-endpoint.example.com/mcp');
+  });
+
+  test('should generate Codex OAuth configuration in gateway mode', () => {
+    mockUseRegistryConfig.mockReturnValue({
+      config: {
+        deployment_mode: 'with-gateway',
+        registry_mode: 'full',
+        nginx_updates_enabled: true,
+        features: { mcp_servers: true, agents: true, skills: true, federation: true, gateway_proxy: true },
+      },
+      loading: false,
+      error: null,
+    });
+
+    renderModal();
+
+    const preElement = screen.getByText(/mcp_oauth_credentials_store = "keyring"/, { selector: 'pre' });
+    const configText = preElement.textContent || '';
+
+    expect(configText).toContain('[mcp_servers."test-server"]');
+    expect(configText).toContain('url = "http://localhost/test-server/mcp"');
+    expect(configText).toContain('oauth_resource = "http://localhost/test-server/mcp"');
+    expect(configText).toContain('scopes = ["mcp:tools"]');
   });
 });

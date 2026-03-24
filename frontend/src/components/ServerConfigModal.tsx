@@ -5,7 +5,7 @@ import type { Server } from './ServerCard';
 import { useRegistryConfig } from '../hooks/useRegistryConfig';
 import useEscapeKey from '../hooks/useEscapeKey';
 
-type IDE = 'cursor' | 'roo-code' | 'claude-code' | 'kiro';
+type IDE = 'codex' | 'cursor' | 'roo-code' | 'claude-code' | 'kiro';
 
 interface ServerConfigModalProps {
   server: Server;
@@ -20,7 +20,7 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
   onClose,
   onShowToast,
 }) => {
-  const [selectedIDE, setSelectedIDE] = useState<IDE>('cursor');
+  const [selectedIDE, setSelectedIDE] = useState<IDE>('codex');
   const [jwtToken, setJwtToken] = useState<string | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
@@ -36,14 +36,37 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
   // Fetch JWT token when modal opens (only in gateway mode)
   // We intentionally only depend on isOpen and isRegistryOnly to fetch once per modal open
   useEffect(() => {
-    if (isOpen && !isRegistryOnly) {
+    if (isOpen && !isRegistryOnly && selectedIDE !== 'codex') {
       // Reset token state when modal opens
       setJwtToken(null);
       setTokenError(null);
       fetchJwtToken();
     }
+    if (isOpen && selectedIDE === 'codex') {
+      setJwtToken(null);
+      setTokenError(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, isRegistryOnly]);
+  }, [isOpen, isRegistryOnly, selectedIDE]);
+
+  const getServerName = useCallback(() => {
+    return server.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  }, [server.name]);
+
+  const getServerUrl = useCallback(() => {
+    if (server.mcp_endpoint) {
+      return server.mcp_endpoint;
+    }
+
+    if (isRegistryOnly && server.proxy_pass_url) {
+      return server.proxy_pass_url;
+    }
+
+    const currentUrl = new URL(window.location.origin);
+    const baseUrl = `${currentUrl.protocol}//${currentUrl.hostname}`;
+    const cleanPath = server.path.replace(/\/+$/, '').replace(/^\/+/, '/');
+    return `${baseUrl}${cleanPath}/mcp`;
+  }, [server.mcp_endpoint, server.path, server.proxy_pass_url, isRegistryOnly]);
 
   const fetchJwtToken = async () => {
     setTokenLoading(true);
@@ -86,24 +109,8 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
   };
 
   const generateMCPConfig = useCallback(() => {
-    const serverName = server.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-
-    // URL determination with fallback chain:
-    // 1. mcp_endpoint (custom override) - always takes precedence
-    // 2. proxy_pass_url (in registry-only mode)
-    // 3. Constructed gateway URL (default/fallback)
-    let url: string;
-
-    if (server.mcp_endpoint) {
-      url = server.mcp_endpoint;
-    } else if (isRegistryOnly && server.proxy_pass_url) {
-      url = server.proxy_pass_url;
-    } else {
-      const currentUrl = new URL(window.location.origin);
-      const baseUrl = `${currentUrl.protocol}//${currentUrl.hostname}`;
-      const cleanPath = server.path.replace(/\/+$/, '').replace(/^\/+/, '/');
-      url = `${baseUrl}${cleanPath}/mcp`;
-    }
+    const serverName = getServerName();
+    const url = getServerUrl();
 
     // In registry-only mode, don't include gateway auth headers
     const includeAuthHeaders = !isRegistryOnly;
@@ -193,23 +200,29 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
           },
         };
     }
-  }, [server.name, server.path, server.proxy_pass_url, server.mcp_endpoint, server.auth_scheme, server.auth_header_name, selectedIDE, isRegistryOnly, jwtToken]);
+  }, [getServerName, getServerUrl, server.auth_scheme, server.auth_header_name, selectedIDE, isRegistryOnly, jwtToken]);
+
+  const generateCodexConfig = useCallback(() => {
+    const serverName = getServerName();
+    const url = getServerUrl();
+    const lines = [
+      'mcp_oauth_credentials_store = "keyring"',
+      '',
+      `[mcp_servers."${serverName}"]`,
+      `url = "${url}"`,
+    ];
+
+    if (!isRegistryOnly) {
+      lines.push(`oauth_resource = "${url}"`);
+      lines.push('scopes = ["mcp:tools"]');
+    }
+
+    return lines.join('\n');
+  }, [getServerName, getServerUrl, isRegistryOnly]);
 
   const generateClaudeCodeCommand = useCallback(() => {
-    const serverName = server.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-
-    // URL determination (same logic as generateMCPConfig)
-    let url: string;
-    if (server.mcp_endpoint) {
-      url = server.mcp_endpoint;
-    } else if (isRegistryOnly && server.proxy_pass_url) {
-      url = server.proxy_pass_url;
-    } else {
-      const currentUrl = new URL(window.location.origin);
-      const baseUrl = `${currentUrl.protocol}//${currentUrl.hostname}`;
-      const cleanPath = server.path.replace(/\/+$/, '').replace(/^\/+/, '/');
-      url = `${baseUrl}${cleanPath}/mcp`;
-    }
+    const serverName = getServerName();
+    const url = getServerUrl();
 
     const includeAuthHeaders = !isRegistryOnly;
     const authToken = jwtToken || '[YOUR_GATEWAY_AUTH_TOKEN]';
@@ -233,14 +246,20 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
     }
 
     return command;
-  }, [server.name, server.path, server.proxy_pass_url, server.mcp_endpoint, server.auth_scheme, server.auth_header_name, isRegistryOnly, jwtToken]);
+  }, [getServerName, getServerUrl, server.auth_scheme, server.auth_header_name, isRegistryOnly, jwtToken]);
+
+  const getConfigText = useCallback(() => {
+    if (selectedIDE === 'codex') {
+      return generateCodexConfig();
+    }
+
+    return JSON.stringify(generateMCPConfig(), null, 2);
+  }, [generateCodexConfig, generateMCPConfig, selectedIDE]);
 
 
   const copyConfigToClipboard = useCallback(async () => {
     try {
-      const config = generateMCPConfig();
-      const configText = JSON.stringify(config, null, 2);
-      await navigator.clipboard.writeText(configText);
+      await navigator.clipboard.writeText(getConfigText());
 
       // Show visual feedback
       setCopied(true);
@@ -251,7 +270,7 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
       console.error('Failed to copy to clipboard:', error);
       onShowToast?.('Failed to copy configuration', 'error');
     }
-  }, [generateMCPConfig, onShowToast]);
+  }, [getConfigText, onShowToast]);
 
   const copyCommandToClipboard = useCallback(async () => {
     try {
@@ -296,9 +315,13 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
             <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
               <li>Copy the configuration below</li>
               <li>
-                Paste it into your <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">mcp.json</code> file
+                Paste it into your{' '}
+                <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">
+                  {selectedIDE === 'codex' ? 'config.toml' : 'mcp.json'}
+                </code>{' '}
+                file
               </li>
-              {!isRegistryOnly && !jwtToken && (
+              {!isRegistryOnly && selectedIDE !== 'codex' && !jwtToken && (
                 <li>
                   Replace <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">[YOUR_AUTH_TOKEN]</code> with your
                   gateway authentication token (or wait for auto-generation)
@@ -308,7 +331,18 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
             </ol>
           </div>
 
-          {!isRegistryOnly ? (
+          {!isRegistryOnly && selectedIDE === 'codex' ? (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">Codex OAuth Flow</h4>
+              <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
+                <li>Copy the TOML snippet below into <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">~/.codex/config.toml</code> or your project&apos;s <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">.codex/config.toml</code></li>
+                <li>Run <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">codex mcp login {getServerName()}</code></li>
+                <li>Codex will complete the browser-based OAuth login and store credentials in your keychain/keyring</li>
+              </ol>
+            </div>
+          ) : null}
+
+          {!isRegistryOnly && selectedIDE !== 'codex' ? (
             <div className={`border rounded-lg p-4 ${
               jwtToken
                 ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
@@ -389,7 +423,7 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
           <div className="bg-gray-50 dark:bg-gray-900 border dark:border-gray-700 rounded-lg p-4">
             <h4 className="font-medium text-gray-900 dark:text-white mb-3">Select your IDE/Tool:</h4>
             <div className="flex flex-wrap gap-2">
-              {(['cursor', 'roo-code', 'claude-code', 'kiro'] as IDE[]).map((ide) => (
+              {(['codex', 'cursor', 'roo-code', 'claude-code', 'kiro'] as IDE[]).map((ide) => (
                 <button
                   key={ide}
                   onClick={() => setSelectedIDE(ide)}
@@ -399,7 +433,9 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                   }`}
                 >
-                  {ide === 'cursor'
+                  {ide === 'codex'
+                    ? 'Codex'
+                    : ide === 'cursor'
                     ? 'Cursor'
                     : ide === 'roo-code'
                     ? 'Roo Code'
@@ -411,7 +447,9 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
               Configuration format optimized for{' '}
-              {selectedIDE === 'cursor'
+              {selectedIDE === 'codex'
+                ? 'Codex CLI'
+                : selectedIDE === 'cursor'
                 ? 'Cursor'
                 : selectedIDE === 'roo-code'
                 ? 'Roo Code'
@@ -469,7 +507,7 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
                 </button>
               </div>
               <pre className="bg-gray-900 text-green-100 p-4 rounded-lg text-sm overflow-x-auto">
-                {JSON.stringify(generateMCPConfig(), null, 2)}
+                {getConfigText()}
               </pre>
             </div>
           ) : (
@@ -488,8 +526,8 @@ const ServerConfigModal: React.FC<ServerConfigModalProps> = ({
                   {copied ? 'Copied!' : 'Copy to Clipboard'}
                 </button>
               </div>
-              <pre className="bg-gray-900 text-green-100 p-4 rounded-lg text-sm overflow-x-auto">
-                {JSON.stringify(generateMCPConfig(), null, 2)}
+              <pre className="bg-gray-900 text-green-100 p-4 rounded-lg text-sm overflow-x-auto whitespace-pre-wrap break-all">
+                {getConfigText()}
               </pre>
             </div>
           )}

@@ -171,13 +171,13 @@ group_mappings:
 
   # ----- Entra ID Group Mappings (Azure AD Object IDs) -----
   # registry-admins group Object ID from Azure AD
-  "4c46ec66-a4f7-4b62-9095-b7958662f4b6":
+  "b4f8501d-abf1-4872-aa1f-1b4c918d2f71":
   - registry-admins
   - mcp-servers-unrestricted/read
   - mcp-servers-unrestricted/execute
 
   # public-mcp-users group Object ID from Azure AD
-  "5f605d68-06bc-4208-b992-bb378eee12c5":
+  "be12f80d-5cdc-4e59-9fc3-e74bf05c32ba":
   - public-mcp-users
 
   # Add additional Entra ID group mappings here as needed:

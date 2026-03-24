@@ -214,6 +214,27 @@ class TestFormatServerDiscovery:
 
             assert result["health_status"] == "unknown"
 
+    def test_format_includes_gateway_resource_metadata(
+        self, mock_health_service, mock_settings, sample_server_info
+    ):
+        """Discovery should expose the OAuth protected-resource metadata URL."""
+        mock_health_service.server_health_status = {"test-server": "healthy"}
+
+        with patch("registry.api.wellknown_routes.health_service", mock_health_service):
+            from registry.api.wellknown_routes import _format_server_discovery
+
+            mock_request = MagicMock()
+            mock_request.headers = {"host": "gateway.example", "x-forwarded-proto": "https"}
+            mock_request.url.scheme = "https"
+
+            result = _format_server_discovery(sample_server_info, mock_request)
+
+            assert result["authentication"]["type"] == "oauth2"
+            assert (
+                result["authentication"]["resource_metadata_url"]
+                == "https://gateway.example/.well-known/oauth-protected-resource/test-server/mcp"
+            )
+
 
 # =============================================================================
 # INTEGRATION TESTS FOR GET /.well-known/mcp-servers
@@ -397,3 +418,37 @@ class TestWellKnownMcpServersEndpoint:
             assert server_statuses["Healthy Server"] == "healthy"
             assert server_statuses["Unhealthy Server"] == "unhealthy"
             assert server_statuses["Unknown Server"] == "unknown"
+
+    def test_oauth_protected_resource_endpoint(
+        self,
+        mock_server_service,
+        mock_health_service,
+        mock_settings,
+    ):
+        """The protected-resource metadata endpoint should advertise the gateway auth server."""
+        mock_settings.enable_wellknown_discovery = True
+        mock_settings.wellknown_cache_ttl = 300
+
+        with (
+            patch("registry.api.wellknown_routes.server_service", mock_server_service),
+            patch("registry.api.wellknown_routes.health_service", mock_health_service),
+            patch("registry.api.wellknown_routes.settings", mock_settings),
+        ):
+            from fastapi import FastAPI
+
+            from registry.api.wellknown_routes import router
+
+            app = FastAPI()
+            app.include_router(router, prefix="/.well-known")
+
+            client = TestClient(app)
+            response = client.get(
+                "/.well-known/oauth-protected-resource/test-server/mcp",
+                headers={"host": "gateway.example", "x-forwarded-proto": "https"},
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["resource"] == "https://gateway.example/test-server/mcp"
+            assert data["authorization_servers"] == ["https://gateway.example"]
+            assert data["scopes_supported"] == ["mcp:tools"]

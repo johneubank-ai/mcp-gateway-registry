@@ -1093,6 +1093,7 @@ map "$uri:$http_x_mcp_server_version" $versioned_backend {{
         auth_request_set $auth_method $upstream_http_x_auth_method;
         auth_request_set $auth_server_name $upstream_http_x_server_name;
         auth_request_set $auth_tool_name $upstream_http_x_tool_name;
+        auth_request_set $auth_www_authenticate $upstream_http_www_authenticate;
 {proxy_directive}
         proxy_http_version 1.1;
         proxy_ssl_server_name on;

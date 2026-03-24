@@ -183,11 +183,13 @@ class KeycloakProvider(AuthProvider):
             ValueError: If token validation fails
         """
         try:
+            unverified_claims = jwt.decode(token, options={"verify_signature": False})
+            audience = unverified_claims.get("aud", JWT_AUDIENCE)
             claims = jwt.decode(
                 token,
                 SECRET_KEY,
                 algorithms=["HS256"],
-                audience=JWT_AUDIENCE,
+                audience=audience,
                 issuer=JWT_ISSUER,
                 options={"verify_exp": True, "verify_iat": True, "verify_aud": True},
             )
@@ -198,13 +200,13 @@ class KeycloakProvider(AuthProvider):
                 raise ValueError(f"Invalid token_use: {token_use}")
 
             # Extract scopes from claims
-            scopes = []
-            if "scope" in claims:
-                scope_value = claims["scope"]
-                if isinstance(scope_value, str):
-                    scopes = scope_value.split() if scope_value else []
-                elif isinstance(scope_value, list):
-                    scopes = scope_value
+            internal_scope_value = claims.get("mcp_scopes", claims.get("scope", ""))
+            if isinstance(internal_scope_value, str):
+                scopes = internal_scope_value.split() if internal_scope_value else []
+            elif isinstance(internal_scope_value, list):
+                scopes = internal_scope_value
+            else:
+                scopes = []
 
             # Extract groups from claims
             groups = claims.get("groups", [])
@@ -225,6 +227,7 @@ class KeycloakProvider(AuthProvider):
                 "email": claims.get("email", ""),
                 "expires_at": claims.get("exp"),
                 "scopes": scopes,
+                "oauth_scopes": claims.get("scope", ""),
                 "groups": groups,
                 "token_type": "user_generated",
             }

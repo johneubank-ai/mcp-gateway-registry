@@ -472,6 +472,7 @@ def test_generate_transport_location_blocks_streamable_http(nginx_service):
     assert len(blocks) == 1
     assert "location {{ROOT_PATH}}/test" in blocks[0]
     assert "proxy_pass http://localhost:8000/mcp" in blocks[0]
+    assert "auth_request_set $auth_www_authenticate $upstream_http_www_authenticate;" in blocks[0]
 
 
 @pytest.mark.unit

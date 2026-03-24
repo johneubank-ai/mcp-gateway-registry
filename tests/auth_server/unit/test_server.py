@@ -706,6 +706,177 @@ class TestValidateEndpoint:
                 data = response.json()
                 assert data["valid"] is True
 
+    @patch("auth_server.server.get_auth_provider")
+    def test_validate_missing_auth_header_includes_resource_metadata(
+        self, mock_get_provider, auth_env_vars
+    ):
+        """MCP auth challenges should advertise protected-resource metadata."""
+        import auth_server.server as server_module
+
+        client = TestClient(server_module.app)
+
+        response = client.get(
+            "/validate",
+            headers={"X-Original-URL": "https://gateway.example/test-server/mcp"},
+        )
+
+        assert response.status_code == 401
+        challenge = response.headers["WWW-Authenticate"]
+        assert 'resource_metadata="https://gateway.example/.well-known/oauth-protected-resource/test-server/mcp"' in challenge
+        assert 'scope="mcp:tools"' in challenge
+
+
+class TestMcpOAuthEndpoints:
+    """Tests for the MCP OAuth 2.1 code flow."""
+
+    @patch("auth_server.server.get_auth_provider")
+    def test_authorize_redirects_to_provider_when_session_missing(
+        self, mock_get_provider, auth_env_vars
+    ):
+        """Authorization should bounce to the configured browser login flow."""
+        import auth_server.server as server_module
+
+        client = TestClient(server_module.app)
+        verifier = "test-code-verifier"
+        challenge = server_module._compute_pkce_s256_challenge(verifier)
+
+        with patch("auth_server.server._get_default_oauth_provider_name", return_value="entra"):
+            response = client.get(
+                "/authorize",
+                params={
+                    "response_type": "code",
+                    "client_id": "codex-cli",
+                    "redirect_uri": "https://codex.example/callback",
+                    "code_challenge": challenge,
+                    "code_challenge_method": "S256",
+                    "resource": "https://gateway.example/test-server/mcp",
+                    "scope": "mcp:tools",
+                    "state": "abc123",
+                },
+                follow_redirects=False,
+            )
+
+        assert response.status_code == 302
+        assert "/oauth2/login/entra" in response.headers["location"]
+        assert "redirect_uri=" in response.headers["location"]
+
+    @patch("auth_server.server.get_auth_provider")
+    def test_oauth_code_flow_issues_resource_bound_token(
+        self,
+        mock_get_provider,
+        auth_env_vars,
+        mock_scope_repository_with_data,
+    ):
+        """The OAuth code flow should issue a resource-bound token that /validate accepts."""
+        import auth_server.server as server_module
+
+        server_module.oauth_authorization_codes.clear()
+        server_module.oauth_refresh_tokens.clear()
+        server_module.oauth_clients.clear()
+
+        client = TestClient(server_module.app)
+        verifier = "codex-verifier-123"
+        challenge = server_module._compute_pkce_s256_challenge(verifier)
+        redirect_uri = "https://codex.example/callback"
+        resource = "https://gateway.example/test-server/mcp"
+
+        session_validation = {
+            "valid": True,
+            "username": "testuser",
+            "scopes": ["read:servers"],
+            "groups": ["users"],
+            "method": "session_cookie",
+            "client_id": "",
+            "data": {
+                "email": "test@example.com",
+                "name": "Test User",
+                "provider": "entra",
+            },
+        }
+
+        with (
+            patch.object(server_module, "SECRET_KEY", auth_env_vars["SECRET_KEY"]),
+            patch("auth_server.server.validate_session_cookie", AsyncMock(return_value=session_validation)),
+            patch(
+                "auth_server.server.get_scope_repository",
+                return_value=mock_scope_repository_with_data,
+            ),
+        ):
+            registration = client.post(
+                "/register",
+                json={
+                    "client_name": "Codex",
+                    "redirect_uris": [redirect_uri],
+                },
+            )
+            assert registration.status_code == 201
+            client_id = registration.json()["client_id"]
+
+            authorize_response = client.get(
+                "/authorize",
+                params={
+                    "response_type": "code",
+                    "client_id": client_id,
+                    "redirect_uri": redirect_uri,
+                    "code_challenge": challenge,
+                    "code_challenge_method": "S256",
+                    "resource": resource,
+                    "scope": "mcp:tools",
+                    "state": "state-1",
+                },
+                cookies={"mcp_gateway_session": "dummy-session"},
+                follow_redirects=False,
+            )
+
+            assert authorize_response.status_code == 302
+            location = authorize_response.headers["location"]
+            assert location.startswith(redirect_uri)
+
+            code = server_module.urllib.parse.parse_qs(
+                server_module.urlparse(location).query
+            )["code"][0]
+
+            token_response = client.post(
+                "/token",
+                data={
+                    "grant_type": "authorization_code",
+                    "client_id": client_id,
+                    "redirect_uri": redirect_uri,
+                    "code": code,
+                    "code_verifier": verifier,
+                },
+            )
+
+            assert token_response.status_code == 200
+            token_data = token_response.json()
+            access_token = token_data["access_token"]
+            assert token_data["scope"] == "mcp:tools"
+            assert "refresh_token" in token_data
+
+            claims = jwt.decode(
+                access_token,
+                auth_env_vars["SECRET_KEY"],
+                algorithms=["HS256"],
+                audience=resource,
+                issuer="mcp-auth-server",
+            )
+            assert claims["aud"] == resource
+            assert claims["mcp_scopes"] == ["read:servers"]
+            assert claims["scope"] == "mcp:tools"
+
+            validate_response = client.get(
+                "/validate",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "X-Original-URL": resource,
+                    "X-Body": '{"method":"tools/list","params":{}}',
+                },
+            )
+
+            assert validate_response.status_code == 200
+            assert validate_response.json()["valid"] is True
+            assert validate_response.json()["scopes"] == ["read:servers"]
+
 
 class TestConfigEndpoint:
     """Tests for /config endpoint."""
